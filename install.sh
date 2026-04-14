@@ -2,13 +2,13 @@
 # kane-cli installer — detects OS/arch, downloads the right binary from GitHub Releases.
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/samyakLambda/kane-cli/main/install.sh | bash
-#   curl -fsSL https://raw.githubusercontent.com/samyakLambda/kane-cli/main/install.sh | bash -s -- --version 0.2.0
-#   curl -fsSL https://raw.githubusercontent.com/samyakLambda/kane-cli/main/install.sh | bash -s -- --dir /usr/local/bin
+#   curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh | bash -s -- --version 0.2.0
+#   curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh | bash -s -- --dir /usr/local/bin
 #
 set -euo pipefail
 
-REPO="samyakLambda/kane-cli"
+REPO="LambdaTest/kane-cli"
 INSTALL_DIR="${HOME}/.local/bin"
 VERSION=""
 BINARY_NAME="kane-cli"

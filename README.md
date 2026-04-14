@@ -13,36 +13,36 @@ npm install -g @testmuai/kane-cli
 ### Homebrew (macOS / Linux) — coming soon
 
 ```bash
-brew tap samyakLambda/kane
+brew tap LambdaTest/kane
 brew install kane-cli
 ```
 
 ### Shell script
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/samyakLambda/kane-cli/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh | bash
 ```
 
 Options:
 
 ```bash
 # Install a specific version
-curl -fsSL https://raw.githubusercontent.com/samyakLambda/kane-cli/main/install.sh | bash -s -- --version 0.2.0
+curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh | bash -s -- --version 0.2.0
 
 # Install to a custom directory
-curl -fsSL https://raw.githubusercontent.com/samyakLambda/kane-cli/main/install.sh | bash -s -- --dir /usr/local/bin
+curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh | bash -s -- --dir /usr/local/bin
 ```
 
 ### Direct download
 
-Download the binary for your platform from [GitHub Releases](https://github.com/samyakLambda/kane-cli/releases) and verify:
+Download the binary for your platform from [GitHub Releases](https://github.com/LambdaTest/kane-cli/releases) and verify:
 
 ```bash
 # Download
-curl -LO https://github.com/samyakLambda/kane-cli/releases/latest/download/kane-cli-darwin-arm64
+curl -LO https://github.com/LambdaTest/kane-cli/releases/latest/download/kane-cli-darwin-arm64
 
 # Verify checksum
-curl -LO https://github.com/samyakLambda/kane-cli/releases/latest/download/SHA256SUMS
+curl -LO https://github.com/LambdaTest/kane-cli/releases/latest/download/SHA256SUMS
 sha256sum -c SHA256SUMS --ignore-missing
 # or on macOS:
 shasum -a 256 -c SHA256SUMS --ignore-missing
@@ -69,8 +69,8 @@ Automatic — macOS Gatekeeper verifies the Apple notarization on first launch.
 ### Linux
 
 ```bash
-curl -LO https://github.com/samyakLambda/kane-cli/releases/latest/download/kane-cli-linux-x64.sig
-curl -LO https://github.com/samyakLambda/kane-cli/releases/latest/download/public_key.pem
+curl -LO https://github.com/LambdaTest/kane-cli/releases/latest/download/kane-cli-linux-x64.sig
+curl -LO https://github.com/LambdaTest/kane-cli/releases/latest/download/public_key.pem
 
 openssl dgst -sha256 -verify public_key.pem -signature kane-cli-linux-x64.sig kane-cli-linux-x64
 ```
@@ -110,12 +110,12 @@ npm update -g @testmuai/kane-cli
 brew upgrade kane-cli
 
 # curl installer
-curl -fsSL https://raw.githubusercontent.com/samyakLambda/kane-cli/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh | bash
 ```
 
 ## Reporting issues
 
-Found a bug? Please [open an issue](https://github.com/samyakLambda/kane-cli/issues/new).
+Found a bug? Please [open an issue](https://github.com/LambdaTest/kane-cli/issues/new).
 
 Include:
 
