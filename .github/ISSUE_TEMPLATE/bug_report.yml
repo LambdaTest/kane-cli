@@ -22,9 +22,9 @@ body:
       label: Operating System
       options:
         - macOS (Apple Silicon)
-        - macOS (Intel)
+        - macOS (Intel) — unsupported
         - Linux (x64)
-        - Linux (ARM64)
+        - Linux (ARM64) — unsupported
         - Windows (x64)
         - Other
     validations:

@@ -9,8 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Public npm distribution (`@lambdatest/kane-cli`)
-- Homebrew installation (`brew install lambdatest/kane/kane-cli`)
+- Public npm distribution (`@testmuai/kane-cli`)
+- Homebrew installation (coming soon)
 - GitHub Releases with signed binaries and SHA256 checksums
 - Shell installer (`curl -fsSL ... | bash`)
 - Windows (x64) support with Authenticode signing

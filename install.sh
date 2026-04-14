@@ -40,7 +40,11 @@ detect_platform() {
   case "$os" in
     darwin) os="darwin" ;;
     linux)  os="linux" ;;
-    mingw*|msys*|cygwin*) os="win" ;;
+    mingw*|msys*|cygwin*)
+      echo "Error: This installer does not support Windows. Use npm instead:"
+      echo "  npm install -g @testmuai/kane-cli"
+      exit 1
+      ;;
     *) echo "Error: Unsupported OS: $os"; exit 1 ;;
   esac
 
@@ -52,7 +56,7 @@ detect_platform() {
 
   # Only supported combos
   case "${os}-${arch}" in
-    darwin-arm64|linux-x64|win-x64) ;;
+    darwin-arm64|linux-x64) ;;
     *) echo "Error: Unsupported platform: ${os}-${arch}"; exit 1 ;;
   esac
 

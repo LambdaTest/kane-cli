@@ -10,10 +10,10 @@ Browser automation CLI for [KaneAI](https://www.lambdatest.com/kane-ai) — AI-p
 npm install -g @testmuai/kane-cli
 ```
 
-### Homebrew (macOS / Linux)
+### Homebrew (macOS / Linux) — coming soon
 
 ```bash
-brew tap lambdatest/kane
+brew tap samyakLambda/kane
 brew install kane-cli
 ```
 
