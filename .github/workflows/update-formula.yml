@@ -1,0 +1,67 @@
+name: Update Homebrew Formula
+
+on:
+  repository_dispatch:
+    types: [formula-update]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to update formula to (e.g. 0.2.0)"
+        required: true
+        type: string
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout tap
+        uses: actions/checkout@v4
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=${{ github.event.client_payload.version }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download checksums from release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          gh release download "v${VERSION}" \
+            --repo LambdaTest/kane-cli \
+            --pattern SHA256SUMS \
+            --dir .
+
+      - name: Update formula
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          FORMULA="Formula/kane-cli.rb"
+
+          # Extract checksums
+          DARWIN_SHA=$(awk '/kane-cli-darwin-arm64$/{print $1}' SHA256SUMS)
+          LINUX_SHA=$(awk '/kane-cli-linux-x64$/{print $1}' SHA256SUMS)
+
+          # Update version
+          sed -i "s/version \".*\"/version \"${VERSION}\"/" "$FORMULA"
+
+          # Update sha256 values — match the line after the url line for each platform
+          # darwin-arm64
+          sed -i "/kane-cli-darwin-arm64/{ n; s/sha256 \".*\"/sha256 \"${DARWIN_SHA}\"/; }" "$FORMULA"
+          # linux-x64
+          sed -i "/kane-cli-linux-x64/{ n; s/sha256 \".*\"/sha256 \"${LINUX_SHA}\"/; }" "$FORMULA"
+
+          echo "Updated formula to v${VERSION}:"
+          cat "$FORMULA"
+
+      - name: Commit and push
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/kane-cli.rb
+          git commit -m "Update kane-cli to v${VERSION}"
+          git push
