@@ -7,7 +7,7 @@ Browser automation CLI for [KaneAI](https://www.lambdatest.com/kane-ai) — AI-p
 ### npm (recommended)
 
 ```bash
-npm install -g @lambdatest/kane-cli
+npm install -g @testmu/kane-cli
 ```
 
 ### Homebrew (macOS / Linux)
@@ -97,14 +97,14 @@ kane-cli --version
 kane-cli checks for updates automatically (once per 24h, non-blocking). When an update is available:
 
 ```
-Update available: 0.1.0 → 0.2.0 — run `npm install -g @lambdatest/kane-cli`
+Update available: 0.1.0 → 0.2.0 — run `npm install -g @testmu/kane-cli`
 ```
 
 Or update manually:
 
 ```bash
 # npm
-npm update -g @lambdatest/kane-cli
+npm update -g @testmu/kane-cli
 
 # Homebrew
 brew upgrade kane-cli
