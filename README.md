@@ -13,8 +13,7 @@ npm install -g @testmuai/kane-cli
 ### Homebrew (macOS / Linux)
 
 ```bash
-brew tap LambdaTest/kane https://github.com/LambdaTest/kane-cli
-brew install kane-cli
+brew install LambdaTest/kane/kane-cli
 ```
 
 ### Shell script
