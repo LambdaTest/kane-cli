@@ -244,26 +244,49 @@ With `--agent`, kane-cli outputs one JSON object per line to **stdout**. Progres
 
 ### Event Types
 
-**Step events** (bulk of the output):
+**Progress events** (bulk of the output — one per step):
 
-| Event | Key Fields | Purpose |
-|-------|-----------|---------|
-| `step_start` | `index`, `objective`, `child_id?` | Step began |
-| `step_event` | `index`, `event` (screenshot\|reasoning\|action\|vision\|assertion\|evaluation), `detail`, `success?`, `method?` | Step activity |
-| `step_end` | `index`, `status` (passed\|failed), `duration`, `summary`, `child_id?` | Step completed |
+```json
+{"step": 1, "status": "passed", "remark": "Navigated to amazon.in"}
+{"step": 2, "status": "passed", "remark": "Typed 'laptop' in search box"}
+{"step": 3, "status": "failed", "remark": "Could not find Add to Cart button"}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `step` | number | Step index (1-based) |
+| `status` | string | `"passed"` or `"failed"` |
+| `remark` | string | What the agent did or why it failed |
+
+These are **untyped** — they have no `type` field. Do **not** key on `event.type === 'step_start'` or `'step_end'`; those event types are not emitted in v0.1.x.
 
 **Flow events:**
 
-| Event | Key Fields | Purpose |
+| Event (`type` field) | Key Fields | Purpose |
 |-------|-----------|---------|
-| `run_start` | `objective`, `timestamp` | Run began |
 | `bifurcation` | `flows[]`, `count` | Agent split objective into sub-flows |
 | `child_agent_start` | `child_id`, `objective`, `parent_step` | Child agent spawned |
 | `child_agent_end` | `child_id`, `success`, `steps_taken`, `summary` | Child agent finished |
 | `ask_user` | `question`, `step_index`, `options?` | Agent needs user input |
 | `error` | `message` | Error occurred |
 
+**Note:** There is no `run_start` event in v0.1.x — the first line is either a `bifurcation` or a progress object.
+
 **Note:** `ask_user` is auto-disabled when stdin is not a TTY. Since agents typically run kane-cli as a subprocess, ask_user events will not be emitted. Write objectives that don't require interactive input.
+
+### Parsing Strategy
+
+Since progress events lack a `type` field, distinguish them from typed events like this:
+
+```
+for each line of NDJSON:
+  if obj.type === "run_end"    → terminal event, stop parsing
+  if obj.type === "bifurcation" → flow split
+  if obj.type exists           → other typed event
+  if obj.step exists           → progress event (step/status/remark)
+```
+
+**Build automation on `run_end`** — it is the only event guaranteed to have a stable schema across versions. Use progress events for live status display only.
 
 **Terminal event** (always the last line):
 
