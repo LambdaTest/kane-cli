@@ -44,25 +44,6 @@ curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh
 curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh | bash -s -- --dir /usr/local/bin
 ```
 
-### Direct download
-
-Download the binary for your platform from [GitHub Releases](https://github.com/LambdaTest/kane-cli/releases) and verify:
-
-```bash
-# Download
-curl -LO https://github.com/LambdaTest/kane-cli/releases/latest/download/kane-cli-darwin-arm64
-
-# Verify checksum
-curl -LO https://github.com/LambdaTest/kane-cli/releases/latest/download/SHA256SUMS
-sha256sum -c SHA256SUMS --ignore-missing
-# or on macOS:
-shasum -a 256 -c SHA256SUMS --ignore-missing
-
-# Install
-chmod +x kane-cli-darwin-arm64
-sudo mv kane-cli-darwin-arm64 /usr/local/bin/kane-cli
-```
-
 ## Supported platforms
 
 | Platform | Architecture          | Status                |
