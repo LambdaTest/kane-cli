@@ -70,12 +70,3 @@ body:
     validations:
       required: false
 
-  - type: dropdown
-    id: reporter
-    attributes:
-      label: Filed by
-      options:
-        - Human
-        - AI Agent
-    validations:
-      required: false
