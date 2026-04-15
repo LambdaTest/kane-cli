@@ -5,15 +5,17 @@ body:
   - type: textarea
     id: description
     attributes:
-      label: What would you like?
-      description: Describe the feature you'd like to see.
+      label: What would you like and why?
+      description: Describe the feature and the problem it solves.
     validations:
       required: true
 
-  - type: textarea
-    id: use-case
+  - type: dropdown
+    id: reporter
     attributes:
-      label: Use case
-      description: Why do you need this? What problem does it solve?
+      label: Filed by
+      options:
+        - Human
+        - AI Agent
     validations:
-      required: true
+      required: false

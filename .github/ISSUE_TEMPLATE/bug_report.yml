@@ -2,11 +2,6 @@ name: Bug Report
 description: Report a bug in kane-cli
 labels: ["bug"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        Thanks for reporting a bug! Please fill out the details below.
-
   - type: input
     id: version
     attributes:
@@ -52,23 +47,19 @@ body:
       required: true
 
   - type: textarea
-    id: steps
+    id: details
     attributes:
-      label: Steps to reproduce
-      description: Minimal steps to trigger the bug.
+      label: Additional details
+      description: Steps to reproduce, expected behavior, or any other context.
       placeholder: |
+        Steps to reproduce:
         1. Run `kane-cli run`
         2. ...
-    validations:
-      required: true
 
-  - type: textarea
-    id: expected
-    attributes:
-      label: Expected behavior
-      description: What did you expect to happen?
+        Expected: ...
+        Actual: ...
     validations:
-      required: true
+      required: false
 
   - type: textarea
     id: logs
@@ -76,5 +67,15 @@ body:
       label: Error output / logs
       description: Paste any error messages or logs.
       render: shell
+    validations:
+      required: false
+
+  - type: dropdown
+    id: reporter
+    attributes:
+      label: Filed by
+      options:
+        - Human
+        - AI Agent
     validations:
       required: false
