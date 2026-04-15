@@ -17,12 +17,6 @@ Instead, email **security@testmuai.com** with:
 - Impact assessment (if known)
 - Your contact information
 
-## Response Timeline
-
-- **Acknowledgment:** within 48 hours
-- **Initial assessment:** within 5 business days
-- **Fix or mitigation:** timeline communicated after assessment
-
 ## Scope
 
 This policy covers:
