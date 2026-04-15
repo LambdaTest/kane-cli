@@ -7,14 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
-- Public npm distribution (`@testmuai/kane-cli`)
-- Homebrew installation (`brew install LambdaTest/kane/kane-cli`)
-- GitHub Releases with signed binaries and SHA256 checksums
-- Shell installer (`curl -fsSL ... | bash`)
-- Windows (x64) support with Authenticode signing
-
 ## [0.1.0] - 2026-04-02
 
 ### Added
@@ -25,4 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Nuitka-compiled native binaries (macOS ARM64, Linux x64)
 - macOS code signing and Apple notarization
 - Linux OpenSSL detached signatures
-- Background version check with 24h cache
+- Public npm distribution (`@testmuai/kane-cli`)
+- Homebrew installation (`brew install LambdaTest/kane/kane-cli`)
+- GitHub Releases with signed binaries and SHA256 checksums
+- Shell installer (`curl -fsSL ... | bash`)
+- Windows (x64) support with Authenticode signing
