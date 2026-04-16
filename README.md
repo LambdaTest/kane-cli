@@ -31,18 +31,16 @@ brew install LambdaTest/kane/kane-cli
 ### Shell script
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh | sh
 ```
 
-Options:
+Installs a specific version:
 
 ```bash
-# Install a specific version
-curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh | bash -s -- --version 0.2.0
-
-# Install to a custom directory
-curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh | bash -s -- --dir /usr/local/bin
+curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh | sh -s -- --version 0.2.0
 ```
+
+> Requires Node.js 18+ and npm. The script delegates to `npm install -g @testmuai/kane-cli` so you get the same install as the npm method above. For an install that doesn't need Node, use Homebrew.
 
 ## Supported platforms
 
@@ -116,7 +114,7 @@ npm update -g @testmuai/kane-cli
 brew upgrade kane-cli
 
 # curl installer
-curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh | sh
 ```
 
 ## Contributing
