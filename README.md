@@ -50,25 +50,6 @@ curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh
 | Linux    | x64                   | Signed (OpenSSL)      |
 | Windows  | x64                   | Signed (Authenticode) |
 
-## Signature verification
-
-### macOS
-
-Automatic — macOS Gatekeeper verifies the Apple notarization on first launch.
-
-### Linux
-
-```bash
-curl -LO https://github.com/LambdaTest/kane-cli/releases/latest/download/kane-cli-linux-x64.sig
-curl -LO https://github.com/LambdaTest/kane-cli/releases/latest/download/public_key.pem
-
-openssl dgst -sha256 -verify public_key.pem -signature kane-cli-linux-x64.sig kane-cli-linux-x64
-```
-
-### Windows
-
-Automatic — Windows SmartScreen verifies the Authenticode signature.
-
 ## Usage
 
 ```bash
