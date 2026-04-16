@@ -1,0 +1,85 @@
+name: Update Homebrew Formula
+
+on:
+  repository_dispatch:
+    types: [formula-update]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to update formula to (e.g. 0.2.0)"
+        required: true
+        type: string
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout tap
+        uses: actions/checkout@v4
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=${{ github.event.client_payload.version }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Wait for npm package availability
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          PKG="@testmuai/kane-cli"
+          echo "Waiting for ${PKG}@${VERSION} on npmjs.com..."
+          for i in $(seq 1 24); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              "https://registry.npmjs.org/${PKG}/${VERSION}")
+            if [ "$STATUS" = "200" ]; then
+              echo "${PKG}@${VERSION} is available."
+              exit 0
+            fi
+            echo "Poll ${i}/24 — HTTP ${STATUS}, sleeping 5s..."
+            sleep 5
+          done
+          echo "ERROR: ${PKG}@${VERSION} not visible on npmjs.com after 2m"
+          exit 1
+
+      - name: Compute tarball sha256
+        id: tarball
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          TARBALL_URL="https://registry.npmjs.org/@testmuai/kane-cli/-/kane-cli-${VERSION}.tgz"
+
+          curl -fsSL "$TARBALL_URL" -o kane-cli.tgz
+          SHA256=$(sha256sum kane-cli.tgz | awk '{print $1}')
+
+          echo "tarball-url=${TARBALL_URL}" >> "$GITHUB_OUTPUT"
+          echo "sha256=${SHA256}" >> "$GITHUB_OUTPUT"
+          echo "Tarball: ${TARBALL_URL}"
+          echo "sha256:  ${SHA256}"
+
+      - name: Update formula
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          TARBALL_URL="${{ steps.tarball.outputs.tarball-url }}"
+          SHA256="${{ steps.tarball.outputs.sha256 }}"
+          FORMULA="Formula/kane-cli.rb"
+
+          # url, sha256, version are all single occurrences in the formula now
+          # (no per-platform blocks).
+          sed -i "s|^  url \".*\"|  url \"${TARBALL_URL}\"|" "$FORMULA"
+          sed -i "s|^  sha256 \".*\"|  sha256 \"${SHA256}\"|" "$FORMULA"
+          sed -i "s|^  version \".*\"|  version \"${VERSION}\"|" "$FORMULA"
+
+          echo "Updated formula to ${VERSION}:"
+          cat "$FORMULA"
+
+      - name: Commit and push
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/kane-cli.rb
+          git diff --cached --quiet && { echo "No changes to commit."; exit 0; }
+          git commit -m "Update kane-cli to ${VERSION}"
+          git push

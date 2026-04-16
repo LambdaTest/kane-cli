@@ -1,0 +1,72 @@
+name: Bug Report
+description: Report a bug in kane-cli
+labels: ["bug"]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: kane-cli version
+      description: "Run `kane-cli --version` and paste the output."
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - macOS (Apple Silicon)
+        - macOS (Intel) — unsupported
+        - Linux (x64)
+        - Linux (ARM64) — unsupported
+        - Windows (x64)
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install-method
+    attributes:
+      label: Installation method
+      options:
+        - npm
+        - Homebrew
+        - curl installer
+        - Direct binary download
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the bug clearly.
+    validations:
+      required: true
+
+  - type: textarea
+    id: details
+    attributes:
+      label: Additional details
+      description: Steps to reproduce, expected behavior, or any other context.
+      placeholder: |
+        Steps to reproduce:
+        1. Run `kane-cli run`
+        2. ...
+
+        Expected: ...
+        Actual: ...
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error output / logs
+      description: Paste any error messages or logs.
+      render: shell
+    validations:
+      required: false
+

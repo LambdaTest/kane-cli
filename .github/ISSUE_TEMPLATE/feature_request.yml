@@ -1,0 +1,12 @@
+name: Feature Request
+description: Suggest a new feature for kane-cli
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: What would you like and why?
+      description: Describe the feature and the problem it solves.
+    validations:
+      required: true
+

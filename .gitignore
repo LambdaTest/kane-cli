@@ -1,0 +1,25 @@
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+._*
+
+# Editor swap files
+*.swp
+*~
+
+# Editors
+.vscode/
+.idea/
+
+# Dependencies
+node_modules/
+
+# Environment
+.env
+
+# Logs
+*.log
+
+# Superpowers (local design/plan docs)
+docs/superpowers/
