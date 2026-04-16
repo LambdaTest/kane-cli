@@ -31,10 +31,11 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          gh release download "v${VERSION}" \
-            --repo LambdaTest/kane-cli \
-            --pattern SHA256SUMS \
-            --dir .
+          # v16's public release workflow tags releases as "0.2.0" (no v prefix);
+          # try the bare tag first, fall back to "v0.2.0" for older releases.
+          if ! gh release download "${VERSION}" --repo LambdaTest/kane-cli --pattern SHA256SUMS --dir . 2>/dev/null; then
+            gh release download "v${VERSION}" --repo LambdaTest/kane-cli --pattern SHA256SUMS --dir .
+          fi
 
       - name: Update formula
         run: |
