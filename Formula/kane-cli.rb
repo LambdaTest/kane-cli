@@ -4,29 +4,21 @@
 class KaneCli < Formula
   desc "KaneAI browser automation CLI - AI-powered testing"
   homepage "https://www.lambdatest.com/kane-ai"
+  url "https://registry.npmjs.org/@testmuai/kane-cli/-/kane-cli-0.2.0.tgz"
+  sha256 "80d2d9da29574d65397172c4ad28e7b54b7f47f71147cfea3e181447ec75a5d5"
   license "Apache-2.0"
   version "0.2.0"
 
-  on_macos do
-    on_arm do
-      url "https://github.com/LambdaTest/kane-cli/releases/download/#{version}/kane-cli-darwin-arm64"
-      sha256 "3e07b923e6720d107d03914e3367b07289eee794d555a1e59be07941c3f86386"
-    end
-  end
-
-  on_linux do
-    on_intel do
-      url "https://github.com/LambdaTest/kane-cli/releases/download/#{version}/kane-cli-linux-x64"
-      sha256 "ea5bc82d4d4858454595c1d5a934f7921e11192a45394f0213e42f0394e0a069"
-    end
-  end
+  depends_on "node"
 
   def install
-    if OS.mac?
-      bin.install "kane-cli-darwin-arm64" => "kane-cli"
-    elsif OS.linux?
-      bin.install "kane-cli-linux-x64" => "kane-cli"
-    end
+    system "npm", "install", *std_npm_args
+    bin.install_symlink libexec.glob("bin/*")
+
+    # The npm meta package declares optionalDependencies on platform-specific
+    # native binary packages (@testmuai/kane-cli-{darwin-arm64,linux-x64,win-x64}).
+    # npm installs only the matching one for the current platform — the others
+    # are silently skipped and never present, so no cleanup is required here.
   end
 
   def caveats
