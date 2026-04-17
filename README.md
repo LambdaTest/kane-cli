@@ -10,8 +10,7 @@ Browser automation CLI for [KaneAI](https://www.lambdatest.com/kane-ai) — AI-p
 
 ```bash
 npm install -g @testmuai/kane-cli
-kane-cli login
-kane-cli run
+kane-cli
 ```
 
 ## Installation
