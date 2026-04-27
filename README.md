@@ -50,9 +50,16 @@ This is what `kane-cli` is for: any time you (or your coding agent) need a real 
 
 ### npx (recommended for one-off use, CI, or trying it out)
 
-Requires Node 18+. No global install — pulls the package on demand. Pin a version with `@<version>` for reproducibility:
+Requires Node 18+. No global install — pulls the package on demand. Pin a version with `@<version>` for reproducibility. **Cold start downloads Chrome (~150 MB, one-time); subsequent invocations reuse the cache.**
 
 ```bash
+# Verify install (zero-config)
+npx @testmuai/kane-cli@latest --version
+
+# Authenticate first (interactive in a terminal; flag-based in CI)
+npx @testmuai/kane-cli@latest login
+
+# Run an objective
 npx @testmuai/kane-cli@latest run "Go to example.com and assert title contains 'Example'"
 ```
 
