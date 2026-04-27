@@ -48,7 +48,15 @@ This is what `kane-cli` is for: any time you (or your coding agent) need a real 
 
 ## Install
 
-### npm (recommended, requires Node 18+)
+### npx (recommended for one-off use, CI, or trying it out)
+
+Requires Node 18+. No global install — pulls the package on demand. Pin a version with `@<version>` for reproducibility:
+
+```bash
+npx @testmuai/kane-cli@latest run "Go to example.com and assert title contains 'Example'"
+```
+
+### npm (install once, run often)
 
 ```bash
 npm install -g @testmuai/kane-cli
@@ -67,6 +75,15 @@ curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh
 ```
 
 Pin a version: append `-s -- --version 0.2.6`.
+
+### About Chrome
+
+On first install, kane-cli downloads a known-good Chrome-for-Testing build (~150 MB) to `~/.cache/kane-cli/chrome`. Subsequent installs and `npx` invocations reuse the cached build.
+
+Skip the auto-download:
+
+- `KANE_CLI_SKIP_BROWSER_DOWNLOAD=1` — install kane-cli without Chrome (run `kane-cli doctor --install-browser` later).
+- `KANE_CLI_CHROME_PATH=/path/to/chrome` — point at an existing Chrome binary instead.
 
 ## First run (under 60 seconds)
 
