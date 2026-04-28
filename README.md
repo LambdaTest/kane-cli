@@ -74,7 +74,6 @@ kane-cli launches your locally installed Google Chrome (stable channel) via the 
 
 - **Homebrew** auto-installs Chrome via the `google-chrome` cask — nothing to do.
 - **`npm install -g` / `npx`**: install Chrome separately if not already present. On first `kane-cli run`, kane-cli verifies Chrome is reachable and produces a clean per-platform error with install instructions if not — re-run after installing Chrome.
-- **Custom path / non-standard install** — set `KANE_CLI_CHROME_PATH=/path/to/chrome`.
 - **Skip the runtime check** (CI / air-gapped) — set `KANE_CLI_SKIP_BROWSER_DOWNLOAD=1`. kane-cli will fall back to whatever `chrome` resolves on PATH.
 
 > Full install reference (platforms, updates, uninstall): [docs/user-guide/installation.md](docs/user-guide/installation.md).
