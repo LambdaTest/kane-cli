@@ -68,6 +68,14 @@ curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh
 
 Pin a version: append `-s -- --version 0.2.6`.
 
+### Chrome (required)
+
+kane-cli launches your locally installed Google Chrome (stable channel) via the DevTools Protocol. Chrome must be present at one of the standard system paths (`/Applications/Google Chrome.app/...` on macOS, `/usr/bin/google-chrome` on Linux, `C:\Program Files\Google\Chrome\Application\chrome.exe` on Windows).
+
+- **Homebrew** auto-installs Chrome via the `google-chrome` cask — nothing to do.
+- **`npm install -g` / `npx`**: install Chrome separately if not already present. On first `kane-cli run`, kane-cli verifies Chrome is reachable and produces a clean per-platform error with install instructions if not — re-run after installing Chrome.
+- **Skip the runtime check** (CI / air-gapped) — set `KANE_CLI_SKIP_BROWSER_DOWNLOAD=1`. kane-cli will fall back to whatever `chrome` resolves on PATH.
+
 > Full install reference (platforms, updates, uninstall): [docs/user-guide/installation.md](docs/user-guide/installation.md).
 
 ## First run (under 60 seconds)
@@ -156,27 +164,27 @@ TUI slash commands (`/run`, `/login`, `/logout`, `/whoami`, `/balance`, `/profil
 
 ### `kane-cli run` flags
 
-| Flag                          | Default                                  | Purpose                                                                  |
-| ----------------------------- | ---------------------------------------- | ------------------------------------------------------------------------ |
-| `--agent`                     | off                                      | Emit NDJSON to stdout. **Required for any scripted use.**                |
-| `--headless`                  | off                                      | Run Chrome with no visible window. Required in CI.                       |
-| `--max-steps <n>`             | `30`                                     | Cap on agent reasoning steps.                                            |
-| `--timeout <s>`               | none                                     | Hard kill the run after N seconds.                                       |
-| `--mode <name>`               | config value, otherwise `testing`        | `action` (strict) or `testing` (lenient) on auth walls / blocked pages.  |
-| `--env <name>`                | active profile's env                     | Environment (e.g. `prod`).                                               |
-| `--cdp-endpoint <url>`        | none                                     | Connect to an existing Chrome via the Chrome DevTools Protocol.          |
-| `--ws-endpoint <url>`         | none                                     | Connect to a Playwright WebSocket endpoint (e.g. TestmuAI `wss://`).     |
-| `--variables '<json>'`        | none                                     | Inline variables for `{{key}}` substitution in objectives.               |
-| `--variables-file <path>`     | none                                     | Load variables from a JSON file.                                         |
-| `--session-context <json>`    | none                                     | Prior runs context JSON.                                                 |
-| `--global-context <file>`     | `~/.testmuai/kaneai/global-memory.md`    | Override global agent context.                                           |
-| `--local-context <file>`      | `.testmuai/context.md` (cwd)             | Override project-local agent context.                                    |
-| `--username <user>`           | none                                     | Basic auth username (skips OAuth).                                       |
-| `--access-key <key>`          | none                                     | Basic auth access key (skips OAuth).                                     |
-| `--code-export`               | off                                      | Generate a code export of the run after upload.                          |
-| `--code-language <lang>`      | `python`                                 | Code-export language (only `python` supported today).                    |
-| `--skip-code-validation`      | on                                       | Skip post-codegen worker-side validation.                                |
-| `--no-skip-code-validation`   | off                                      | Force post-codegen worker-side validation.                               |
+| Flag                        | Default                               | Purpose                                                                 |
+| --------------------------- | ------------------------------------- | ----------------------------------------------------------------------- |
+| `--agent`                   | off                                   | Emit NDJSON to stdout. **Required for any scripted use.**               |
+| `--headless`                | off                                   | Run Chrome with no visible window. Required in CI.                      |
+| `--max-steps <n>`           | `30`                                  | Cap on agent reasoning steps.                                           |
+| `--timeout <s>`             | none                                  | Hard kill the run after N seconds.                                      |
+| `--mode <name>`             | config value, otherwise `testing`     | `action` (strict) or `testing` (lenient) on auth walls / blocked pages. |
+| `--env <name>`              | active profile's env                  | Environment (e.g. `prod`).                                              |
+| `--cdp-endpoint <url>`      | none                                  | Connect to an existing Chrome via the Chrome DevTools Protocol.         |
+| `--ws-endpoint <url>`       | none                                  | Connect to a Playwright WebSocket endpoint (e.g. TestmuAI `wss://`).    |
+| `--variables '<json>'`      | none                                  | Inline variables for `{{key}}` substitution in objectives.              |
+| `--variables-file <path>`   | none                                  | Load variables from a JSON file.                                        |
+| `--session-context <json>`  | none                                  | Prior runs context JSON.                                                |
+| `--global-context <file>`   | `~/.testmuai/kaneai/global-memory.md` | Override global agent context.                                          |
+| `--local-context <file>`    | `.testmuai/context.md` (cwd)          | Override project-local agent context.                                   |
+| `--username <user>`         | none                                  | Basic auth username (skips OAuth).                                      |
+| `--access-key <key>`        | none                                  | Basic auth access key (skips OAuth).                                    |
+| `--code-export`             | off                                   | Generate a code export of the run after upload.                         |
+| `--code-language <lang>`    | `python`                              | Code-export language (only `python` supported today).                   |
+| `--skip-code-validation`    | on                                    | Skip post-codegen worker-side validation.                               |
+| `--no-skip-code-validation` | off                                   | Force post-codegen worker-side validation.                              |
 
 ### Variables (parameterizing objectives)
 
@@ -230,22 +238,22 @@ These are **untyped** — they have no `type` field. Identify them by the presen
   "final_state": { "price": "$29.99", "product_name": "Wireless Headphones" },
   "context": { "memory": {}, "variables": {}, "pointer": "(passed) …" },
   "session_dir": "~/.testmuai/kaneai/sessions/<session-id>",
-  "run_dir":     "~/.testmuai/kaneai/sessions/<session-id>/runs/0",
-  "test_url":    "https://test-manager.lambdatest.com/projects/<id>/test-cases/<id>"
+  "run_dir": "~/.testmuai/kaneai/sessions/<session-id>/runs/0",
+  "test_url": "https://test-manager.lambdatest.com/projects/<id>/test-cases/<id>"
 }
 ```
 
-| Field         | Meaning                                                                   |
-| ------------- | ------------------------------------------------------------------------- |
-| `status`      | `"passed"` or `"failed"` — also reflected in the process exit code        |
-| `summary`     | What the agent did, in one or two sentences                               |
-| `one_liner`   | Short headline for display                                                |
-| `reason`      | Why the run terminated                                                    |
-| `credits`     | Credits consumed by the run (when reported)                               |
-| `final_state` | Map of every value extracted via `"store as"` objectives                  |
-| `test_url`    | Deep link to the run in the KaneAI test manager (if upload succeeded)     |
-| `session_dir` | Directory containing all session logs                                     |
-| `run_dir`     | Directory containing per-step JSON, screenshots, and the run summary      |
+| Field         | Meaning                                                               |
+| ------------- | --------------------------------------------------------------------- |
+| `status`      | `"passed"` or `"failed"` — also reflected in the process exit code    |
+| `summary`     | What the agent did, in one or two sentences                           |
+| `one_liner`   | Short headline for display                                            |
+| `reason`      | Why the run terminated                                                |
+| `credits`     | Credits consumed by the run (when reported)                           |
+| `final_state` | Map of every value extracted via `"store as"` objectives              |
+| `test_url`    | Deep link to the run in the KaneAI test manager (if upload succeeded) |
+| `session_dir` | Directory containing all session logs                                 |
+| `run_dir`     | Directory containing per-step JSON, screenshots, and the run summary  |
 
 ### Parsing pattern
 
@@ -261,12 +269,12 @@ for each line of stdout:
 
 ## Exit codes
 
-| Code | Meaning                                                  |
-| ---- | -------------------------------------------------------- |
-| `0`  | Passed                                                   |
-| `1`  | Failed (objective ran but did not pass)                  |
-| `2`  | Error (auth, setup, infrastructure — Chrome, network)    |
-| `3`  | Timeout or cancelled                                     |
+| Code | Meaning                                               |
+| ---- | ----------------------------------------------------- |
+| `0`  | Passed                                                |
+| `1`  | Failed (objective ran but did not pass)               |
+| `2`  | Error (auth, setup, infrastructure — Chrome, network) |
+| `3`  | Timeout or cancelled                                  |
 
 Use these in CI: `kane-cli run … --agent --headless` exits non-zero on any failure, which gates your pipeline naturally.
 
