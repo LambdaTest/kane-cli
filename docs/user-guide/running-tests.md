@@ -41,7 +41,7 @@ The bad version leaves "test" undefined and gives the agent no end state. The be
 
 ## Interactive TUI
 
-Launch the TUI by running `kane-cli` with no arguments. The TUI is the right surface when you are exploring objectives, debugging failures, or working through a multi-run flow that should share browser state.
+Launch the TUI by running `kane-cli --tui`. The TUI is the right surface when you are exploring objectives, debugging failures, or working through a multi-run flow that should share browser state.
 
 ### Boot and menu
 

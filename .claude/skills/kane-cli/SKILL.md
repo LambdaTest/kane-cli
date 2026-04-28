@@ -66,13 +66,10 @@ If this shows "not configured" or errors, run login:
 kane-cli login --username <user> --access-key <key>
 ```
 
-This creates the default profile with basic auth, auto-selects the KaneAI project, and marks setup complete. Credentials come from the user's LambdaTest dashboard (Settings → Keys).
+This creates the default profile with basic auth, auto-selects the KaneAI project, and marks setup complete. Credentials come from the user's TestmuAI dashboard (Settings → Keys).
 
-Optional flags:
-- `--profile <name>` — profile name (default: "default")
-- `--project-id <id>` — skip auto-project-fetch
-- `--folder-id <id>` — set folder directly
-- `--model <name>` — model (default: v16-alpha)
+Optional flag:
+- `--profile <name>` — profile name (default: last selected profile check using `config show`)
 
 ### Login (OAuth)
 
@@ -143,7 +140,7 @@ Variables parameterize objectives with reusable values and secrets. Use `{{key}}
 }
 ```
 
-`secret: true` masks the value in logs and pushes it to HyperExecute Secrets API.
+`secret: true` masks the value in logs and routes it to TestmuAI's secrets store instead of being synced as plain TMS variables.
 
 **Loading order** (later wins):
 1. `~/.testmuai/kaneai/variables/*.json` (global, alphabetical)
@@ -313,6 +310,7 @@ for each line of NDJSON:
   "one_liner": "Searched for laptop on Amazon and added to cart",
   "reason": "Objective completed",
   "duration": 45.2,
+  "credits": 12,
   "final_state": {
     "price": "$29.99",
     "product_name": "Wireless Headphones"
@@ -321,12 +319,6 @@ for each line of NDJSON:
     "memory": {},
     "variables": {},
     "pointer": "(passed) Searched for laptop and added first result to cart"
-  },
-  "token_usage": {
-    "reasoning_input": 12000,
-    "reasoning_output": 800,
-    "vision_input": 5000,
-    "vision_output": 200
   },
   "session_dir": "~/.testmuai/kaneai/sessions/a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "run_dir": "~/.testmuai/kaneai/sessions/a1b2c3d4-e5f6-7890-abcd-ef1234567890/runs/0",
@@ -339,10 +331,10 @@ Key `run_end` fields:
 - `summary` — what the agent did
 - `one_liner` — short summary for display
 - `reason` — why it stopped
+- `credits` — credits consumed by the run (when reported)
 - `final_state` — extracted values from "store as" objectives
 - `test_url` — link to KaneAI dashboard (if upload succeeded)
 - `session_dir` / `run_dir` — paths to log files
-- `token_usage` — token consumption breakdown
 
 ### Responding to `ask_user` (if stdin is a TTY)
 
@@ -450,37 +442,19 @@ When a run fails, diagnose before suggesting fixes.
 The `run_end` event provides `session_dir` and `run_dir` paths. Use those directly.
 
 ```
-{run_dir}/
-├── run.log                    # Text log for this run
-└── run-test/
-    ├── run_summary.json       # Overall result, step list, errors
-    ├── step_001.json          # Per-step detail
-    ├── step_002.json
-    ├── screenshots/
-    │   ├── step_001.png
-    │   └── step_002.png
-    ├── dag_diagram.md         # Cycle detection diagram
-    └── child-{id}/            # Child agent logs (same structure)
-```
-
-Session-level log:
-```
 {session_dir}/
 ├── session.json               # Session metadata, run list, upload status
-└── tui.log                    # Timeline: session start, run start/end, errors
+├── tui.log                    # Timeline: session start, run start/end, errors
+└── runs/{n}/
+    └── run-test/
+        └── actions.ndjson     # Step-by-step record of agent actions
 ```
 
 ### Debugging Flow
 
-1. **Read `run_summary.json`** → check `final_status`, `reason`, `errors[]`
-2. **Find the failing step** → scan `steps[]` for `"success": false`
-3. **Read that `step_NNN.json`** → check:
-   - `reasoning.response` — what the agent intended
-   - `dom_action` / `action` — what actually happened
-   - `vision` — what the agent saw
-   - `assertion` — checkpoint verdict (if assertion step)
-4. **View `screenshots/step_NNN.png`** — see what the page looked like
-5. **Check `tui.log`** — for session-level issues (Chrome launch, auth, upload)
+1. **Parse the `run_end` event** from stdout — it has `status`, `reason`, and `summary` plus the `session_dir` / `run_dir` paths.
+2. **Read `actions.ndjson`** in `{run_dir}/run-test/` — each line is one agent action with its intent and outcome.
+3. **Check `tui.log`** in `{session_dir}/` — for session-level issues (Chrome launch, auth, upload).
 
 ### Common Failure Patterns
 
@@ -584,7 +558,7 @@ kane-cli feedback --test-id <id> --feedback-type <positive|negative> --details "
 
 ```
 ~/.testmuai/kaneai/
-├── tui-config.json              # Persistent settings
+├── tui-config.json              # Persistent CLI settings
 ├── config.json                  # Shared auth configuration
 ├── global-memory.md             # Global agent context
 ├── chrome-profile/              # Default Chrome user profile
@@ -593,10 +567,12 @@ kane-cli feedback --test-id <id> --feedback-type <positive|negative> --details "
 │       └── credentials
 ├── sessions/                    # Session history
 │   └── {session-id}/
-│       ├── session.json
-│       ├── tui.log
-│       └── runs/{n}/
-│           └── run-test/        # Step logs + screenshots
+│       ├── session.json         # Metadata, run list, upload status
+│       ├── tui.log              # Session event log
+│       ├── runs/{n}/
+│       │   └── run-test/
+│       │       └── actions.ndjson   # Step-by-step record of agent actions
+│       └── code-export/         # (when --code-export) generated code files
 └── variables/                   # Global variable files
     └── *.json
 

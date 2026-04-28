@@ -20,10 +20,10 @@ If you prefer username and access key, or need to script logins on a CI runner, 
 
 ## 3. Open the TUI
 
-Run `kane-cli` with no arguments:
+Run `kane-cli --tui`:
 
 ```bash
-kane-cli
+kane-cli --tui
 ```
 
 You see a short boot animation: a small VR-helmet sprite renders on the left and the words `KANE CLI` build up next to it in block letters. A grey footer below confirms which profile you are logged in as. After the animation, the main view drops you at a chat prompt with a status bar at the bottom showing your model, session ID, environment, and run count.

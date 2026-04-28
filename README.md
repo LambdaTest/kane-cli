@@ -99,7 +99,7 @@ kane-cli run "<objective>" --agent
 
 `--agent` switches stdout to NDJSON (one JSON event per line). UI rendering goes to stderr and stays out of your way.
 
-> Running `kane-cli` with **no arguments** opens an interactive TUI for authoring and exploring objectives. See [docs/user-guide/getting-started.md](docs/user-guide/getting-started.md) and [docs/user-guide/running-tests.md](docs/user-guide/running-tests.md) for the full TUI walk-through and slash commands.
+> Running `kane-cli --tui` opens an interactive TUI for authoring and exploring objectives. See [docs/user-guide/getting-started.md](docs/user-guide/getting-started.md) and [docs/user-guide/running-tests.md](docs/user-guide/running-tests.md) for the full TUI walk-through and slash commands.
 
 ---
 
@@ -132,7 +132,7 @@ This installs the skill for Claude Code, Codex CLI, and Gemini CLI in one comman
 ## Commands
 
 ```bash
-kane-cli                               # Open the interactive TUI (no args).
+kane-cli --tui                         # Open the interactive TUI.
 kane-cli run "<objective>" [flags]     # Run a browser objective (headless/CLI mode).
 
 # Authentication
@@ -234,14 +234,9 @@ These are **untyped** — they have no `type` field. Identify them by the presen
   "one_liner": "Searched for laptop on Amazon and added to cart",
   "reason": "Objective completed",
   "duration": 45.2,
+  "credits": 12,
   "final_state": { "price": "$29.99", "product_name": "Wireless Headphones" },
   "context": { "memory": {}, "variables": {}, "pointer": "(passed) …" },
-  "token_usage": {
-    "reasoning_input": 12000,
-    "reasoning_output": 800,
-    "vision_input": 5000,
-    "vision_output": 200
-  },
   "session_dir": "~/.testmuai/kaneai/sessions/<session-id>",
   "run_dir": "~/.testmuai/kaneai/sessions/<session-id>/runs/0",
   "test_url": "https://test-manager.lambdatest.com/projects/<id>/test-cases/<id>"
@@ -254,6 +249,7 @@ These are **untyped** — they have no `type` field. Identify them by the presen
 | `summary`     | What the agent did, in one or two sentences                           |
 | `one_liner`   | Short headline for display                                            |
 | `reason`      | Why the run terminated                                                |
+| `credits`     | Credits consumed by the run (when reported)                           |
 | `final_state` | Map of every value extracted via `"store as"` objectives              |
 | `test_url`    | Deep link to the run in the KaneAI test manager (if upload succeeded) |
 | `session_dir` | Directory containing all session logs                                 |
