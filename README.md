@@ -68,6 +68,8 @@ curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh
 
 Pin a version: append `-s -- --version 0.2.6`.
 
+> Full install reference (platforms, updates, uninstall): [docs/user-guide/installation.md](docs/user-guide/installation.md).
+
 ## First run (under 60 seconds)
 
 ```bash
@@ -88,6 +90,8 @@ kane-cli run "<objective>" --agent
 ```
 
 `--agent` switches stdout to NDJSON (one JSON event per line). UI rendering goes to stderr and stays out of your way.
+
+> Running `kane-cli` with **no arguments** opens an interactive TUI for authoring and exploring objectives. See [docs/user-guide/getting-started.md](docs/user-guide/getting-started.md) and [docs/user-guide/running-tests.md](docs/user-guide/running-tests.md) for the full TUI walk-through and slash commands.
 
 ---
 
@@ -120,32 +124,59 @@ This installs the skill for Claude Code, Codex CLI, and Gemini CLI in one comman
 ## Commands
 
 ```bash
-kane-cli login [--username <u> --access-key <k>] [--oauth] [--profile <name>]
-                                       # Authenticate. Interactive if no flags and TTY.
-kane-cli run "<objective>" [flags]     # Run a browser objective.
-kane-cli whoami                        # Show current auth state and profile.
+kane-cli                               # Open the interactive TUI (no args).
+kane-cli run "<objective>" [flags]     # Run a browser objective (headless/CLI mode).
+
+# Authentication
+kane-cli login [--oauth] [--username <u> --access-key <k>] [--profile <name>]
+                                       # Authenticate. Interactive wizard if no flags and TTY.
+kane-cli logout                        # Sign out of the active profile (revokes OAuth tokens).
+kane-cli whoami [--profile <name>]     # Show auth state, environment, token validity.
+kane-cli profiles list                 # List saved profiles, marking the active one.
+kane-cli profiles switch <name>        # Set the active profile.
+kane-cli profiles delete <name>        # Remove a saved profile.
+kane-cli balance [--profile <name>]    # Show current credit balance.
+
+# Configuration
 kane-cli config show                   # Show all current configuration.
 kane-cli config set-window <W>x<H>     # Browser window size (e.g. 1920x1080).
-kane-cli config project <id>           # Default project for run uploads.
-kane-cli config folder <id>            # Default folder for run uploads.
-kane-cli config chrome-profile <path>  # Chrome user-profile path.
+kane-cli config set-mode <action|testing>
+                                       # Agent behaviour on auth walls / blocked pages.
+kane-cli config project [<id>]         # Default project for uploads (interactive picker if no id).
+kane-cli config folder [<id>]          # Default folder for uploads (interactive picker if no id).
+kane-cli config chrome-profile [<path>]
+                                       # Chrome user-profile (interactive picker if no path).
+
+# Other
 kane-cli feedback --test-id <id> --feedback-type <positive|negative> --details "…"
 kane-cli --version                     # Print version.
 ```
 
+TUI slash commands (`/run`, `/login`, `/logout`, `/whoami`, `/balance`, `/profiles`, `/config`, `/new`, `/summary`, `/cancel`, `/help`, `/clear`, `/exit`) are listed in [docs/user-guide/running-tests.md](docs/user-guide/running-tests.md#slash-commands).
+
 ### `kane-cli run` flags
 
-| Flag                          | Default                                  | Purpose                                                      |
-| ----------------------------- | ---------------------------------------- | ------------------------------------------------------------ |
-| `--agent`                     | off                                      | Emit NDJSON to stdout. **Required for any scripted use.**    |
-| `--headless`                  | off                                      | Run Chrome with no visible window. Required in CI.           |
-| `--max-steps <n>`             | `30`                                     | Cap on agent reasoning steps.                                |
-| `--timeout <s>`               | none                                     | Hard kill the run after N seconds.                           |
-| `--variables '<json>'`        | none                                     | Inline variables for `{{key}}` substitution in objectives.   |
-| `--variables-file <path>`     | none                                     | Load variables from a JSON file.                             |
-| `--global-context <file>`     | `~/.testmuai/kaneai/global-memory.md`    | Override global agent context.                               |
-| `--local-context <file>`      | `.testmuai/context.md` (cwd)             | Override project-local agent context.                        |
-| `--code-export`               | off                                      | Generate a code export of the run after upload.              |
+| Flag                          | Default                                  | Purpose                                                                  |
+| ----------------------------- | ---------------------------------------- | ------------------------------------------------------------------------ |
+| `--agent`                     | off                                      | Emit NDJSON to stdout. **Required for any scripted use.**                |
+| `--headless`                  | off                                      | Run Chrome with no visible window. Required in CI.                       |
+| `--max-steps <n>`             | `30`                                     | Cap on agent reasoning steps.                                            |
+| `--timeout <s>`               | none                                     | Hard kill the run after N seconds.                                       |
+| `--mode <name>`               | config value, otherwise `testing`        | `action` (strict) or `testing` (lenient) on auth walls / blocked pages.  |
+| `--env <name>`                | active profile's env                     | Environment (e.g. `prod`).                                               |
+| `--cdp-endpoint <url>`        | none                                     | Connect to an existing Chrome via the Chrome DevTools Protocol.          |
+| `--ws-endpoint <url>`         | none                                     | Connect to a Playwright WebSocket endpoint (e.g. TestmuAI `wss://`).     |
+| `--variables '<json>'`        | none                                     | Inline variables for `{{key}}` substitution in objectives.               |
+| `--variables-file <path>`     | none                                     | Load variables from a JSON file.                                         |
+| `--session-context <json>`    | none                                     | Prior runs context JSON.                                                 |
+| `--global-context <file>`     | `~/.testmuai/kaneai/global-memory.md`    | Override global agent context.                                           |
+| `--local-context <file>`      | `.testmuai/context.md` (cwd)             | Override project-local agent context.                                    |
+| `--username <user>`           | none                                     | Basic auth username (skips OAuth).                                       |
+| `--access-key <key>`          | none                                     | Basic auth access key (skips OAuth).                                     |
+| `--code-export`               | off                                      | Generate a code export of the run after upload.                          |
+| `--code-language <lang>`      | `python`                                 | Code-export language (only `python` supported today).                    |
+| `--skip-code-validation`      | on                                       | Skip post-codegen worker-side validation.                                |
+| `--no-skip-code-validation`   | off                                      | Force post-codegen worker-side validation.                               |
 
 ### Variables (parameterizing objectives)
 
@@ -157,6 +188,8 @@ kane-cli run "Go to https://app.example.com, login as {{username}} with password
 ```
 
 Variable load order (later wins): global files in `~/.testmuai/kaneai/variables/*.json` → project files in `./.testmuai/variables/*.json` → `--variables-file` → inline `--variables`.
+
+> Full variables, secrets, and agent-context reference: [docs/user-guide/variables-and-context.md](docs/user-guide/variables-and-context.md).
 
 ---
 
@@ -274,6 +307,8 @@ kane-cli run "<objective>" --agent --headless --timeout 120
 
 Run `kane-cli login --help` for the full set of authentication flags supported by your installed version.
 
+> CI recipes for GitHub Actions, GitLab, Jenkins, and Docker: [docs/user-guide/cicd.md](docs/user-guide/cicd.md). Full settings reference (`tui-config.json`, modes, Chrome profiles, code export): [docs/user-guide/configuration.md](docs/user-guide/configuration.md).
+
 ---
 
 ## Troubleshooting
@@ -321,7 +356,7 @@ If it reports "not configured", run `kane-cli login` (interactive in a TTY, or p
 
 Stored values appear in the `run_end` event's `final_state` field.
 
-For a longer list of failure patterns and a full debugging flow (reading per-step JSON, inspecting screenshots, diagnosing Chrome issues), see the [agent guide](https://testmuai.com/kane-cli/agents.md).
+For a longer list of failure patterns and a full debugging flow (reading per-step JSON, inspecting screenshots, diagnosing Chrome issues), see the [agent guide](https://testmuai.com/kane-cli/agents.md) or [docs/user-guide/troubleshooting.md](docs/user-guide/troubleshooting.md).
 
 ---
 
@@ -349,6 +384,10 @@ curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh
 
 ## Documentation, support, contributing
 
+- **User guide** (humans using the CLI/TUI):
+  - [Installation](docs/user-guide/installation.md) · [Getting started](docs/user-guide/getting-started.md) · [Authentication](docs/user-guide/authentication.md)
+  - [Running tests](docs/user-guide/running-tests.md) · [Configuration](docs/user-guide/configuration.md) · [Variables & context](docs/user-guide/variables-and-context.md)
+  - [TMS integration](docs/user-guide/tms-integration.md) · [CI/CD recipes](docs/user-guide/cicd.md) · [Troubleshooting](docs/user-guide/troubleshooting.md)
 - **Agent setup guide** (deep reference for AI coding agents): [testmuai.com/kane-cli/agents.md](https://testmuai.com/kane-cli/agents.md)
 - **Issues / bug reports:** [GitHub Issues](https://github.com/LambdaTest/kane-cli/issues/new/choose)
 - **Security:** see [SECURITY.md](SECURITY.md)
