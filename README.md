@@ -50,7 +50,7 @@ This is what `kane-cli` is for: any time you (or your coding agent) need a real 
 
 ### npx (recommended for one-off use, CI, or trying it out)
 
-Requires Node 18+. No global install — pulls the package on demand. Pin a version with `@<version>` for reproducibility. **Cold start downloads Chrome (~150 MB, one-time); subsequent invocations reuse the cache.**
+Requires Node 18+ and Google Chrome. No global install — pulls the package on demand. Pin a version with `@<version>` for reproducibility.
 
 ```bash
 # Verify install (zero-config)
@@ -83,14 +83,15 @@ curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh
 
 Pin a version: append `-s -- --version 0.2.6`.
 
-### About Chrome
+### Chrome (required)
 
-On first install, kane-cli downloads a known-good Chrome-for-Testing build (~150 MB) to `~/.cache/kane-cli/chrome`. Subsequent installs and `npx` invocations reuse the cached build.
+kane-cli launches your locally installed Google Chrome (stable channel) via the DevTools Protocol. Chrome must be present at one of the standard system paths (`/Applications/Google Chrome.app/...` on macOS, `/usr/bin/google-chrome` on Linux, `C:\Program Files\Google\Chrome\Application\chrome.exe` on Windows).
 
-Skip the auto-download:
-
-- `KANE_CLI_SKIP_BROWSER_DOWNLOAD=1` — install kane-cli without Chrome (run `kane-cli doctor --install-browser` later).
-- `KANE_CLI_CHROME_PATH=/path/to/chrome` — point at an existing Chrome binary instead.
+- **Homebrew install** auto-installs Chrome via the `google-chrome` cask — nothing to do.
+- **macOS via npm/npx** with no Chrome installed: the postinstall attempts `brew install --cask google-chrome` if `brew` is available; otherwise prints install instructions.
+- **Linux/Windows via npm/npx** with no Chrome installed: the postinstall prints platform-specific install instructions and exits without failing.
+- **Custom path / non-standard install** — set `KANE_CLI_CHROME_PATH=/path/to/chrome`.
+- **Skip the postinstall check** (CI / air-gapped) — set `KANE_CLI_SKIP_BROWSER_DOWNLOAD=1`.
 
 ## First run (under 60 seconds)
 
