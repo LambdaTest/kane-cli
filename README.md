@@ -91,7 +91,7 @@ kane-cli run "<objective>" --agent
 
 `--agent` switches stdout to NDJSON (one JSON event per line). UI rendering goes to stderr and stays out of your way.
 
-> Running `kane-cli` with **no arguments** opens an interactive TUI for authoring and exploring objectives. See [docs/user-guide/getting-started.md](docs/user-guide/getting-started.md) and [docs/user-guide/running-tests.md](docs/user-guide/running-tests.md) for the full TUI walk-through and slash commands.
+> Running `kane-cli --tui` opens an interactive TUI for authoring and exploring objectives. See [docs/user-guide/getting-started.md](docs/user-guide/getting-started.md) and [docs/user-guide/running-tests.md](docs/user-guide/running-tests.md) for the full TUI walk-through and slash commands.
 
 ---
 
@@ -124,7 +124,7 @@ This installs the skill for Claude Code, Codex CLI, and Gemini CLI in one comman
 ## Commands
 
 ```bash
-kane-cli                               # Open the interactive TUI (no args).
+kane-cli --tui                         # Open the interactive TUI.
 kane-cli run "<objective>" [flags]     # Run a browser objective (headless/CLI mode).
 
 # Authentication
