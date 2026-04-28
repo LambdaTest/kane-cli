@@ -87,11 +87,10 @@ Pin a version: append `-s -- --version 0.2.6`.
 
 kane-cli launches your locally installed Google Chrome (stable channel) via the DevTools Protocol. Chrome must be present at one of the standard system paths (`/Applications/Google Chrome.app/...` on macOS, `/usr/bin/google-chrome` on Linux, `C:\Program Files\Google\Chrome\Application\chrome.exe` on Windows).
 
-- **Homebrew install** auto-installs Chrome via the `google-chrome` cask — nothing to do.
-- **macOS via npm/npx** with no Chrome installed: the postinstall attempts `brew install --cask google-chrome` if `brew` is available; otherwise prints install instructions.
-- **Linux/Windows via npm/npx** with no Chrome installed: the postinstall prints platform-specific install instructions and exits without failing.
+- **Homebrew** auto-installs Chrome via the `google-chrome` cask — nothing to do.
+- **`npm install -g` / `npx`**: install Chrome separately if not already present. On first `kane-cli run`, kane-cli verifies Chrome is reachable and produces a clean per-platform error with install instructions if not — re-run after installing Chrome.
 - **Custom path / non-standard install** — set `KANE_CLI_CHROME_PATH=/path/to/chrome`.
-- **Skip the postinstall check** (CI / air-gapped) — set `KANE_CLI_SKIP_BROWSER_DOWNLOAD=1`.
+- **Skip the runtime check** (CI / air-gapped) — set `KANE_CLI_SKIP_BROWSER_DOWNLOAD=1`. kane-cli will fall back to whatever `chrome` resolves on PATH.
 
 ## First run (under 60 seconds)
 
