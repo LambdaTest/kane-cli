@@ -388,16 +388,19 @@ async function applyTriageLabels({ token, repo, issueNumber, t, currentLabels, f
 }
 
 async function applyMarkerLabel({ token, repo, issueNumber, currentLabels, marker }) {
-  // marker is 'triage-failed' or 'needs-info'. Add it; remove the other one
-  // and any priority/* / area/* the bot might have applied previously.
-  for (const n of currentLabels) {
-    if (n === marker) continue;
-    if (isManagedLabel(n)) {
-      try { await removeLabel({ token, repo, issueNumber, name: n }); }
-      catch (err) {
-        if (!(err instanceof GhError && err.status === 404)) {
-          console.warn(`::warning::DELETE label ${n} on #${issueNumber} failed: ${err.message}`);
-        }
+  // marker is 'triage-failed' or 'needs-info'. Toggle ONLY the two flag
+  // labels — never touch priority/* or area/* here. A failure or
+  // needs-info pass on an already-triaged issue must not erase a
+  // maintainer's classification (see codex adversarial review,
+  // 2026-04-30): a reporter edit that strips the body would otherwise
+  // delete a maintainer-corrected `priority/*` on the way to applying
+  // `needs-info`.
+  const otherMarker = marker === 'triage-failed' ? 'needs-info' : 'triage-failed';
+  if (currentLabels.includes(otherMarker)) {
+    try { await removeLabel({ token, repo, issueNumber, name: otherMarker }); }
+    catch (err) {
+      if (!(err instanceof GhError && err.status === 404)) {
+        console.warn(`::warning::DELETE label ${otherMarker} on #${issueNumber} failed: ${err.message}`);
       }
     }
   }
