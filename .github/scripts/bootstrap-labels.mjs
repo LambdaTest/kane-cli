@@ -1,61 +1,62 @@
 #!/usr/bin/env node
-// Idempotently create or update the labels defined in .github/scripts/labels.json.
-// Existing labels with the same name get their color/description patched.
+// Idempotently create or update the labels defined in labels.json. Existing
+// labels with the same name get color/description patched.
 
 import { readFile } from 'node:fs/promises';
+import { gh, GhError } from './lib.mjs';
 
 const { GITHUB_TOKEN, REPO } = process.env;
 if (!GITHUB_TOKEN || !REPO) {
-  console.error('Missing GITHUB_TOKEN or REPO env.');
+  console.error('::error::Missing GITHUB_TOKEN or REPO env.');
   process.exit(1);
 }
 
-async function gh(path, init = {}) {
-  const res = await fetch(`https://api.github.com${path}`, {
-    ...init,
-    headers: {
-      accept: 'application/vnd.github+json',
-      authorization: `Bearer ${GITHUB_TOKEN}`,
-      'x-github-api-version': '2022-11-28',
-      'content-type': 'application/json',
-      ...(init.headers ?? {}),
-    },
-  });
-  return { status: res.status, body: res.status === 204 ? null : await res.json() };
+// Fail fast on a typo in REPO instead of getting confusing per-label 404s.
+try {
+  await gh({ token: GITHUB_TOKEN, path: `/repos/${REPO}` });
+} catch (err) {
+  console.error(`::error::Repo ${REPO} not accessible: ${err.message}`);
+  process.exit(1);
 }
 
 const labels = JSON.parse(await readFile(new URL('./labels.json', import.meta.url), 'utf8'));
+const result = { created: [], updated: [], failed: [] };
 
 for (const label of labels) {
-  const existing = await gh(`/repos/${REPO}/labels/${encodeURIComponent(label.name)}`);
-  if (existing.status === 200) {
-    const patch = await gh(`/repos/${REPO}/labels/${encodeURIComponent(label.name)}`, {
-      method: 'PATCH',
-      body: JSON.stringify({
-        new_name: label.name,
-        color: label.color,
-        description: label.description,
-      }),
+  try {
+    const existing = await gh({
+      token: GITHUB_TOKEN,
+      path: `/repos/${REPO}/labels/${encodeURIComponent(label.name)}`,
+      allowedStatuses: [200, 404],
     });
-    if (patch.status >= 300) {
-      console.error(`PATCH ${label.name} -> ${patch.status}: ${JSON.stringify(patch.body)}`);
-      process.exitCode = 1;
-    } else {
+    if (existing.status === 200) {
+      await gh({
+        token: GITHUB_TOKEN,
+        path: `/repos/${REPO}/labels/${encodeURIComponent(label.name)}`,
+        init: {
+          method: 'PATCH',
+          body: JSON.stringify({ new_name: label.name, color: label.color, description: label.description }),
+        },
+      });
+      result.updated.push(label.name);
       console.log(`updated: ${label.name}`);
-    }
-  } else if (existing.status === 404) {
-    const created = await gh(`/repos/${REPO}/labels`, {
-      method: 'POST',
-      body: JSON.stringify(label),
-    });
-    if (created.status >= 300) {
-      console.error(`POST ${label.name} -> ${created.status}: ${JSON.stringify(created.body)}`);
-      process.exitCode = 1;
     } else {
+      await gh({
+        token: GITHUB_TOKEN,
+        path: `/repos/${REPO}/labels`,
+        init: { method: 'POST', body: JSON.stringify(label) },
+      });
+      result.created.push(label.name);
       console.log(`created: ${label.name}`);
     }
-  } else {
-    console.error(`GET ${label.name} -> ${existing.status}: ${JSON.stringify(existing.body)}`);
-    process.exitCode = 1;
+  } catch (err) {
+    result.failed.push({ name: label.name, error: err instanceof GhError ? `${err.status} ${err.message}` : String(err) });
+    console.error(`::error::failed ${label.name}: ${err.message}`);
   }
+}
+
+console.log(`\nSummary: ${result.created.length} created, ${result.updated.length} updated, ${result.failed.length} failed`);
+if (result.failed.length) {
+  console.error('Failed labels:', JSON.stringify(result.failed, null, 2));
+  process.exit(1);
 }

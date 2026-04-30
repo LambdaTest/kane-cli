@@ -58,5 +58,15 @@
     "name": "no-triage",
     "color": "ededed",
     "description": "Skip the AI triage workflow on this issue"
+  },
+  {
+    "name": "triage-failed",
+    "color": "e99695",
+    "description": "AI triage could not classify this issue (model returned invalid schema); needs human review"
+  },
+  {
+    "name": "needs-info",
+    "color": "fef2c0",
+    "description": "Issue has too little detail to triage automatically; reporter, please add repro steps"
   }
 ]
