@@ -30,6 +30,24 @@ Maintainers may relabel issues, edit the comment, or delete it at any time.
 3. Run the **Bootstrap triage labels** workflow once
    (`Actions → Bootstrap triage labels → Run workflow`) to create the
    `priority/*`, `area/*`, and `no-triage` labels.
+4. (Optional) Run **AI Issue Triage (Backfill)** once to triage every
+   existing open issue. The per-issue workflow only fires on
+   `opened`/`reopened`/`edited`, so issues opened before this workflow
+   was added need this one-shot backfill.
+
+## Backfilling existing issues
+
+`Actions → AI Issue Triage (Backfill) → Run workflow` accepts:
+
+- `state` — `open` (default), `closed`, or `all`.
+- `only_unlabeled` — when `true` (default), skips issues that already
+  have a `priority/*` label. Set to `false` to force re-triage.
+- `limit` — max issues to process per run (1–500, default 100).
+- `dry_run` — when `true`, prints classifications to the workflow log
+  without commenting or labeling. Useful for previewing.
+
+Issues labeled `no-triage` are always skipped. The backfill processes
+issues sequentially and prints a summary line at the end.
 
 ## Opt-out
 
