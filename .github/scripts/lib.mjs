@@ -21,7 +21,11 @@
 import crypto from 'node:crypto';
 
 const MARKER = '<!-- ai-triage-bot:v1 -->';
-const APPLIED_MARKER_RE = /<!-- ai-triage-applied:\s*([^>]*?)\s*-->/;
+// Anchored to the start of the comment body so a future template reorder
+// — or a model-emitted HTML comment that survived sanitisation — cannot
+// take precedence over the genuine marker. Tolerant of either \n or
+// \r\n line endings in case GitHub ever changes its normalisation.
+const APPLIED_MARKER_RE = /^<!-- ai-triage-bot:v1 -->\r?\n<!-- ai-triage-applied:\s*([^>]*?)\s*-->/;
 const BOT_LOGIN = 'github-actions[bot]';
 
 export const DEFAULT_MODEL = 'claude-haiku-4-5-20251001';
@@ -95,6 +99,18 @@ export class AnthropicError extends Error {
   }
 }
 
+// Issue was deleted between event delivery and label mutation. We catch
+// this in triageIssue and exit cleanly rather than spraying writes at a
+// dead resource.
+export class IssueGoneError extends Error {
+  constructor(issueNumber, status) {
+    super(`Issue #${issueNumber} no longer exists (HTTP ${status}).`);
+    this.name = 'IssueGoneError';
+    this.issueNumber = issueNumber;
+    this.status = status;
+  }
+}
+
 // --------------------------------------------------------------- safe log
 
 // Wrap untrusted text printed to stdout so the GitHub Actions runner cannot
@@ -145,9 +161,6 @@ async function callClaude({ apiKey, model, issue, retried = false }) {
 
   if (!res.ok) {
     const text = await res.text().catch(() => '');
-    if (res.status === 401 || res.status === 403) {
-      throw new AnthropicError(res.status, text, true);
-    }
     if ((res.status === 429 || res.status === 529) && !retried) {
       const retryAfter = Number(res.headers.get('retry-after') ?? 5);
       const waitMs = Math.min(60_000, Math.max(1000, retryAfter * 1000));
@@ -155,7 +168,12 @@ async function callClaude({ apiKey, model, issue, retried = false }) {
       await new Promise((r) => setTimeout(r, waitMs));
       return callClaude({ apiKey, model, issue, retried: true });
     }
-    throw new AnthropicError(res.status, text, res.status === 401 || res.status === 403);
+    // Treat any 4xx other than 429 as fatal: 401/403 (auth), 404
+    // (model_not_found from a typo'd ANTHROPIC_TRIAGE_MODEL), 400
+    // (malformed request) — none of these self-heal by retrying.
+    // 5xx other than 529 stay non-fatal (transient).
+    const fatal = res.status >= 400 && res.status < 500 && res.status !== 429;
+    throw new AnthropicError(res.status, text, fatal);
   }
 
   const data = await res.json();
@@ -198,27 +216,45 @@ function findBalancedJson(s) {
 
 // ------------------------------------------------------ sanitize
 
+// Strip HTML comments so a model-emitted `<!-- ai-triage-applied: ... -->`
+// inside the RCA / summary / next_steps cannot win the marker regex on
+// the next pass. Defence-in-depth: APPLIED_MARKER_RE is also anchored
+// to the start of the comment body.
+const stripHtmlComments = (s) => String(s ?? '').replace(/<!--[\s\S]*?-->/g, '');
+
 function validate(raw) {
   const errors = [];
   if (!PRIORITIES.includes(raw?.priority)) errors.push(`priority=${JSON.stringify(raw?.priority)}`);
   if (!TYPES.includes(raw?.type)) errors.push(`type=${JSON.stringify(raw?.type)}`);
   const conf = raw?.confidence;
   if (typeof conf !== 'number' || !(conf >= 0 && conf <= 1)) errors.push(`confidence=${JSON.stringify(conf)}`);
-  if (!Array.isArray(raw?.areas)) errors.push(`areas=${JSON.stringify(raw?.areas)}`);
+  // Require 1-3 areas, all in the closed enum. An empty/all-invalid
+  // areas array means the model didn't actually classify the issue;
+  // failing loud here beats silently emitting `priority/Pn` with no
+  // routing label.
+  if (
+    !Array.isArray(raw?.areas) ||
+    raw.areas.length < 1 ||
+    raw.areas.length > 3 ||
+    !raw.areas.every((a) => AREAS.includes(a))
+  ) {
+    errors.push(`areas=${JSON.stringify(raw?.areas)}`);
+  }
   if (errors.length) {
     throw new SchemaError(`Model returned invalid schema: ${errors.join(', ')}`, raw);
   }
-  const areas = [...new Set(raw.areas.filter((a) => AREAS.includes(a)))].slice(0, 3);
+  const areas = [...new Set(raw.areas)].slice(0, 3);
   // Strip leading markdown sigils that could break out of list rendering.
-  const cleanStep = (s) => String(s ?? '').replace(/^[\s>#|-]+/, '').slice(0, 300);
+  const cleanStep = (s) =>
+    stripHtmlComments(s).replace(/^[\s>#|-]+/, '').slice(0, 300);
   const next_steps = Array.isArray(raw.next_steps) ? raw.next_steps.map(cleanStep).filter(Boolean).slice(0, 6) : [];
   return {
     priority: raw.priority,
     areas,
     type: raw.type,
     confidence: conf,
-    summary: String(raw.summary ?? '').slice(0, 500),
-    rca: String(raw.rca ?? '').slice(0, 1500),
+    summary: stripHtmlComments(raw.summary).slice(0, 500),
+    rca: stripHtmlComments(raw.rca).slice(0, 1500),
     next_steps,
   };
 }
@@ -334,11 +370,6 @@ function parseAppliedLabels(body) {
   const m = body.match(APPLIED_MARKER_RE);
   if (!m) return new Set();
   return new Set(m[1].split(',').map((s) => s.trim()).filter(Boolean));
-}
-
-async function fetchCurrentLabels({ token, repo, issueNumber }) {
-  const issue = await gh({ token, path: `/repos/${repo}/issues/${issueNumber}` });
-  return (issue.labels || []).map((l) => l.name);
 }
 
 // --------------------------------------------------- comment lookup
@@ -483,12 +514,17 @@ async function applyMarkerLabel({ token, repo, issueNumber, currentLabels, marke
 
 async function postOrUpdateComment({ token, repo, issueNumber, body, existing }) {
   if (existing) {
-    await gh({
+    // PATCH may 404 if a maintainer just deleted the bot's comment;
+    // fall through to POST in that case so labels and comment stay
+    // consistent.
+    const res = await gh({
       token,
       path: `/repos/${repo}/issues/comments/${existing.id}`,
       init: { method: 'PATCH', body: JSON.stringify({ body }) },
+      allowedStatuses: [200, 404],
     });
-    return 'updated';
+    if (res.status === 200) return 'updated';
+    console.warn(`::warning::Existing bot comment ${existing.id} was deleted; creating a fresh one.`);
   }
   await gh({
     token,
@@ -501,11 +537,32 @@ async function postOrUpdateComment({ token, repo, issueNumber, body, existing })
 // Refresh issue state right before mutation: latest labels and the
 // existing bot comment (which carries the bot's previously-applied set).
 // Closes the TOCTOU window between event delivery and label write.
+//
+// Uses Promise.allSettled (not Promise.all) so we can attribute failures
+// to the specific arm and avoid losing context if one read 404s while the
+// other 200s. Issue-deleted (404/410) is surfaced as IssueGoneError so
+// the caller can exit cleanly without spraying writes at a dead resource.
 async function loadFreshState({ token, repo, issueNumber }) {
-  const [freshLabels, existing] = await Promise.all([
-    fetchCurrentLabels({ token, repo, issueNumber }),
+  const [issueRes, commentRes] = await Promise.allSettled([
+    gh({
+      token,
+      path: `/repos/${repo}/issues/${issueNumber}`,
+      allowedStatuses: [200, 404, 410],
+    }),
     findExistingComment({ token, repo, issueNumber }),
   ]);
+  if (issueRes.status === 'rejected') {
+    throw new Error(`loadFreshState: GET issue #${issueNumber} failed: ${issueRes.reason.message}`, { cause: issueRes.reason });
+  }
+  if (commentRes.status === 'rejected') {
+    throw new Error(`loadFreshState: list comments for #${issueNumber} failed: ${commentRes.reason.message}`, { cause: commentRes.reason });
+  }
+  const issueResult = issueRes.value;
+  if (issueResult.status === 404 || issueResult.status === 410) {
+    throw new IssueGoneError(issueNumber, issueResult.status);
+  }
+  const freshLabels = (issueResult.body?.labels || []).map((l) => l.name);
+  const existing = commentRes.value;
   const botPreviouslyApplied = parseAppliedLabels(existing?.body);
   return { freshLabels, existing, botPreviouslyApplied };
 }
@@ -534,6 +591,34 @@ async function loadFreshState({ token, repo, issueNumber }) {
  * @param {boolean} [args.forceRelabel] Allow overwrite of human-applied
  *   priority/area labels. Default false (assistive mode).
  */
+// Apply the `triage-failed` marker + post a failure comment. Used by
+// every failure path (model call, schema validation, label mutation).
+// Returns null if the failure should be silenced (issue gone, no-triage
+// added during the call); the caller still throws so the workflow turns
+// red, but no writes are attempted.
+async function recordFailure({ token, repo, issueNumber, model, error }) {
+  let state;
+  try {
+    state = await loadFreshState({ token, repo, issueNumber });
+  } catch (loadErr) {
+    if (loadErr instanceof IssueGoneError) return null;
+    throw loadErr;
+  }
+  const { freshLabels, existing, botPreviouslyApplied } = state;
+  // Honour `no-triage` even if added between event delivery and now —
+  // the call window for an Anthropic round-trip is enough for a fast
+  // maintainer to opt out before we'd otherwise mutate.
+  if (freshLabels.includes('no-triage')) return null;
+  await applyMarkerLabel({
+    token, repo, issueNumber, currentLabels: freshLabels, marker: 'triage-failed',
+  });
+  await postOrUpdateComment({
+    token, repo, issueNumber, existing,
+    body: buildFailureComment({ model, error: error.message, previousApplied: botPreviouslyApplied }),
+  });
+  return state;
+}
+
 export async function triageIssue({ token, apiKey, model, repo, issue, dryRun = false, forceRelabel = false }) {
   if (issue.labels.includes('no-triage')) {
     return { result: null, action: 'skipped:no-triage' };
@@ -545,15 +630,24 @@ export async function triageIssue({ token, apiKey, model, repo, issue, dryRun = 
   const bodyLen = String(issue.body || '').trim().length;
   if (bodyLen === 0 && titleLen < 40) {
     if (dryRun) return { result: { needs_info: true }, action: 'dry-run:needs-info' };
-    const { freshLabels, existing, botPreviouslyApplied } = await loadFreshState({ token, repo, issueNumber: issue.number });
-    if (freshLabels.includes('no-triage')) return { result: null, action: 'skipped:no-triage' };
+    let state;
+    try {
+      state = await loadFreshState({ token, repo, issueNumber: issue.number });
+    } catch (err) {
+      if (err instanceof IssueGoneError) {
+        console.warn(`::warning::${err.message}`);
+        return { result: null, action: 'skipped:issue-gone' };
+      }
+      throw err;
+    }
+    if (state.freshLabels.includes('no-triage')) return { result: null, action: 'skipped:no-triage' };
     await applyMarkerLabel({
       token, repo, issueNumber: issue.number,
-      currentLabels: freshLabels, marker: 'needs-info',
+      currentLabels: state.freshLabels, marker: 'needs-info',
     });
     const action = await postOrUpdateComment({
-      token, repo, issueNumber: issue.number, existing,
-      body: buildNeedsInfoComment({ model, previousApplied: botPreviouslyApplied }),
+      token, repo, issueNumber: issue.number, existing: state.existing,
+      body: buildNeedsInfoComment({ model, previousApplied: state.botPreviouslyApplied }),
     });
     return { result: null, action: `needs-info:${action}` };
   }
@@ -565,15 +659,11 @@ export async function triageIssue({ token, apiKey, model, repo, issue, dryRun = 
     if (err instanceof AnthropicError && err.fatal) throw err;
     if (!(err instanceof SchemaError)) throw err;
     if (dryRun) return { result: { error: err.message }, action: 'dry-run:failed' };
-    const { freshLabels, existing, botPreviouslyApplied } = await loadFreshState({ token, repo, issueNumber: issue.number });
-    await applyMarkerLabel({
-      token, repo, issueNumber: issue.number,
-      currentLabels: freshLabels, marker: 'triage-failed',
-    });
-    await postOrUpdateComment({
-      token, repo, issueNumber: issue.number, existing,
-      body: buildFailureComment({ model, error: err.message, previousApplied: botPreviouslyApplied }),
-    });
+    try {
+      await recordFailure({ token, repo, issueNumber: issue.number, model, error: err });
+    } catch (recErr) {
+      console.error(`::error::recordFailure on #${issue.number} also failed: ${recErr.message}`);
+    }
     throw err;
   }
 
@@ -582,28 +672,51 @@ export async function triageIssue({ token, apiKey, model, repo, issue, dryRun = 
     t = validate(raw);
   } catch (err) {
     if (dryRun) return { result: { error: err.message, raw }, action: 'dry-run:failed' };
-    const { freshLabels, existing, botPreviouslyApplied } = await loadFreshState({ token, repo, issueNumber: issue.number });
-    await applyMarkerLabel({
-      token, repo, issueNumber: issue.number,
-      currentLabels: freshLabels, marker: 'triage-failed',
-    });
-    await postOrUpdateComment({
-      token, repo, issueNumber: issue.number, existing,
-      body: buildFailureComment({ model, error: err.message, previousApplied: botPreviouslyApplied }),
-    });
+    try {
+      await recordFailure({ token, repo, issueNumber: issue.number, model, error: err });
+    } catch (recErr) {
+      console.error(`::error::recordFailure on #${issue.number} also failed: ${recErr.message}`);
+    }
     throw err;
   }
 
   if (dryRun) return { result: t, action: 'dry-run' };
 
   // Fresh state for both label and comment decisions.
-  const { freshLabels, existing, botPreviouslyApplied } = await loadFreshState({ token, repo, issueNumber: issue.number });
+  let state;
+  try {
+    state = await loadFreshState({ token, repo, issueNumber: issue.number });
+  } catch (err) {
+    if (err instanceof IssueGoneError) {
+      console.warn(`::warning::${err.message}`);
+      return { result: null, action: 'skipped:issue-gone' };
+    }
+    throw err;
+  }
+  const { freshLabels, existing, botPreviouslyApplied } = state;
   if (freshLabels.includes('no-triage')) return { result: null, action: 'skipped:no-triage' };
 
-  const labelResult = await applyTriageLabels({
-    token, repo, issueNumber: issue.number, t,
-    freshLabels, botPreviouslyApplied, forceRelabel,
-  });
+  let labelResult;
+  try {
+    labelResult = await applyTriageLabels({
+      token, repo, issueNumber: issue.number, t,
+      freshLabels, botPreviouslyApplied, forceRelabel,
+    });
+  } catch (err) {
+    // A GhError here usually means the repo is missing one of the
+    // managed labels (bootstrap workflow not run, or a maintainer
+    // renamed/deleted a label). Don't leave the issue partially
+    // mutated with no marker — route through the same failure path
+    // schema errors take so the issue ends up labeled `triage-failed`
+    // with an explanatory comment.
+    if (!(err instanceof GhError)) throw err;
+    try {
+      await recordFailure({ token, repo, issueNumber: issue.number, model, error: err });
+    } catch (recErr) {
+      console.error(`::error::recordFailure on #${issue.number} also failed: ${recErr.message}`);
+    }
+    throw err;
+  }
 
   // The applied marker records what the bot LAST APPLIED, not what's
   // currently on the issue. If the bot preserved human labels (didn't
