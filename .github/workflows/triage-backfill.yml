@@ -1,0 +1,53 @@
+name: AI Issue Triage (Backfill)
+
+on:
+  workflow_dispatch:
+    inputs:
+      state:
+        description: 'Issue state to triage'
+        type: choice
+        options: [open, closed, all]
+        default: open
+      only_unlabeled:
+        description: 'Skip issues that already have a priority/* label'
+        type: boolean
+        default: true
+      limit:
+        description: 'Max issues to process (1-500)'
+        type: number
+        default: 100
+      dry_run:
+        description: 'Print classifications only — do not comment or label'
+        type: boolean
+        default: false
+
+permissions:
+  issues: write
+  contents: read
+
+concurrency:
+  group: ai-triage-backfill
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run AI triage backfill
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_TRIAGE_MODEL || 'claude-haiku-4-5-20251001' }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          STATE: ${{ inputs.state }}
+          ONLY_UNLABELED: ${{ inputs.only_unlabeled }}
+          LIMIT: ${{ inputs.limit }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: node .github/scripts/backfill.mjs
