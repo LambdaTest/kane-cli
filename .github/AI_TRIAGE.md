@@ -32,22 +32,38 @@ time.
 
 ## Label ownership
 
-The bot is assistive, not authoritative. After first triage:
+The bot is assistive, not authoritative. The bot tracks **the labels it
+last applied** by embedding them in the marker comment as
+`<!-- ai-triage-applied: priority/Pn,area/x -->`. On every re-run the
+workflow re-fetches the issue's current labels and compares them with
+what the bot last applied:
 
-- If a maintainer changes a `priority/*` or `area/*` label, the bot will
-  **not** overwrite it on subsequent re-triage (e.g. when the reporter
-  edits the issue body). Stale `triage-failed` / `needs-info` markers are
-  cleared on a successful classification, but `priority/*` and `area/*`
-  are left exactly as the maintainer set them.
-- The comment body still updates with the latest RCA hypothesis on
-  re-triage, so RCA stays fresh even when labels are frozen.
-- To force the bot to re-apply labels (overwriting human corrections),
-  run the **AI Issue Triage (Backfill)** workflow with
-  `force_relabel: true`. This is destructive and is logged as a warning.
+- **Bot can refresh its own classification.** If the issue's
+  `priority/*` and `area/*` labels exactly match what the bot last
+  applied, the bot is free to update them when the model's
+  classification changes (e.g. reporter added repro detail that bumps
+  priority).
+- **Human-touched labels are preserved.** If a maintainer has changed a
+  `priority/*` or `area/*` label since the bot last wrote, the labels
+  no longer match the bot's recorded set, and the bot will **not**
+  overwrite them. The comment body still updates with the latest RCA,
+  so RCA stays fresh even when labels are frozen.
+- **The comment marker stays frozen on preservation.** When the bot
+  preserves human labels, the `ai-triage-applied` marker is left at the
+  bot's last-written set — not the current human-touched set — so the
+  bot keeps recognising the human's labels as not-its-own on later runs.
+- **Stale `triage-failed` / `needs-info` markers** are bot-owned and
+  cleared on a successful classification.
+- **Label state is re-fetched immediately before mutation**, so a
+  maintainer label change racing with the workflow's Anthropic call
+  is observed before the bot decides what to do.
+- **To force re-apply** (overwriting human corrections), run the
+  **AI Issue Triage (Backfill)** workflow with `force_relabel: true`.
+  This is destructive and is logged as a warning.
 
 If a maintainer corrects a label and the bot re-applies it anyway, treat
-that as a bug and report it — the contract is that human labels are
-sticky.
+that as a bug and report it — the contract is that any label the bot
+didn't itself apply is sticky.
 
 ## Setup (one-time)
 

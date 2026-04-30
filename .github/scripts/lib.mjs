@@ -1,21 +1,27 @@
 // Shared triage core. Consumed by triage.mjs (per-issue) and backfill.mjs.
 //
 // Design rules baked in here:
-// - The bot **assists** maintainers; it does not own labels. After first
-//   triage, any human-applied `priority/*` or `area/*` is preserved on
-//   re-runs unless the caller passes `forceRelabel: true`.
+// - The bot can refresh its OWN previously-applied `priority/*` / `area/*`
+//   labels when the model's classification changes (e.g. reporter added
+//   repro details that bump priority). It does NOT touch labels a human
+//   has touched — distinguished by embedding the bot's last applied set
+//   into the marker comment as `<!-- ai-triage-applied: ... -->` and
+//   comparing against the freshly-fetched label state at mutation time.
 // - Schema violations from the model are NOT silently coerced. Invalid
 //   priority/type/confidence raise SchemaError, which surfaces as a
 //   `triage-failed` label + comment + non-zero workflow exit.
 // - Comments are owned by `github-actions[bot]`. Lookup matches both the
 //   marker AND the comment author so an attacker can't hijack the PATCH
 //   target by forging the marker.
+// - Label state is re-fetched from GitHub immediately before any mutation
+//   to close the TOCTOU window between event delivery and write.
 // - Untrusted model output is wrapped in `::stop-commands::<token>`
 //   before being printed, so prompt-injected workflow commands are inert.
 
 import crypto from 'node:crypto';
 
 const MARKER = '<!-- ai-triage-bot:v1 -->';
+const APPLIED_MARKER_RE = /<!-- ai-triage-applied:\s*([^>]*?)\s*-->/;
 const BOT_LOGIN = 'github-actions[bot]';
 
 export const DEFAULT_MODEL = 'claude-haiku-4-5-20251001';
@@ -249,11 +255,18 @@ export async function gh({ token, path, init = {}, allowedStatuses = null }) {
 
 // -------------------------------------------------------- comments
 
-function buildSuccessComment({ model, t }) {
+function appliedMarker(applied) {
+  // applied is a Set or array of label names. Stable sorted for diff stability.
+  const list = [...applied].filter(Boolean).sort().join(',');
+  return `<!-- ai-triage-applied: ${list} -->`;
+}
+
+function buildSuccessComment({ model, t, applied }) {
   const areaList = t.areas.length ? t.areas.map((a) => `\`area/${a}\``).join(', ') : '_none_';
   const steps = t.next_steps.length ? t.next_steps.map((s) => `- ${s}`).join('\n') : '_none suggested_';
   const conf = Math.round(t.confidence * 100);
   return `${MARKER}
+${appliedMarker(applied)}
 ## 🤖 Automated triage
 
 > AI-generated, **not human-reviewed**. Maintainers may relabel or delete this comment. Powered by \`${model}\`.
@@ -272,16 +285,19 @@ function buildSuccessComment({ model, t }) {
 **Suggested next steps:**
 ${steps}
 
-<sub>The bot does not overwrite human-applied \`priority/*\` or \`area/*\` labels — once a maintainer labels an issue, the bot leaves labels alone. To skip triage entirely, add \`no-triage\`. Bot mistakes? Comment to flag — a human will review.</sub>`;
+<sub>Bot can refresh its OWN priority/area on later edits when the model's classification changes, but it never overwrites a label a maintainer has touched. To skip triage entirely, add \`no-triage\`. Bot mistakes? Comment to flag — a human will review.</sub>`;
 }
 
-function buildFailureComment({ model, error }) {
+function buildFailureComment({ model, error, previousApplied = new Set() }) {
+  // Carry the bot's last successful applied set forward so a follow-up
+  // success can still recognise its own labels.
   return `${MARKER}
+${appliedMarker(previousApplied)}
 ## 🤖 Automated triage — **failed**
 
 > AI-generated, **not human-reviewed**. Powered by \`${model}\`.
 
-The model did not return a valid response, so this issue has been labeled \`triage-failed\` for human review. No \`priority/*\` or \`area/*\` label was applied.
+The model did not return a valid response, so this issue has been labeled \`triage-failed\` for human review. Existing \`priority/*\` and \`area/*\` labels are left untouched.
 
 <details><summary>Failure detail</summary>
 
@@ -294,8 +310,9 @@ ${String(error).replace(/```/g, '`​``').slice(0, 1500)}
 <sub>To skip triage, add \`no-triage\`. To retry, edit the issue body or run the backfill workflow.</sub>`;
 }
 
-function buildNeedsInfoComment({ model }) {
+function buildNeedsInfoComment({ model, previousApplied = new Set() }) {
   return `${MARKER}
+${appliedMarker(previousApplied)}
 ## 🤖 Automated triage — **needs more info**
 
 > AI-generated, **not human-reviewed**. Powered by \`${model}\`.
@@ -310,6 +327,18 @@ This issue is too short to triage automatically — title and body together don'
 The bot will re-evaluate when the issue is edited.
 
 <sub>To skip triage, add \`no-triage\`.</sub>`;
+}
+
+function parseAppliedLabels(body) {
+  if (!body) return new Set();
+  const m = body.match(APPLIED_MARKER_RE);
+  if (!m) return new Set();
+  return new Set(m[1].split(',').map((s) => s.trim()).filter(Boolean));
+}
+
+async function fetchCurrentLabels({ token, repo, issueNumber }) {
+  const issue = await gh({ token, path: `/repos/${repo}/issues/${issueNumber}` });
+  return (issue.labels || []).map((l) => l.name);
 }
 
 // --------------------------------------------------- comment lookup
@@ -332,10 +361,6 @@ async function findExistingComment({ token, repo, issueNumber }) {
 
 // ------------------------------------------------------ labels
 
-const MANAGED_PREFIXES = ['priority/', 'area/'];
-const MANAGED_FLAGS = ['triage-failed', 'needs-info'];
-const isManagedLabel = (n) => MANAGED_PREFIXES.some((p) => n.startsWith(p)) || MANAGED_FLAGS.includes(n);
-
 async function removeLabel({ token, repo, issueNumber, name }) {
   await gh({
     token,
@@ -354,37 +379,82 @@ async function addLabels({ token, repo, issueNumber, labels }) {
   });
 }
 
-// Apply priority/area only if no human-applied managed labels exist, OR if
-// forceRelabel is true. Returns the labels actually written.
-async function applyTriageLabels({ token, repo, issueNumber, t, currentLabels, forceRelabel }) {
-  const hasHumanManaged = currentLabels.some(
-    (n) => isManagedLabel(n) && n !== 'triage-failed' && n !== 'needs-info',
-  );
-  if (hasHumanManaged && !forceRelabel) {
-    // Maintainer owns labels. We only clear stale `triage-failed` /
-    // `needs-info` markers since we now have a successful classification.
-    for (const n of currentLabels) {
-      if (n === 'triage-failed' || n === 'needs-info') {
-        await removeLabel({ token, repo, issueNumber, name: n }).catch(() => {});
-      }
+async function safeRemoveLabel({ token, repo, issueNumber, name }) {
+  try { await removeLabel({ token, repo, issueNumber, name }); }
+  catch (err) {
+    if (!(err instanceof GhError && err.status === 404)) {
+      console.warn(`::warning::DELETE label ${name} on #${issueNumber} failed: ${err.message}`);
     }
-    return { applied: [], preserved: currentLabels.filter(isManagedLabel) };
+  }
+}
+
+const isPriorityOrArea = (n) => n.startsWith('priority/') || n.startsWith('area/');
+
+function setEqual(a, b) {
+  if (a.size !== b.size) return false;
+  for (const x of a) if (!b.has(x)) return false;
+  return true;
+}
+
+/**
+ * Apply priority/area labels with bot-vs-human ownership tracking.
+ *
+ * Decides ownership by comparing the bot's previously-applied set
+ * (parsed from the marker comment) with the freshly-fetched managed
+ * labels on the issue:
+ *   - sets equal => bot owns them, free to refresh.
+ *   - sets differ => a human (or another bot) touched them, preserve.
+ * `forceRelabel: true` overrides preservation.
+ *
+ * `freshLabels` is the result of fetchCurrentLabels() called immediately
+ * before this function — passing in stale event-payload labels is a bug.
+ */
+async function applyTriageLabels({ token, repo, issueNumber, t, freshLabels, botPreviouslyApplied, forceRelabel }) {
+  const currentManaged = new Set(freshLabels.filter(isPriorityOrArea));
+  const desiredApplied = new Set([`priority/${t.priority}`, ...t.areas.map((a) => `area/${a}`)]);
+
+  // Always clear stale failure markers — those are bot-owned.
+  for (const flag of ['triage-failed', 'needs-info']) {
+    if (freshLabels.includes(flag)) {
+      await safeRemoveLabel({ token, repo, issueNumber, name: flag });
+    }
   }
 
-  // Either first triage, or forceRelabel: replace bot-managed labels.
-  for (const n of currentLabels) {
-    if (isManagedLabel(n)) {
-      try { await removeLabel({ token, repo, issueNumber, name: n }); }
-      catch (err) {
-        if (!(err instanceof GhError && err.status === 404)) {
-          console.warn(`::warning::DELETE label ${n} on #${issueNumber} failed: ${err.message}`);
-        }
-      }
+  const humanTouched = !setEqual(currentManaged, botPreviouslyApplied);
+
+  if (humanTouched && !forceRelabel) {
+    return {
+      applied: [],
+      preserved: [...currentManaged],
+      bot_previously_applied: [...botPreviouslyApplied],
+      reason: 'human-touched',
+    };
+  }
+
+  // Either first triage (botPreviouslyApplied is empty and currentManaged
+  // is empty so sets equal), or labels match what bot last applied
+  // (refresh path), or forceRelabel.
+  // Remove labels that bot previously applied but are no longer desired,
+  // plus (only if forceRelabel) any current managed labels the bot didn't apply.
+  const toRemove = new Set([...botPreviouslyApplied].filter((n) => !desiredApplied.has(n)));
+  if (forceRelabel) {
+    for (const n of currentManaged) {
+      if (!desiredApplied.has(n) && !botPreviouslyApplied.has(n)) toRemove.add(n);
     }
   }
-  const toAdd = [`priority/${t.priority}`, ...t.areas.map((a) => `area/${a}`)];
+  for (const n of toRemove) {
+    await safeRemoveLabel({ token, repo, issueNumber, name: n });
+  }
+
+  const toAdd = [...desiredApplied].filter((n) => !currentManaged.has(n) || toRemove.has(n));
   await addLabels({ token, repo, issueNumber, labels: toAdd });
-  return { applied: toAdd, preserved: [] };
+
+  return {
+    applied: [...desiredApplied],
+    preserved: [],
+    bot_previously_applied: [...botPreviouslyApplied],
+    reason: forceRelabel && humanTouched ? 'force-overwrite' : 'refresh',
+  };
 }
 
 async function applyMarkerLabel({ token, repo, issueNumber, currentLabels, marker }) {
@@ -411,8 +481,7 @@ async function applyMarkerLabel({ token, repo, issueNumber, currentLabels, marke
 
 // --------------------------------------------------- post comment
 
-async function postOrUpdateComment({ token, repo, issueNumber, body }) {
-  const existing = await findExistingComment({ token, repo, issueNumber });
+async function postOrUpdateComment({ token, repo, issueNumber, body, existing }) {
   if (existing) {
     await gh({
       token,
@@ -429,6 +498,18 @@ async function postOrUpdateComment({ token, repo, issueNumber, body }) {
   return 'created';
 }
 
+// Refresh issue state right before mutation: latest labels and the
+// existing bot comment (which carries the bot's previously-applied set).
+// Closes the TOCTOU window between event delivery and label write.
+async function loadFreshState({ token, repo, issueNumber }) {
+  const [freshLabels, existing] = await Promise.all([
+    fetchCurrentLabels({ token, repo, issueNumber }),
+    findExistingComment({ token, repo, issueNumber }),
+  ]);
+  const botPreviouslyApplied = parseAppliedLabels(existing?.body);
+  return { freshLabels, existing, botPreviouslyApplied };
+}
+
 // ------------------------------------------------- entry point
 
 /**
@@ -438,12 +519,17 @@ async function postOrUpdateComment({ token, repo, issueNumber, body }) {
  * comment with correct labels is less misleading than a confident-looking
  * comment with stale labels.
  *
+ * Label state is re-read from GitHub right before mutation to avoid
+ * acting on the (possibly minutes-old) event-payload snapshot.
+ *
  * @param {object} args
  * @param {string} args.token GitHub token (issues:write).
  * @param {string} args.apiKey Anthropic API key.
  * @param {string} args.model Anthropic model id.
  * @param {string} args.repo `owner/name`.
  * @param {{number,title,body,author,labels:string[]}} args.issue
+ *   `labels` here is a hint from the event payload — used only for the
+ *   early `no-triage` skip check. Mutation logic refetches.
  * @param {boolean} [args.dryRun] Print classification, write nothing.
  * @param {boolean} [args.forceRelabel] Allow overwrite of human-applied
  *   priority/area labels. Default false (assistive mode).
@@ -459,12 +545,15 @@ export async function triageIssue({ token, apiKey, model, repo, issue, dryRun = 
   const bodyLen = String(issue.body || '').trim().length;
   if (bodyLen === 0 && titleLen < 40) {
     if (dryRun) return { result: { needs_info: true }, action: 'dry-run:needs-info' };
+    const { freshLabels, existing, botPreviouslyApplied } = await loadFreshState({ token, repo, issueNumber: issue.number });
+    if (freshLabels.includes('no-triage')) return { result: null, action: 'skipped:no-triage' };
     await applyMarkerLabel({
       token, repo, issueNumber: issue.number,
-      currentLabels: issue.labels, marker: 'needs-info',
+      currentLabels: freshLabels, marker: 'needs-info',
     });
     const action = await postOrUpdateComment({
-      token, repo, issueNumber: issue.number, body: buildNeedsInfoComment({ model }),
+      token, repo, issueNumber: issue.number, existing,
+      body: buildNeedsInfoComment({ model, previousApplied: botPreviouslyApplied }),
     });
     return { result: null, action: `needs-info:${action}` };
   }
@@ -475,17 +564,17 @@ export async function triageIssue({ token, apiKey, model, repo, issue, dryRun = 
   } catch (err) {
     if (err instanceof AnthropicError && err.fatal) throw err;
     if (!(err instanceof SchemaError)) throw err;
-    // Schema/parse failure — fall through to triage-failed branch.
-    raw = null;
     if (dryRun) return { result: { error: err.message }, action: 'dry-run:failed' };
+    const { freshLabels, existing, botPreviouslyApplied } = await loadFreshState({ token, repo, issueNumber: issue.number });
     await applyMarkerLabel({
       token, repo, issueNumber: issue.number,
-      currentLabels: issue.labels, marker: 'triage-failed',
+      currentLabels: freshLabels, marker: 'triage-failed',
     });
     await postOrUpdateComment({
-      token, repo, issueNumber: issue.number, body: buildFailureComment({ model, error: err.message }),
+      token, repo, issueNumber: issue.number, existing,
+      body: buildFailureComment({ model, error: err.message, previousApplied: botPreviouslyApplied }),
     });
-    throw err; // surface to the caller so the workflow turns red
+    throw err;
   }
 
   let t;
@@ -493,24 +582,41 @@ export async function triageIssue({ token, apiKey, model, repo, issue, dryRun = 
     t = validate(raw);
   } catch (err) {
     if (dryRun) return { result: { error: err.message, raw }, action: 'dry-run:failed' };
+    const { freshLabels, existing, botPreviouslyApplied } = await loadFreshState({ token, repo, issueNumber: issue.number });
     await applyMarkerLabel({
       token, repo, issueNumber: issue.number,
-      currentLabels: issue.labels, marker: 'triage-failed',
+      currentLabels: freshLabels, marker: 'triage-failed',
     });
     await postOrUpdateComment({
-      token, repo, issueNumber: issue.number, body: buildFailureComment({ model, error: err.message }),
+      token, repo, issueNumber: issue.number, existing,
+      body: buildFailureComment({ model, error: err.message, previousApplied: botPreviouslyApplied }),
     });
     throw err;
   }
 
   if (dryRun) return { result: t, action: 'dry-run' };
 
-  // Labels first, then comment.
+  // Fresh state for both label and comment decisions.
+  const { freshLabels, existing, botPreviouslyApplied } = await loadFreshState({ token, repo, issueNumber: issue.number });
+  if (freshLabels.includes('no-triage')) return { result: null, action: 'skipped:no-triage' };
+
   const labelResult = await applyTriageLabels({
-    token, repo, issueNumber: issue.number, t, currentLabels: issue.labels, forceRelabel,
+    token, repo, issueNumber: issue.number, t,
+    freshLabels, botPreviouslyApplied, forceRelabel,
   });
+
+  // The applied marker records what the bot LAST APPLIED, not what's
+  // currently on the issue. If the bot preserved human labels (didn't
+  // mutate), the marker must stay frozen at the bot's previous set so
+  // the next run still detects "human-touched" instead of claiming the
+  // human's labels as its own.
+  const newApplied = labelResult.applied.length
+    ? new Set(labelResult.applied)
+    : botPreviouslyApplied;
+
   const commentAction = await postOrUpdateComment({
-    token, repo, issueNumber: issue.number, body: buildSuccessComment({ model, t }),
+    token, repo, issueNumber: issue.number, existing,
+    body: buildSuccessComment({ model, t, applied: newApplied }),
   });
 
   return {
