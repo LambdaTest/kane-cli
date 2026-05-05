@@ -128,10 +128,12 @@ bot will respect the human-applied labels on subsequent edits. Add the
 
 ## Cost
 
-Default model `claude-haiku-4-5-20251001` runs at roughly fractions of a
-cent per issue. The system prompt is cached on Anthropic's side to
-minimise repeated cost. Issue title and body are clamped to ~500 and
-~8000 characters respectively before sending to the model.
+Default model `claude-sonnet-4-6` runs at roughly one cent per issue.
+The system prompt is cached on Anthropic's side to minimise repeated
+cost. Issue title and body are clamped to ~500 and ~8000 characters
+respectively before sending to the model. Override with the
+`ANTHROPIC_TRIAGE_MODEL` repo variable (e.g. `claude-haiku-4-5-20251001`
+for ~5x cheaper at lower RCA quality).
 
 Concurrency is keyed per issue (per-issue workflow) and globally for the
 backfill. Timeouts: 5 minutes for per-issue triage, 30 minutes for
@@ -146,3 +148,27 @@ backfill, 5 minutes for label bootstrap.
   `::stop-commands::<token>` blocks so prompt-injected workflow
   commands (`::add-mask::`, `::error::`, etc.) are inert.
 - All third-party Actions are pinned to a full commit SHA.
+
+## Public-leak hardening
+
+The bot's RCA and summary are posted publicly on the issue, so we treat
+the model's output as something that needs to leave the repo cleanly:
+
+- The system prompt explicitly instructs the model not to speculate
+  about LambdaTest internal architecture, services, codenames, or env
+  vars. It may quote internal terms only if the issue text references
+  them first.
+- All model output (`summary`, `rca`, `next_steps`) is run through a
+  redaction pass before posting. Internal references that slip through
+  the prompt — `v16`, internal service acronyms (HPS, MHPS, LTMS, …),
+  internal env var prefixes (`V16_*`, `LT_*`, `KANE_INTERNAL_*`),
+  internal hostnames (`*.lambdatestinternal.com`,
+  `*.lambdatestdev.com`), `@lambdatest.com` emails, Jira ticket IDs
+  (`TE-1234`), and `LambdatestIncPrivate/*` URLs — are replaced with
+  `[redacted]`. Reviewers see explicit `[redacted]` markers, not
+  confidently-wrong internal-looking words.
+- Privacy note: issue title + body are sent to Anthropic's API. They
+  are not used for training (per Anthropic's API policy) but they do
+  leave your control. If a reporter pastes credentials or PII into an
+  issue, redact before opening, or apply the `no-triage` label to skip
+  the workflow on that issue.
