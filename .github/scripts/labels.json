@@ -1,0 +1,72 @@
+[
+  {
+    "name": "priority/P0",
+    "color": "b60205",
+    "description": "Broken core flow, security, or data loss"
+  },
+  {
+    "name": "priority/P1",
+    "color": "d93f0b",
+    "description": "Major feature broken or common workflow blocked"
+  },
+  {
+    "name": "priority/P2",
+    "color": "fbca04",
+    "description": "Non-blocking bug or important enhancement"
+  },
+  {
+    "name": "priority/P3",
+    "color": "0e8a16",
+    "description": "Minor, cosmetic, or nice-to-have"
+  },
+  {
+    "name": "area/cli",
+    "color": "1d76db",
+    "description": "CLI commands, flags, help text"
+  },
+  {
+    "name": "area/config",
+    "color": "1d76db",
+    "description": "Config files, env vars, defaults"
+  },
+  {
+    "name": "area/auth",
+    "color": "1d76db",
+    "description": "Login, tokens, credentials"
+  },
+  {
+    "name": "area/execution",
+    "color": "1d76db",
+    "description": "Test run, browser launch, headless"
+  },
+  {
+    "name": "area/reporting",
+    "color": "1d76db",
+    "description": "Reports, links, output"
+  },
+  {
+    "name": "area/tms",
+    "color": "1d76db",
+    "description": "Test Manager / project listing / playground integration"
+  },
+  {
+    "name": "area/docs",
+    "color": "1d76db",
+    "description": "Doc URLs, README, help text accuracy"
+  },
+  {
+    "name": "no-triage",
+    "color": "ededed",
+    "description": "Skip the AI triage workflow on this issue"
+  },
+  {
+    "name": "triage-failed",
+    "color": "e99695",
+    "description": "AI triage could not classify this issue (model returned invalid schema); needs human review"
+  },
+  {
+    "name": "needs-info",
+    "color": "fef2c0",
+    "description": "Issue has too little detail to triage automatically; reporter, please add repro steps"
+  }
+]

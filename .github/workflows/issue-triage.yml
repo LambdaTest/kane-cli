@@ -1,0 +1,44 @@
+name: AI Issue Triage
+
+on:
+  issues:
+    types: [opened, reopened, edited]
+
+permissions: {}
+
+concurrency:
+  group: ai-triage-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  triage:
+    # Skip when:
+    #  - opened by a bot (avoid loops with other automation)
+    #  - already labeled `no-triage`
+    #  - this is an `edited` event with neither title nor body changed
+    #    (label-only edits, lock changes, etc. shouldn't burn an API call)
+    if: >-
+      github.event.issue.user.type != 'Bot' &&
+      !contains(github.event.issue.labels.*.name, 'no-triage') &&
+      (github.event.action != 'edited' ||
+        github.event.changes.title != null ||
+        github.event.changes.body  != null)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '20'
+
+      - name: Run AI triage
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_TRIAGE_MODEL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: node .github/scripts/triage.mjs
