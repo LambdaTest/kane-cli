@@ -23,6 +23,18 @@ npm install -g @testmuai/kane-cli
 
 If your global `npm` prefix is not on `PATH`, add it before running `kane-cli`. You can find the prefix with `npm config get prefix`; the `kane-cli` binary lives in `<prefix>/bin` on macOS and Linux, and `<prefix>` on Windows.
 
+## Install with pnpm or yarn
+
+Installing kane-cli via **pnpm** is not currently supported. pnpm uses a different `node_modules` layout (the project-root `node_modules/` is one level deeper than with npm), and kane-cli's resolver for the platform-specific `v16-runner` binary does not yet search deep enough to find it. The symptom is a silent exit with status 2 shortly after startup — see [CLI exits with code 2 and no output](./troubleshooting.md#cli-exits-with-code-2-and-no-output) in the troubleshooting guide. This limitation is tracked in [issue #24](https://github.com/LambdaTest/kane-cli/issues/24).
+
+Until that is resolved, install kane-cli through one of the supported paths:
+
+- **npm** globally (`npm install -g @testmuai/kane-cli`, above).
+- **Homebrew** on macOS or Linux (`brew install LambdaTest/kane/kane-cli`). Does not require Node.
+- The **shell installer** for any POSIX system (`curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh | sh`).
+
+yarn (classic and Berry) has not been verified end-to-end. If you use yarn, prefer the Homebrew or shell-installer path until it is explicitly supported.
+
 ## Verify installation
 
 Confirm the install by printing the version:
