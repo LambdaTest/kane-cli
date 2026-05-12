@@ -1,4 +1,4 @@
-# kane-cli
+# kane-cli — TestMu AI (Formerly LambdaTest)
 
 **The validation layer for AI coding agents — natural-language browser automation, called from your CLI or IDE.**
 
@@ -376,7 +376,7 @@ Error: CDP endpoint not reachable on port 9222
 kane-cli whoami
 ```
 
-If it reports "not configured", run `kane-cli login` (interactive in a TTY, or pass `--username` / `--access-key` for non-interactive setups). Get your access key from your LambdaTest dashboard under **Settings → Keys**.
+If it reports "not configured", run `kane-cli login` (interactive in a TTY, or pass `--username` / `--access-key` for non-interactive setups). Get your access key from your TestMu AI dashboard under **Settings → Keys**.
 
 ### 3. The agent ran, but didn't extract the value I wanted
 
@@ -438,3 +438,22 @@ curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh
 ## License
 
 [Apache-2.0](LICENSE)
+
+## 🚀 [LambdaTest is Now TestMu AI](https://www.testmuai.com/lambdatest-is-now-testmuai/)
+
+👋 Welcome to TestMu AI, the next evolution of LambdaTest. As of January 2026, LambdaTest has officially rebranded to TestMu AI. We have evolved from a cross-browser testing cloud into a unified, AI-native quality engineering platform designed for the modern DevOps era.
+
+Whether you have been part of the LambdaTest community for years or are just discovering TestMu AI, our mission remains the same: to help you ship faster with high-scale test execution, autonomous testing, and deep quality analytics.
+
+**🔄 Our Rebrand Journey**
+
+We chose the name TestMu AI to reflect our shift towards intelligent, autonomous testing. While our identity has changed, our core technology and commitment to the testing community stay the same.
+
+**✨ Specialties**
+
+- 🤖 AI-Native Test Execution (Formerly LambdaTest)
+- ⚡ Autonomous Test Automation
+- 🌐 Cross-Browser & Mobile Testing
+- 📊 Unified Quality Intelligence
+
+👉 Find [LambdaTest's New Home](https://www.testmuai.com/).
