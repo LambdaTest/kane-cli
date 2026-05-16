@@ -47,6 +47,34 @@ kane-cli run "<objective>" \
 
 If they still do not work, regenerate the access key in the dashboard and retry.
 
+## "Login failed — fetch failed" / SSL certificate errors
+
+If `kane-cli login` exits immediately with `Login failed — fetch failed`, or a `NODE_DEBUG=undici` trace shows an OpenSSL error code like `UNABLE_TO_GET_ISSUER_CERT_LOCALLY`, kane-cli could not validate the TLS certificate of an auth or upload endpoint. Browsers and `curl` on the same machine will typically still work — this is specific to Node's default trust store.
+
+The cause is that Node ships with its own bundled Mozilla CA list and does not read the operating-system keychain by default. If corporate endpoint security software (EDR), a TLS-inspecting proxy (Zscaler, Netskope, GlobalProtect), or any similar tool signs traffic with a root certificate that lives only in the OS keychain, Node has no way to validate it. Browsers and `curl` succeed because they trust the keychain natively; Node does not.
+
+Fixes, in order of preference:
+
+1. **Tell Node to trust the system keychain.** Built-in env var, available on Node 22.19+ / 24.6+:
+
+   ```bash
+   export NODE_USE_SYSTEM_CA=1
+   kane-cli login
+   ```
+
+   See the [Node docs](https://nodejs.org/api/cli.html#node_use_system_ca1). On macOS this reads the default and system keychains using the same trust policy your browser uses, so whatever root makes `curl` and your browser work will work for kane-cli too.
+
+2. **Point Node at a specific CA bundle.** If you are in a corporate setup and your IT or security team can provide the corporate CA file directly, use the standard Node env var:
+
+   ```bash
+   export NODE_EXTRA_CA_CERTS=/path/to/corp-ca.pem
+   kane-cli login
+   ```
+
+   This is also the fallback for Node versions older than 22.19, where `NODE_USE_SYSTEM_CA` is unavailable.
+
+3. **Persist the setting** by adding the `export` line to your shell profile (`~/.zshrc`, `~/.bashrc`, or equivalent) so every new terminal session inherits it. Otherwise the env var only applies to the shell where you ran `export`.
+
 ## "Run timed out" or "max steps exceeded"
 
 A run ends with a timeout when it hits the wall-clock limit, and with a max-steps error when the agent exhausts its allowed step budget before finishing.
