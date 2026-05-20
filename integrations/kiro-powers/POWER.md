@@ -12,8 +12,6 @@ keywords:
   - "ui-test"
   - "chrome"
   - "playwright"
-  - "selenium"
-  - "puppeteer"
   - "screenshot"
   - "verify-deploy"
   - "smoke-test"
