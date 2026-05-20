@@ -1,0 +1,25 @@
+{
+  "enabled": true,
+  "name": "Kane CLI — Verify on change",
+  "description": "When frontend or deploy-relevant files change, run a Kane CLI browser smoke test and surface failures + screenshots.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/**/*.{ts,tsx,js,jsx,vue,svelte}",
+      "app/**/*.{ts,tsx,js,jsx}",
+      "public/**/*",
+      "next.config.*",
+      "vite.config.*",
+      "vercel.json",
+      "netlify.toml",
+      ".env*",
+      "Dockerfile",
+      "docker-compose.yml"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Frontend or deploy-relevant files just changed. Run a Kane CLI smoke test:\n\n1. If a committed `_test.md` already exists for this flow, prefer it:\n     kane-cli testmd run <path-to-_test.md> --agent --headless --on-lock-conflict wait --retry\n   Load the kane-cli-testmd steering file first.\n\n2. Otherwise, read .testmuai/context.md (if present) for the project's smoke objective, then run a one-shot:\n     kane-cli run \"<smoke objective from .testmuai/context.md or the default: open the app, sign in with {{username}}/{{password}}, assert the dashboard loads>\" --agent --headless --timeout 120\n   Load the kane-cli-run steering file first.\n\nParse the NDJSON output, present results in plain language with extracted values and screenshots, and propose fixes for any failed step."
+  }
+}
