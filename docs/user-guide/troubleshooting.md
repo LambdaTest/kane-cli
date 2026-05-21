@@ -1,6 +1,19 @@
 # Troubleshooting
 
-This page lists common problems you may hit while using kane-cli, what causes them, and how to resolve them.
+This page lists common problems you may hit while using kane-cli, what causes them, and how to resolve them. If you're new to the CLI, start with [Installation](./installation.md) and [Getting started](./getting-started.md); for setup-level concerns see [Configuration](./configuration.md) and [Authentication](./authentication.md).
+
+## Contents
+
+- [Chrome failed to launch](#chrome-failed-to-launch)
+- [Authentication failed](#authentication-failed)
+- [Login failed — fetch failed / SSL certificate errors](#login-failed--fetch-failed--ssl-certificate-errors) — Node TLS trust against a corporate proxy
+- [Runner SSL: CERTIFICATE_VERIFY_FAILED behind a TLS-inspecting proxy](#runner-ssl-certificate_verify_failed-behind-a-tls-inspecting-proxy) — Python runner TLS trust (Netskope, Zscaler, GlobalProtect)
+- [Run timed out or max steps exceeded](#run-timed-out-or-max-steps-exceeded)
+- [Variables not resolving](#variables-not-resolving)
+- [Upload failed or TMS error](#upload-failed-or-tms-error)
+- [CLI exits with code 2 and no output](#cli-exits-with-code-2-and-no-output)
+- [Update available notice](#update-available-notice)
+- [Reporting bugs](#reporting-bugs)
 
 ## "Chrome failed to launch"
 
@@ -74,6 +87,44 @@ Fixes, in order of preference:
    This is also the fallback for Node versions older than 22.19, where `NODE_USE_SYSTEM_CA` is unavailable.
 
 3. **Persist the setting** by adding the `export` line to your shell profile (`~/.zshrc`, `~/.bashrc`, or equivalent) so every new terminal session inherits it. Otherwise the env var only applies to the shell where you ran `export`.
+
+## Runner: "[SSL: CERTIFICATE_VERIFY_FAILED]" behind a TLS-inspecting proxy
+
+If `kane-cli login` succeeds but a run fails mid-execution with an error like:
+
+```
+[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: self-signed certificate in certificate chain
+```
+
+the failure is in the bundled `v16-runner`, not in Node. The runner is a standalone Python binary (built with Nuitka) and ships with [certifi](https://github.com/certifi/python-certifi)'s `cacert.pem` baked in. It does **not** consult the Windows / macOS / Linux system trust store, and the Node fixes above (`NODE_USE_SYSTEM_CA`, `NODE_EXTRA_CA_CERTS`) do not affect it.
+
+On a corporate network with a TLS-inspecting proxy (Netskope, Zscaler, GlobalProtect, etc.), the proxy decrypts and re-encrypts HTTPS using its own self-signed root CA. That root is in your OS keychain but not in certifi's bundle, so the runner's TLS handshake fails. On a home network there is no MITM, so the chain validates against certifi and the same command works.
+
+Fix — give the runner a CA bundle that includes the corporate root:
+
+1. **Get the corporate root CA from IT.** On Windows you can export it yourself: open `certmgr.msc` → **Trusted Root Certification Authorities** → **Certificates**, find the proxy's CA (often named after Netskope / Zscaler / your company), right-click → **All Tasks → Export**, choose **Base-64 encoded X.509 (.cer)**.
+
+2. **Concatenate it with certifi's `cacert.pem`** into a single PEM file. On Windows, for example, save the combined file as `C:\certs\corp-bundle.pem`.
+
+3. **Point the runner at the combined bundle** with `SSL_CERT_FILE`.
+
+   Windows (persists across new terminals):
+
+   ```cmd
+   setx SSL_CERT_FILE "C:\certs\corp-bundle.pem"
+   ```
+
+   Restart the terminal after `setx` — the variable is only picked up by new shells.
+
+   macOS / Linux:
+
+   ```bash
+   export SSL_CERT_FILE=/path/to/corp-bundle.pem
+   ```
+
+   Add the `export` line to `~/.zshrc` / `~/.bashrc` to persist it.
+
+If your environment also breaks `kane-cli login`, apply the Node-side fix in the previous section as well — the two env vars cover two different processes and you may need both.
 
 ## "Run timed out" or "max steps exceeded"
 
