@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.4] - 2026-05-26
+
+### Faster, smarter project picker
+- **Project search now filters on the server** — typing in the project picker sends a `filter[name]` query instead of filtering a local list, so results are accurate and instant even across hundreds of projects.
+- **Results are paginated at 10 per page with a searching indicator** — a visible loading state appears while results load, so the picker never feels frozen.
+
+### Fuller artifact uploads
+- **The entire session directory is zipped and uploaded** — artifact uploads now capture everything in the session folder, not just individual files, so post-run inspection has the full context.
+- **Screenshot file extensions are tracked per operation** — the correct extension (`.png`, `.jpg`, etc.) is recorded per operation ID, so artifact references point to real files.
+
+### Variable templates that actually resolve
+- **`{{var}}` placeholders in query descriptions now expand correctly** — analyze, vision, and textual query descriptions that reference variables were being sent as raw template strings; they now resolve before the query runs.
+
+### Triage and reporting
+- **Triage payload and reporting are now supported** — runs can emit structured triage data, giving you a reportable summary of what passed, failed, or needs attention.
+
+### Smoother installation
+- **`sharp` is now an optional dependency** — a missing `sharp` native module no longer blocks `npm install`, and the post-install check no longer silently fails on global installs.
+
+### Resolved Issues 
+- https://github.com/LambdaTest/kane-cli/issues/51
+- https://github.com/LambdaTest/kane-cli/issues/48
+- https://github.com/LambdaTest/kane-cli/issues/47
+- https://github.com/LambdaTest/kane-cli/issues/46
+- https://github.com/LambdaTest/kane-cli/issues/44
+- https://github.com/LambdaTest/kane-cli/issues/38
+- https://github.com/LambdaTest/kane-cli/issues/27
+
+---
+
 ## [0.3.3] - 2026-05-22
 
 ### Replay runs are more accurate
