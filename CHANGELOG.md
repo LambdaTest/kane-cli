@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.5] - 2026-05-29
+
+### Features Added
+
+- **Opt out of auto-generated checks in action mode** ([kane-cli#43](https://github.com/LambdaTest/kane-cli/issues/43)) — when authoring tests via `kane-cli` in action mode, the CLI no longer appends its own final-verification check. Authors keep full control over which assertions land in the generated test file. (Behavior unchanged outside action mode.)
+- **Confidence-scored element matching** — every element-match call now reports a confidence score and the visual cues that influenced it. Low-confidence matches are rejected up front instead of letting a wrong element silently get clicked.
+- **Richer target descriptions** — element targeting now distinguishes load-bearing descriptors (PRIMARY) from supporting visual cues (HINTS), producing fewer ambiguous matches on visually similar elements.
+
+### Bugs Resolved
+
+- **`--retry` now works with OAuth credentials** ([kane-cli#52](https://github.com/LambdaTest/kane-cli/issues/52)) — OAuth users no longer have to fall back to `--username` / `--access-key`. Credentials are resolved up front before the run lock is acquired.
+- **Screenshots upload reliably across the full session lifecycle** ([kane-cli#42](https://github.com/LambdaTest/kane-cli/issues/42)) — image network calls now fire consistently in kane-cli reports across boot, login, profile switch, and `/new` session resets.
+
+### Reliability improvements
+
+- **Automatic retry on transient network failures** — idempotent reads retry with backoff instead of failing the run immediately.
+- **Stale credential cache falls back correctly** — if the in-memory snapshot is out of date, the CLI falls back to the last known good cached credentials.
+- **Session transitions handled consistently** — boot, login, profile switch, and logout now go through a single dispatcher, closing gaps where auth state could get out of sync.
+- **Remote logger and screenshot queue init hardened** — the logger won't re-initialize if already running, and a screenshot setup failure no longer takes down the surrounding operation.
+
 ## [0.3.4] - 2026-05-26
 
 ### Faster, smarter project picker
