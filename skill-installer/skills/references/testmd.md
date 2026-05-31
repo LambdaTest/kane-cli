@@ -144,7 +144,7 @@ Flag wins over frontmatter for everything **except** `variables` — the file ow
 
 After a run:
 
-```
+```text
 amazon_test.md
 output-amazon/
   Result.md                      # human-readable run report
@@ -188,9 +188,14 @@ kane-cli testmd run ./tests/checkout_test.md \
 - `--on-lock-conflict wait` — block instead of failing if a teammate is editing the same test.
 - `--retry` — automatically recover transient replay failures.
 
-Exit codes follow §3 with new semantics:
-- `2` now includes parse errors and `--on-lock-conflict fail`
-- `3` now includes `--on-lock-conflict wait` timeout
+Exit codes:
+
+| Code | Meaning |
+|------|---------|
+| 0 | ✅ Passed |
+| 1 | ❌ Failed |
+| 2 | ⚠️ Error (auth, setup, infra) — for `testmd`, also includes parse errors and `--on-lock-conflict fail` |
+| 3 | ⏱️ Timeout or cancelled — for `testmd`, also includes `--on-lock-conflict wait` timeout |
 
 ## Parse errors (when writing a `_test.md`)
 
