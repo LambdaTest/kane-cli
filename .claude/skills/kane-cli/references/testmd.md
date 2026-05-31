@@ -1,0 +1,217 @@
+<!-- Read this when the user wants to save, persist, version-control, or re-run a browser test. Owns _test.md file format, replay/cascade rules, testmd subcommands, and parse errors. -->
+
+# Saving & Replaying Tests with testmd
+
+The §3 `run` command is the **primary** mode — one-shot, ephemeral. `testmd` is the **secondary** mode: tests live as `_test.md` files on disk, each step is cached on the first run, and every later run **replays from cache** with no LLM cost.
+
+Use `testmd` whenever the user wants the test to persist. The decision is binary — once a test exists as a file, every later invocation is `testmd run`, never `run`.
+
+## When to switch from `run` to `testmd`
+
+| User says | Use |
+|---|---|
+| "save this test", "commit this", "keep this", "add this to the suite" | `testmd` |
+| "regression test", "smoke test", "make this replayable" | `testmd` |
+| "this is a test", "test the X flow end-to-end" (suite-shaped) | `testmd` |
+| "run this once", "check if X works right now", "try X" | `run` (§3) |
+| "search for", "click", "fill", "verify" (one-shot) | `run` (§3) |
+
+If unclear, ask: "Do you want me to save this test so you can re-run it later?"
+
+## Quick start
+
+Write the file (any path; filename must end in `_test.md`):
+
+```markdown
+---
+mode: testing
+max_steps: 30
+---
+
+# Amazon search
+
+## Open Amazon
+Open https://www.amazon.com.
+
+## Search for headphones
+Type "wireless headphones" into the search box and submit.
+Verify at least one product result is visible.
+```
+
+Run it:
+
+```bash
+kane-cli testmd run amazon_test.md --agent
+```
+
+## File format
+
+Four parts in order:
+
+1. **YAML frontmatter** — between `--- ... ---` at the very top.
+2. **`# Title`** — decorative; everything before the first `## ` is ignored.
+3. **`## H2` step headings** — one per step. The agent reads the step body, not the heading.
+4. **Step body** — either prose **or** a single `@import <path>` line. Never both.
+
+Per-step `yaml` overrides go immediately under the heading, in a fenced block:
+
+````markdown
+## Submit the form
+```yaml
+timeout: 90
+optional: true
+```
+Click submit and verify the confirmation banner.
+````
+
+**Frontmatter keys to use:**
+
+| Key | Scope | Description |
+|---|---|---|
+| `mode` | root | `action` (halts on auth walls) or `testing` (default — pushes through so negative-test assertions can fire) |
+| `max_steps` | root + step | Max agent reasoning steps. Default `30`. |
+| `timeout` | root + step | Hard kill per step in seconds. |
+| `headless` | root | No browser window. |
+| `variables` | root + step | `{{name}}` params, same shape as §3, with `secret: true` for credentials |
+| `global_context` / `local_context` | root + step | Inline Markdown or path |
+| `code_export` / `code_language` | root + step | Generate Playwright after the run; language `python` or `javascript` |
+
+Files ending in `_test.md` are tests (valid entry points). Any other `.md` is a helper — reachable only via `@import`.
+
+## The replay & cascade rule (CRITICAL)
+
+On the **first** run of a test, the agent authors each step and saves a recording. On **every later run**, each step replays from its recording — no agent, no LLM cost, much faster.
+
+A step replays only if **all** of these hold:
+- A recording for that step exists,
+- Its prose is unchanged since the recording,
+- Its `yaml` block is unchanged,
+- No earlier step in the file invalidated it.
+
+**Editing step N re-authors step N AND every step after it in the same file.** Each step starts where the previous step left off (URL, login, tabs). When step 3 changes, step 4 cannot safely replay against state that no longer exists.
+
+Consequences when editing tests:
+- A one-line tweak at the top of a 20-step test re-authors all 20 steps on the next run.
+- To re-record only one step, edit only that step (or steps after it).
+- `--author` forces full authoring for one run (debugging only).
+- `rm -rf output-<stem>/` wipes the cache entirely.
+
+## `@import` for reusing flows
+
+Extract a repeating flow (login, setup, cookie banner dismissal) into a helper file:
+
+```markdown
+## Sign in
+@import ./helpers/login.md
+```
+
+Rules:
+- Helper filename **must not** end in `_test.md`.
+- Path resolves relative to the **importing file**, not the shell's cwd.
+- The step body must be exactly `@import <path>` — no mixed prose, no extra lines.
+- The step's `yaml` block may contain **only** `optional`. Other keys are rejected.
+- `optional: true` on `@import` is allowed only at the root file, not on a nested import.
+
+Variables and context propagate into helpers. Chrome / `mode` / auth do not (root-only).
+
+Editing a helper re-authors that step in **every test that imports it**, plus everything after the import in those tests. Same cascade rule.
+
+## Commands
+
+| Command | Use |
+|---|---|
+| `kane-cli testmd run <path> --agent [flags]` | Run a test |
+| `kane-cli testmd list` | List `*_test.md` files under cwd (NDJSON when non-TTY) |
+| `kane-cli testmd status <path>` | Test Manager identity + local-sync state |
+| `kane-cli testmd export <path> [--code-language python\|javascript]` | Regenerate code export from existing recordings (no browser launch) |
+| `kane-cli testmd delete <path>` | Local-only delete: removes source + `output-<stem>/`. Does NOT delete from Test Manager. |
+
+**Flags on `testmd run` that don't exist on §3 `run`:**
+
+| Flag | Default | Description |
+|---|---|---|
+| `--name <name>` | none | Persist the run under this name. Regex `[a-zA-Z0-9_-]+`. |
+| `--on-lock-conflict <readonly\|fail\|wait>` | none | Behavior when another user holds the test's edit lock. `readonly` = replay-only / no upload, `fail` = exit 2, `wait` = block until released |
+| `--retry` | off | On replay failure, restart with a shrinking replay window |
+| `--retry-count <n>` | `3` | Max retry restarts before falling back to full re-author |
+| `--author` | off | Force authoring every step (skip replay decision) |
+
+All §3 `run` flags also apply (`--agent`, `--headless`, `--max-steps`, `--timeout`, `--variables`, etc.).
+
+Flag wins over frontmatter for everything **except** `variables` — the file owns variables; you can add new keys via flags but cannot override file-defined ones.
+
+## Output: `output-<stem>/` and `Result.md`
+
+After a run:
+
+```text
+amazon_test.md
+output-amazon/
+  Result.md                      # human-readable run report
+  .internal/                     # cached recordings — do not edit
+  playwright-python-code/        # only if code_export enabled
+```
+
+**`output-<stem>/` is commit-safe and should be committed to git.** That's how teammates and CI replay the same recordings.
+
+For tests using `@import`, helper recordings land next to the helper file in `helper-output-<helper>-<root>-<step>/` directories. Also commit-safe.
+
+**`Result.md`** opens in any Markdown viewer. It contains:
+- Frontmatter — `status`, `started`, `duration_s`, `session_id`
+- One entry per root step with one of `✓ passed`, `✗ failed`, `⏭ skipped`, optionally suffixed `(optional)` when a soft-failing step failed but the run continued
+- For `@import` steps that failed, a path to the failing sub-step inside the helper
+
+When the user asks "did the test pass?" or "where did it fail?" for a previously-run test, read `Result.md` rather than re-running the test.
+
+## Recording a `_test.md` from a live session
+
+If the user runs an ad-hoc objective with §3 `run` and decides to keep it:
+
+```bash
+kane-cli run "Search for noise-cancelling headphones on amazon.com" --name amazon-search
+```
+
+On exit, kane-cli writes `<cwd>/.testmuai/tests/amazon-search_test.md`. Move that file into the user's repo and re-run it with `testmd run`. Without `--name`, an ad-hoc `run` is ephemeral and nothing is written.
+
+## CI invocation
+
+```bash
+kane-cli testmd run ./tests/checkout_test.md \
+  --agent \
+  --headless \
+  --on-lock-conflict wait \
+  --retry
+```
+
+- `--agent` — NDJSON to stdout (auto-enabled when stdin is not a TTY; pass explicitly anyway).
+- `--headless` — no window.
+- `--on-lock-conflict wait` — block instead of failing if a teammate is editing the same test.
+- `--retry` — automatically recover transient replay failures.
+
+Exit codes:
+
+| Code | Meaning |
+|------|---------|
+| 0 | ✅ Passed |
+| 1 | ❌ Failed |
+| 2 | ⚠️ Error (auth, setup, infra) — for `testmd`, also includes parse errors and `--on-lock-conflict fail` |
+| 3 | ⏱️ Timeout or cancelled — for `testmd`, also includes `--on-lock-conflict wait` timeout |
+
+## Parse errors (when writing a `_test.md`)
+
+Parse errors abort **before** any browser launch with exit `2`. Common ones and the fix:
+
+| Message | Fix |
+|---|---|
+| `frontmatter is missing closing '---'` | Add the trailing `---` |
+| `invalid YAML in frontmatter` | Re-validate the YAML block |
+| `step body must be exactly one of prose / @import` | Split into two steps |
+| `step config on @import may only contain 'optional'` | Remove other keys from the yaml block |
+| `cannot @import a test file` | Imports may only reference helpers (not ending in `_test.md`) |
+| `cyclic reference` | Restructure helpers to break the loop |
+| `chrome config is global-only` | Move Chrome key to root frontmatter |
+| `'<key>' is run-level and cannot be set per-step` | Move `mode` / `on_lock_conflict` to root frontmatter |
+| `unknown config key` | Remove or fix the key |
+| `auth/identity keys are CLI-only` | Pass `username` / `access_key` as CLI flags, not in frontmatter |
+
+When the user reports a parse error, fix the file before retrying — don't loop on the same error.
