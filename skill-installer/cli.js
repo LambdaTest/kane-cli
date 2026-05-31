@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { cpSync, mkdirSync, rmSync, existsSync } from "node:fs";
+import { cpSync, mkdirSync, rmSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
@@ -9,6 +9,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const SKILL_NAME = "kane-cli";
 const SOURCE_DIR = join(__dirname, "skills");
+const VERSION = JSON.parse(readFileSync(join(__dirname, "package.json"), "utf8")).version;
 
 const TARGETS = [
   { dir: join(homedir(), ".claude", "skills", SKILL_NAME), agent: "Claude Code" },
@@ -22,13 +23,14 @@ function install() {
     process.exit(1);
   }
 
-  console.log("Installing kane-cli skill...\n");
+  console.log(`Installing kane-cli skill v${VERSION}...\n`);
 
   let installed = 0;
   for (const { dir, agent } of TARGETS) {
     try {
       mkdirSync(dir, { recursive: true });
       cpSync(SOURCE_DIR, dir, { recursive: true, force: true });
+      writeFileSync(join(dir, "VERSION"), VERSION + "\n");
       console.log(`  ✓ ${agent}  →  ${dir}`);
       installed++;
     } catch (err) {
@@ -38,7 +40,7 @@ function install() {
 
   console.log();
   if (installed > 0) {
-    console.log(`Installed to ${installed}/3 agents.`);
+    console.log(`Installed v${VERSION} to ${installed}/3 agents.`);
     console.log();
     console.log("Usage:");
     console.log("  Claude Code  →  /kane-cli  or ask any browser task");
