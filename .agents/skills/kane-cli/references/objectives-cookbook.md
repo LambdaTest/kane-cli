@@ -217,7 +217,7 @@ For DevTools extractions, the same rule applies — use "store" or "extract":
 ✅ "extract the value of the session_id cookie as 'session'"
 ```
 
-Stored values land in `run_end.final_state` and feed the second results table per `SKILL.md §1.3`.
+Stored values land in `run_end.final_state` and feed the second results table per `SKILL.md §1.4`.
 
 ---
 
