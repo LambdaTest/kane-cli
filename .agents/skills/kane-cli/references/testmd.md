@@ -51,7 +51,7 @@ Four parts in order:
 1. **YAML frontmatter** — between `--- ... ---` at the very top.
 2. **`# Title`** — decorative; everything before the first `## ` is ignored.
 3. **`## H2` step headings** — one per step. The agent reads the step body, not the heading.
-4. **Step body** — either prose **or** a single `@import <path>` line. Never both.
+4. **Step body** — either prose **or** a single `@import <path>` line. Never both. Prose bodies are objectives with the same grammar as `kane-cli run` — for the full pattern catalog (action verbs, assertion analyze methods, checkpoint types, chaining, worked examples), Read `references/objectives-cookbook.md`.
 
 Per-step `yaml` overrides go immediately under the heading, in a fenced block:
 
