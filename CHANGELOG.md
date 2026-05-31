@@ -7,6 +7,83 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.5] - 2026-05-29
+
+### Features Added
+
+- **Opt out of auto-generated checks in action mode** ([kane-cli#43](https://github.com/LambdaTest/kane-cli/issues/43)) — when authoring tests via `kane-cli` in action mode, the CLI no longer appends its own final-verification check. Authors keep full control over which assertions land in the generated test file. (Behavior unchanged outside action mode.)
+- **Confidence-scored element matching** — every element-match call now reports a confidence score and the visual cues that influenced it. Low-confidence matches are rejected up front instead of letting a wrong element silently get clicked.
+- **Richer target descriptions** — element targeting now distinguishes load-bearing descriptors (PRIMARY) from supporting visual cues (HINTS), producing fewer ambiguous matches on visually similar elements.
+
+### Bugs Resolved
+
+- **`--retry` now works with OAuth credentials** ([kane-cli#52](https://github.com/LambdaTest/kane-cli/issues/52)) — OAuth users no longer have to fall back to `--username` / `--access-key`. Credentials are resolved up front before the run lock is acquired.
+- **Screenshots upload reliably across the full session lifecycle** ([kane-cli#42](https://github.com/LambdaTest/kane-cli/issues/42)) — image network calls now fire consistently in kane-cli reports across boot, login, profile switch, and `/new` session resets.
+
+### Reliability improvements
+
+- **Automatic retry on transient network failures** — idempotent reads retry with backoff instead of failing the run immediately.
+- **Stale credential cache falls back correctly** — if the in-memory snapshot is out of date, the CLI falls back to the last known good cached credentials.
+- **Session transitions handled consistently** — boot, login, profile switch, and logout now go through a single dispatcher, closing gaps where auth state could get out of sync.
+- **Remote logger and screenshot queue init hardened** — the logger won't re-initialize if already running, and a screenshot setup failure no longer takes down the surrounding operation.
+
+## [0.3.4] - 2026-05-26
+
+### Faster, smarter project picker
+- **Project search now filters on the server** — typing in the project picker sends a `filter[name]` query instead of filtering a local list, so results are accurate and instant even across hundreds of projects.
+- **Results are paginated at 10 per page with a searching indicator** — a visible loading state appears while results load, so the picker never feels frozen.
+
+### Fuller artifact uploads
+- **The entire session directory is zipped and uploaded** — artifact uploads now capture everything in the session folder, not just individual files, so post-run inspection has the full context.
+- **Screenshot file extensions are tracked per operation** — the correct extension (`.png`, `.jpg`, etc.) is recorded per operation ID, so artifact references point to real files.
+
+### Variable templates that actually resolve
+- **`{{var}}` placeholders in query descriptions now expand correctly** — analyze, vision, and textual query descriptions that reference variables were being sent as raw template strings; they now resolve before the query runs.
+
+### Triage and reporting
+- **Triage payload and reporting are now supported** — runs can emit structured triage data, giving you a reportable summary of what passed, failed, or needs attention.
+
+### Smoother installation
+- **`sharp` is now an optional dependency** — a missing `sharp` native module no longer blocks `npm install`, and the post-install check no longer silently fails on global installs.
+
+### Resolved Issues 
+- https://github.com/LambdaTest/kane-cli/issues/51
+- https://github.com/LambdaTest/kane-cli/issues/48
+- https://github.com/LambdaTest/kane-cli/issues/47
+- https://github.com/LambdaTest/kane-cli/issues/46
+- https://github.com/LambdaTest/kane-cli/issues/44
+- https://github.com/LambdaTest/kane-cli/issues/38
+- https://github.com/LambdaTest/kane-cli/issues/27
+
+---
+
+## [0.3.3] - 2026-05-22
+
+### Replay runs are more accurate
+- **Variables now carry through in replay mode** — values set earlier in a test are correctly passed to the runner when replaying a recorded flow, so replay results match the original run.
+- **AI-driven steps behave more consistently** — when Kane-CLI interprets a step, it now uses the AI's own understanding of the intent rather than the human-written description, producing more reliable browser actions.
+
+## [0.3.2] - 2026-05-21
+
+### Smarter replay with live branch evaluation
+- **`if/else` branches re-evaluate during replay** — instead of blindly replaying recorded steps, the replay engine now re-gates each `if/else` branch against live conditions, so playback follows the correct path even when runtime state differs from the recording.
+- **`--retry` no longer gets stuck on terminal-step failures** — previously, retrying a run that failed at a terminal step would silently do nothing; it now behaves correctly.
+- **Run log lands in the right place** — `run.log` is now written to `runs/<n>/run.log` instead of `runs/<n>/run-test/run.log`, so it's where you'd expect to find it.
+
+### Tab-count assertions now work end-to-end
+- **Assert on the number of open browser tabs** — `tab_count` is now a fully supported assertion type: it's recognized during test initialization, wired through the analyzer, and evaluated correctly during replay.
+
+### More reliable test execution
+- **Click actions use vision-based drift detection as a fallback** — coordinate-based clicks now pass, so if a target has shifted since recording, the engine detects the drift rather than silently clicking the wrong spot.
+- **Assertion outcomes are recorded, not re-executed** — the codegen path now captures the assert result directly instead of re-running the assertion through code generation, which could produce incorrect behavior.
+- **Variable names reach TMS unmodified** — external runtime variable names are now pushed as-is, without an internal prefix that was being incorrectly applied.
+- **Code export failures are caught immediately** — if the trigger or poll step for code export returns a non-200 response, the run now fails fast instead of hanging or silently continuing.
+
+### A smoother CLI experience
+- **Paste multi-line text into the objective prompt** — multi-line clipboard content pasted into the objective input field is now handled cleanly instead of being misprocessed.
+- **`--help` looks the same everywhere** — help output is now consistent whether you reach it via `--help` or by typing an invalid command, and invalid input now shows a hint.
+- **HTTPS connections trust your OS certificate store** — the CLI now uses your system's trusted certificate authorities instead of a bundled set, which means corporate or custom CA setups work without extra configuration. A crash on malformed cert entries is also fixed.
+
 ## [0.3.1] - 2026-05-14
 
 ### More reliable HTTPS connections

@@ -4,6 +4,7 @@ This page lists common problems you may hit while using kane-cli, what causes th
 
 ## Contents
 
+- [Install fails with "sharp: Please add node-addon-api"](./troubleshooting/sharp-install-failure.md) — system libvips, npm optional deps, proxy issues
 - [Chrome failed to launch](#chrome-failed-to-launch)
 - [Authentication failed](#authentication-failed)
 - [Login failed — fetch failed / SSL certificate errors](#login-failed--fetch-failed--ssl-certificate-errors) — Node TLS trust against a corporate proxy
