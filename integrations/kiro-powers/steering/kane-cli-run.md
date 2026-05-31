@@ -84,6 +84,59 @@ Chain action → extraction → assertion in a single objective:
 | Negative    | `"assert no error message or red banner is visible"` |
 | Positional  | `"assert 'Settings' appears in the left sidebar navigation"` |
 
+## Analyze methods — picking the right checkpoint
+
+Assertions, extractions, and if/else checkpoints each work with five **analyze methods** — *where* the agent looks for the data. The method is selected from the phrasing of the objective. Pick the method that matches the data source, not the one that's easiest to type.
+
+| Method | Use it for | Phrasing the agent recognizes |
+|---|---|---|
+| **Visual** (default) | Visible text, prices, labels, counts, colors by name, visibility | "the price …", "is visible", "displays", "is shown" |
+| **Textual (DOM)** | Element states, CSS properties, HTML attributes, exact CSS color values | "is disabled / enabled / checked", "the placeholder of …", "the aria-label of …", "the font-size of …", "rgb(…)" / "#hex" |
+| **URL** | Address bar — path, query, fragment, redirects | "URL contains …", "URL path is …", "URL has param …", "redirected to …" |
+| **Title** | Browser tab `document.title` | "page title contains …", "title is …" |
+| **DevTools** | Things not visible on the page — network, console, performance, cookies, localStorage | see DevTools subdomains below |
+
+### DevTools subdomains
+
+Five domains. Each captures data the user cannot see on screen. The agent picks the subdomain from phrasing.
+
+| Subdomain | Captures | Scope | Common phrasing |
+|---|---|---|---|
+| **Network** | HTTP requests/responses — status codes, headers, response bodies, timing | Resets each step | "no API calls returned 5xx", "the POST /api/login returned 200", "all API responses completed under 2 seconds" |
+| **Console** | `console.log/warn/error/info/debug` + uncaught JS exceptions | Resets each step. Top frame only | "no console errors", "no uncaught JS exceptions", "console contains '…'" |
+| **Performance** | Core Web Vitals — LCP, CLS, INP, FCP, TTFB | Per-navigation, point-in-time | "page LCP is under 2500ms", "CLS is below 0.1", "TTFB under 800ms" |
+| **Cookies** | All cookies including `httpOnly` — name, value, flags | Point-in-time, persists across steps | "a cookie named 'session_id' exists", "the session cookie is httpOnly", "no cookies without the Secure flag" |
+| **localStorage** | Browser `localStorage` for the current origin | Point-in-time, persists across steps on same origin | "auth_token exists in localStorage", "the theme preference is 'dark'" |
+
+> Network and Console **reset between steps** — if a later step asserts on traffic or logs from an earlier step, extract and carry the value forward. Cookies and localStorage **persist** across steps on the same origin.
+
+### Operators
+
+Assertions support these comparisons. Phrase naturally — the agent maps to the right one.
+
+| Operator | Meaning | Example |
+|---|---|---|
+| `equals` | Exact match | "price equals $29.99", "title is 'Home'" |
+| `contains` | Substring match | "URL contains /checkout" |
+| `not_contains` | Does not contain | "title not contains 'Error'" |
+| `gt` / `gte` | Greater than / or equal | "items greater than 5" |
+| `lt` / `lte` | Less than / or equal | "LCP less than 2500" |
+| `not_equals` | Not equal | "status not equals 'failed'" |
+
+### Picking the right method when in doubt
+
+- "Is the price $29.99?" → **Visual** (on screen).
+- "Is the submit button disabled?" → **Textual/DOM** (state, not visible text).
+- "Does this red background match exactly `rgb(220,38,38)`?" → **Textual/DOM** (exact CSS).
+- "Are we on the checkout page?" → **URL**.
+- "Did the page send failed API calls?" → **DevTools/Network**.
+- "Are there console errors?" → **DevTools/Console**.
+- "Is the page fast?" → **DevTools/Performance** (LCP/FCP/TTFB).
+- "Did login set a session cookie?" → **DevTools/Cookies**.
+- "Did the app store the auth token?" → **DevTools/localStorage**.
+
+Default when uncertain: **Visual** — that's what the agent does too.
+
 ## Do / Don't
 
 | ✅ Do | ❌ Don't |
@@ -91,6 +144,7 @@ Chain action → extraction → assertion in a single objective:
 | Imperative verbs: "go to", "click", "store as" | Vague verbs: "check out", "look at", "explore" |
 | Be specific: "click the 'Add to Cart' button"   | Be vague: "add the item" |
 | Name extractions: "store X as 'price'"          | Hope for values: "tell me the price" |
+| Use the right analyze method for the data       | Default to a generic "check this" when DevTools fits |
 | Use `{{variables}}` for credentials and URLs    | Hardcode secrets in the objective string |
 | Include the starting URL in the objective       | Assume the agent knows where to start |
 | Split mega-objectives (>15 steps) into runs     | Cram everything into one giant objective |
