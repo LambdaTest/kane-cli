@@ -8,7 +8,7 @@ When a run fails, diagnose before suggesting fixes.
 
 The `run_end` event provides `session_dir` and `run_dir` paths. Use those directly.
 
-```
+```text
 {session_dir}/
 ├── session.json               # Session metadata, run list, upload status
 ├── tui.log                    # Timeline: session start, run start/end, errors
