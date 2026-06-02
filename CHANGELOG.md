@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.6] - 2026-06-02
+
+### DevTools assertions and extraction
+- **Assert on network requests directly in your tests** — KaneAI can now inspect live network traffic during a run, letting you assert on request/response bodies, status codes, and headers using operators like `gte`, `lte`, and `not_equals`.
+- **Read and assert on browser console output** — console logs (errors, warnings, app-level messages) are captured per run and can be used as assertion targets or extraction sources, with level normalization handled automatically.
+- **Cookies and localStorage are now inspectable** — Kane-cli can read, assert on, and extract values from cookies and `localStorage` during a test run.
+- **Performance traces are captured and assertable** — browser performance data is collected inline during a run and exposed as an assertion and extraction target.
+
+### Code export for DevTools actions
+- **DevTools actions now export to Code** — network queries, console reads, cookie access, and performance snapshots all produce correct automation code when code export is enabled, including replay support.
+
+### Replay handles DevTools actions
+- **Replaying DevTools steps works end-to-end** — network capture starts and stops correctly around `devtool_network` replay steps; console, cookie, storage, and performance actions are all wired into the replay execution.
+
+---
+
 ## [0.3.5] - 2026-05-29
 
 ### Features Added
