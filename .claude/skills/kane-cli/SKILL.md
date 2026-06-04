@@ -11,70 +11,69 @@ Use `kane-cli` for **any task that requires a real browser**: navigating website
 
 ---
 
-## 1. Live narration and results presentation — READ THIS FIRST
+## 1. Narration and results presentation — READ THIS FIRST
 
-The user is watching this happen in real time. Silence during a kane-cli run is a bug; a one-line "Test passed" instead of the results table is a bug. Both happen because this section used to be buried at line 353 of an 800-line file. It's first now. Follow it exactly.
+A one-line "Test passed" instead of the results table is a bug. This section is first so you don't miss it. Follow it exactly.
 
-### 1.1 How to launch kane-cli — Monitor (Claude Code) or Bash (Codex / Gemini)
+### 1.1 How to launch kane-cli
 
-**Bash is synchronous — it blocks until kane-cli exits, then hands you the whole stdout at once. That means you cannot narrate event-by-event from a Bash call.** To narrate live, the launch tool must stream stdout line-by-line.
+**All platforms use `Bash`** to launch kane-cli. Do NOT use `Monitor` — it creates excessive noise.
 
-| Agent | Launch tool | Live narration possible? |
-|---|---|---|
-| **Claude Code** | `Monitor` — streams each stdout line as its own notification | ✅ Yes — narrate per event as it arrives |
-| **Codex CLI** | `Bash` (or shell equivalent) | ❌ No — narrate post-run from captured stdout |
-| **Gemini CLI** | `Bash` (or shell equivalent) | ❌ No — narrate post-run from captured stdout |
-
-**In Claude Code, you MUST use `Monitor` (not Bash) to launch `kane-cli run` / `kane-cli testmd run`.** Pattern:
-
-```yaml
-description: "kane-cli: <short objective>"
-command: kane-cli run "<objective>" --agent <other-flags>
-timeout_ms: 600000
-persistent: false
+```bash
+kane-cli run "<objective>" --agent <other-flags>
 ```
 
-Every NDJSON line from kane-cli arrives as a notification. The watch ends when kane-cli exits (you'll see the exit code in the final notification). Do NOT also call Bash for the same run — that double-launches kane-cli.
+Bash blocks until kane-cli exits, then hands you the complete stdout. Parse it, summarize what happened, and present the results table. Same pattern for `kane-cli testmd run` and `kane-cli generate`.
 
-In Codex/Gemini, use Bash with the same `kane-cli ... --agent` command. After it returns, parse the captured stdout as if you had received the events in sequence.
+Set a generous timeout (up to 600000ms) since browser runs can take a while.
 
-### 1.2 Before you launch — emit start line and create todos
+### 1.2 Before you launch
 
-**Before** invoking Monitor (or Bash), emit:
+**Before** invoking Bash, emit:
 
 ```text
 Starting browser task: <one-line restatement of the user's objective>.
 ```
 
-Then create these TodoWrite items (skip on Gemini CLI where TodoWrite is unavailable):
+That single line tells the user something is in progress. No todos needed — Bash returns all output at once and you summarize it below.
 
-1. `Narrate start of <objective>` — mark `in_progress` immediately
-2. `Narrate each step as NDJSON arrives`
-3. `Present results table after run_end`
+### 1.3 After the run — summarize what happened
 
-The todos exist so that after Monitor/Bash returns control, the in-context reminder pulls you back into narration mode rather than a generic "parse stdout" mode.
+Once Bash returns, parse the captured NDJSON stdout and present a **concise summary** of what happened. Not every event deserves a line — surface what matters and skip the noise.
 
-### 1.3 During the run — narrate every event
+Progress events have `step`/`status`/`remark` fields and **no `type` field**.
 
-Progress events have `step`/`status`/`remark` fields and **no `type` field**. Each one gets ONE narration line.
+#### What to surface
 
-**Claude Code (Monitor):** Each Monitor notification IS one event. Narrate it the moment the notification arrives. Do not batch. Do not wait for more events. One notification → one narration line.
+| Show | Which events | How |
+|------|-------------|-----|
+| **Failures** | Any step with `status: "failed"` | `Step <n> failed: <remark>` |
+| **Flow changes** | `bifurcation`, `child_agent_start`, `child_agent_end` | Plain-language one-liner (e.g. "The agent split the objective into 2 sub-tasks") |
+| **Errors** | `error` typed events | `Error: <message>` |
+| **Overall progress** | All passing steps | One summary line: `<total> steps completed — <2–4 key actions from remarks>` |
 
-**Codex / Gemini (Bash post-run):** Iterate the captured stdout line-by-line in order. Emit one narration per progress event in sequence before moving on to the results table.
+#### What to skip
 
-Template (both cases):
+- Individual passing steps — fold them into the overall progress line
+- Internal field names (`step`, `status`, `remark`, `run_end`, `final_state`, `bifurcation`, `session_dir`, etc.) — translate to plain language
+
+#### Example output for a 15-step run with one failure
 
 ```text
-Step <n>: <plain-language version of the remark>
+Starting browser task: Search for laptop on Amazon and add to cart.
+
+<Bash runs…>
+
+15 steps completed — navigated to amazon.in, searched for 'laptop', filtered results, added to cart.
+Step 6 failed: Could not find Add to Cart button — the agent retried successfully.
+
+| | |
+|-------|-------|
+| 🟢 **Result** | Passed |
+| …results table… |
 ```
 
-If `status` is `"failed"`, flag it immediately:
-
-```text
-Step <n> failed: <remark> — the agent is retrying.
-```
-
-Never expose internal field names (`step`, `status`, `remark`, `run_end`, `final_state`, `bifurcation`, `session_dir`, etc.) to the user. Translate to plain language.
+For short runs (≤ 3 steps), you may list each step individually since there's nothing to fold.
 
 ### 1.4 After run_end — present the results table
 
@@ -242,7 +241,7 @@ Parsing strategy:
 for each line:
   if obj.type === "run_end"  → terminal, stop parsing
   else if obj.type exists    → typed flow event (rare)
-  else if obj.step exists    → progress event → narrate per §1.3
+  else if obj.step exists    → progress event → summarize per §1.3
 ```
 
 `run_end` is the only event with a stable cross-version schema — build all post-run logic on it.
@@ -265,7 +264,19 @@ Three explicit modes, each runs **one turn then exits**:
 | **Refine** | `kane-cli generate "<change>" --refine --req <id> --agent` |
 | **Save** | `kane-cli generate --save --req <id> --agent` → writes runnable `_test.md` |
 
-**Launch + present** — same launch model as §1 (stream with `Monitor` on Claude Code / `Bash` on Codex / Gemini); narrate `thinking`/progress in plain language. Note generate is a **quick single turn** — it exits on its own at `generate_done`, so there's no long-lived stream to keep alive. At `generate_done`, **present the result adaptively**:
+**Launch + present** — same as §1: use `Bash` (not Monitor), emit "Generating test cases…" before launch, then parse the output when it returns. Generate is a **quick single turn** — it exits on its own at `generate_done`.
+
+**After Bash returns**, parse the NDJSON and present only what matters:
+
+| Show | Event | How |
+|------|-------|-----|
+| **The deliverable** | `generate_snapshot` | Present scenarios + cases (see below) |
+| **Clarifications** | `generate_clarification` | Surface the question — it needs an answer |
+| **Save results** | `generate_save_result` | List files written |
+| **Errors** | `error` | Surface the message |
+| **Skip everything else** | `generate_thinking`, `generate_progress`, `generate_chat`, `generate_start` | Noise — don't narrate |
+
+At `generate_done`, **present the result adaptively**:
 - **≤ ~30 cases** → a nested tree: each scenario, then its cases tagged Positive / Negative / Edge.
 - **more than that** → a summary line + a bulleted scenario list (title + case count); expand a scenario's cases only when asked.
 
