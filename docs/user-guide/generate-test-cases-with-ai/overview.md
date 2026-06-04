@@ -1,6 +1,6 @@
 # Generating test cases with AI
 
-`kane-cli generate` turns a plain-language description of *what you want to test* into structured **test scenarios** and **test cases** — without writing them by hand and without launching a browser. It drives the same AI Test Case Generator available in the web product; this page covers the command-line surface.
+`kane-cli generate` turns a plain-language description of *what you want to test* into structured **test scenarios** and **test cases** — without writing them by hand and without launching a browser. This page covers the command-line interface to AI test-case generation.
 
 A generation produces:
 
@@ -9,7 +9,7 @@ A generation produces:
 
 You generate, review the result, **refine** it in plain language as many times as you like, and optionally **save** the functional cases as runnable `_test.md` files that [`kane-cli testmd`](../testmd/running.md) can execute and replay.
 
-> This is the same feature documented at <https://www.testmuai.com/support/docs/generate-test-cases-with-ai/>. The web product accepts richer inputs (files, PDFs, issue links) and can push cases straight into Test Manager or automation; the **CLI takes a text description** and writes local `_test.md` files. See [Limits and scope](#limits-and-scope).
+> For the full picture of AI test-case generation — including richer inputs (files, PDFs, issue links) and pushing cases into Test Manager or automation — see the docs at <https://www.testmuai.com/support/docs/generate-test-cases-with-ai/>. The **CLI here takes a text description** and writes local `_test.md` files. See [Limits and scope](#limits-and-scope).
 
 ## Quick start
 
