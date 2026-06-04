@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-06-04
+
+### AI test generation (`kane-cli generate`)
+- **New `kane-cli generate "<objective>"` command** — starts an AI-driven generation session in an interactive TUI; refine the objective through a chat-like interface, then `/save` to materialize `.testmd` test files.
+- **Headless / scripted generation** — run `kane generate` with `--refine` or `--save` flags for non-interactive pipelines; `--out` controls where the resulting files land.
+- **Scenarios drill-in with `/view`** — while generating, `/view` opens a full-screen browser showing scenarios and individual test cases as they are produced; cases can be excluded before saving.
+- **Bifurcation into per-case `.testmd` files** — each scenario is split into independent test cases eagerly; `/save` writes only functional cases and reports exactly how many were written.
+- **Clarification round-trips** — if the AI needs more detail mid-generation, it prompts inline and resumes once answered; cancel any in-flight turn with **Ctrl+C** without losing the session.
+- **Mode-switch guard** — switching from Generate to Run (or vice versa) while work is in progress asks for confirmation; an active inline run blocks the switch entirely.
+
+### Browse and run saved tests inline
+- **`/list` opens a saved-tests overlay** — from inside a run session, `/list` shows all saved `.testmd` tests; select one to inspect it, then launch it as a full inline run without leaving the TUI.
+- **Inline `.testmd` runs have full fidelity** — the in-session run gets its own scoped lifecycle, keybindings, and log; it can't accidentally kill the outer session's Chrome when it exits.
+- **Run summary and share link appended on completion** — when an inline `.testmd` run finishes, the summary and share URL are written into the scrollback.
+
+### Share URLs in agent output
+- **`share_url` now appears in agent NDJSON** — `test_md_summary` and `test_md_done` events both carry the share URL, so CI pipelines and downstream tooling can link directly to the completed run.
+
+### Chrome profile support
+- **`--chrome-profile` flag on `kane-cli run`** — pass a Chrome profile name at the command line; it is also picked up automatically from `.testmd` frontmatter when running saved tests.
+
+### Cleaner Generate TUI
+- **Teal accent and wider progress bar** — Generate mode uses a distinct teal color scheme; the progress bar grows from 10 to 24 cells so progress is easier to read at a glance.
+- **Bottom bar condensed to 3 rows** — the model name is gone; Mode, Session ID, and key hints fit on three lines.
+- **Thinking box capped at 5 rows** — the expanded thinking panel no longer pushes the live region off-screen.
+- **Agent replies wrap correctly** — each reply block renders as a single unit so Ink wraps at word boundaries; bullets and indented blocks no longer dedent mid-line.
+- **Markdown formatting in agent replies** — bold, italic (boundary-safe, so `snake_case` is never mangled), and `@`-mention mappings render correctly in the scrollback.
+- **Mode-scoped commands** — slash commands are locked to the mode they belong to; foreign commands are rejected with a clear message rather than silently ignored.
+
+---
+
 ## [0.3.7] - 2026-06-04
 
 ### Deterministic navigation at run start
