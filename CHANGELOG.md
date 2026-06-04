@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.7] - 2026-06-04
+
+### Deterministic navigation at run start
+- **Runs now navigate to the target URL as a defined first step** — navigation happens in its own phase before any test actions begin, so timing is predictable and logged accurately with real wall-clock duration.
+- **Navigation and session setup happen in parallel** — the browser moves to the start URL at the same time the session initializer spins up, reducing dead time at the start of a run.
+
+### More reliable dropdown and combobox interaction
+- **Custom ARIA comboboxes are now clicked instead of selected** — elements that look like dropdowns but use custom ARIA roles get the interaction they actually respond to, reducing failed selections.
+- **All combobox, listbox, and select elements expose their options again** — option extraction was missing for some element types and is now restored across the board.
+
+### Fewer silent failures
+- **Non-text request bodies no longer crash the session** — a `UnicodeDecodeError` reading binary or malformed request content is now swallowed gracefully instead of surfacing as an error.
+- **Viewport size is read correctly** — a subtle API mismatch when querying the viewport has been fixed, so layout-sensitive steps get accurate dimensions.
+
+### Cleaner run objective display
+- **The run's objective now shows the full picture** — the display combines the start URL and the cleaned task description into a single stitched objective, so what you see at the top of a run reflects exactly what was requested.
+
 ## [0.3.6] - 2026-06-02
 
 ### DevTools assertions and extraction
