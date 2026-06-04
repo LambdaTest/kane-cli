@@ -1,6 +1,6 @@
 ---
 name: kane-cli
-description: Browser automation via kane-cli — run objectives, parse NDJSON output, inspect logs, report bugs. Use for any task requiring a real browser (navigate, click, fill forms, test web UI, take screenshots).
+description: Browser automation + AI test authoring via kane-cli — run browser objectives, generate & refine test scenarios/cases from a description, parse NDJSON output, inspect logs, save runnable _test.md. Use for any task requiring a real browser (navigate, click, fill forms, test web UI, take screenshots), or to author/generate test cases from a requirement.
 ---
 
 # Kane CLI — Browser Automation Skill
@@ -133,6 +133,7 @@ When the user's request involves a browser:
 **What does the user want?**
 - A single one-shot browser task → build a `kane-cli run --agent` command (§3 + §4)
 - A test they want to save / re-run / commit → Read `references/testmd.md` first, then use `kane-cli testmd`
+- Generate / author test cases or scenarios from a description or requirement (no browser) → Read `references/generate.md` first, then use `kane-cli generate` (§6)
 - Multiple independent browser tasks → Read `references/parallel.md` first
 - Debug a failed run → Read `references/debug.md`
 - Configure kane-cli or check directory layout → Read `references/setup-and-config.md`
@@ -246,14 +247,44 @@ for each line:
 
 For full event schemas (`bifurcation` flow fields, `child_agent_*`, `ask_user` semantics, `cancel`/`user_response` outbound events, complete `run_end` field list), Read `references/parsing.md`.
 
+`kane-cli generate` (§6) emits a **different** stream — every line is typed `generate_*` (no untyped progress lines), terminated by `generate_done`. Its schema is in `references/generate-parsing.md`.
+
 ---
 
-## 6. When to read which reference
+## 6. Generate test cases (authoring — no browser)
+
+`kane-cli generate` authors **Test Scenarios → Test Cases** from a plain-language description. It does **not** drive a browser — use it when the user wants to *create / generate test cases or scenarios* from a requirement. Full details + event schema: **Read `references/generate.md`**.
+
+Three explicit modes, each runs **one turn then exits**:
+
+| Mode | Command |
+|---|---|
+| **New** | `kane-cli generate "<what to test>" --agent` |
+| **Refine** | `kane-cli generate "<change>" --refine --req <id> --agent` |
+| **Save** | `kane-cli generate --save --req <id> --agent` → writes runnable `_test.md` |
+
+**Launch + present** — same launch model as §1 (stream with `Monitor` on Claude Code / `Bash` on Codex / Gemini); narrate `thinking`/progress in plain language. Note generate is a **quick single turn** — it exits on its own at `generate_done`, so there's no long-lived stream to keep alive. At `generate_done`, **present the result adaptively**:
+- **≤ ~30 cases** → a nested tree: each scenario, then its cases tagged Positive / Negative / Edge.
+- **more than that** → a summary line + a bulleted scenario list (title + case count); expand a scenario's cases only when asked.
+
+Then offer the next commands from the terminal line's Refine / Save hints (they carry the request id) — don't hand-build them.
+
+**Clarification → refine (do not skip):** if the turn ends with a clarification, that's **exit 0 — not an error**. Act on it: answer it yourself, or ask your own user, then **re-invoke** `kane-cli generate "<answer>" --refine --req <id> --agent`. Never drop a clarification.
+
+**Save is Functional-only:** `--save` writes only **Functional** cases to `_test.md` (under `<cwd>/.testmuai/tests` by default). Non-functional cases (Security, Performance, …) are generated and shown but not saved. Run saved files with **`kane-cli testmd run`** (`references/testmd.md`) — that's the generate → testmd pipeline.
+
+Internal event/field names (`generate_snapshot`, `request_id`, …) are for parsing only — never show them to the user (§5 rule). Wire schema: `references/generate-parsing.md`.
+
+---
+
+## 7. When to read which reference
 
 | Situation | Read |
 |---|---|
 | User wants to save/persist/re-run a test | `references/testmd.md` |
+| User wants to generate / author test cases from a description | `references/generate.md` |
 | Run failed, need to diagnose | `references/debug.md` |
 | Multiple independent browser tasks | `references/parallel.md` |
-| Need full NDJSON event schema | `references/parsing.md` |
+| Need full NDJSON event schema (`run`) | `references/parsing.md` |
+| Need the `generate` NDJSON event schema | `references/generate-parsing.md` |
 | First-time install, auth, or full config | `references/setup-and-config.md` |
