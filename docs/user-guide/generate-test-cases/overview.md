@@ -1,6 +1,6 @@
 # Generating test cases with AI
 
-`kane-cli generate` turns a plain-language description of *what you want to test* into structured **test scenarios** and **test cases** — without writing them by hand and without launching a browser. This page covers the command-line interface to AI test-case generation.
+`kane-cli generate` turns a plain-language description of *what you want to test* into structured **test scenarios** and **test cases** — without writing them by hand and without launching a browser. This page covers AI test-case generation from both the command line and the interactive kane-cli TUI.
 
 A generation produces:
 
@@ -32,7 +32,7 @@ The request id (`23271` above) is printed at the end of each generation and is h
 
 ## The three modes
 
-`generate` runs **one turn per command, then exits** — there is no long-lived interactive session. You continue a request by running the command again with `--req <id>`.
+`generate` runs **one turn per command, then exits** — you continue a request by running the command again with `--req <id>`. (That's the scripted/headless surface; run interactively, kane-cli opens a live TUI session instead — see [Interactive mode (TUI)](#interactive-mode-tui).)
 
 | Mode | Command | What it does |
 |---|---|---|
@@ -55,6 +55,24 @@ The request id (`23271` above) is printed at the end of each generation and is h
 | `--project <id>` / `--folder <id>` | Test Manager project / folder. |
 | `--agent` | Emit structured NDJSON on stdout (auto-on when run non-interactively / piped). |
 | `--env`, `--username`, `--access-key` | Environment and authentication — same as [`kane-cli run`](../running-tests.md). See [Authentication](../authentication.md). |
+
+## Interactive mode (TUI)
+
+The commands above are the scripted surface. Running `kane-cli generate "<objective>"` in a terminal **without `--agent`** instead opens the interactive **Generate mode** in the kane-cli TUI and submits your objective. (From Run mode, `/generate` switches in; `/run` switches back.)
+
+Unlike the one-turn command-line surface, the TUI is a **live session** — generated scenarios stay pinned in a **Scenarios** box that you refine and browse in place:
+
+| Input | Action |
+|---|---|
+| *(type any text)* | **Refine** — describe a change in plain language; the set updates in place |
+| `/view [S<n>]` | Open the **scenario browser** — drill scenarios → cases → case detail |
+| `/save` | Save the functional cases to `<cwd>/.testmuai/tests/…` |
+| `/cancel` | Cancel the current generation |
+| `/run` | Switch back to Run mode |
+
+In the scenario browser: `↑↓` move · `↵` open · `◂ ▸` previous/next sibling · `x` remove a case · `←`/`esc` back. **Non-functional cases** (Security, Performance, …) show a **gray `✓`** with a "won't be saved" note — `/save` writes only functional cases (see [Saving is functional-only](#saving-is-functional-only)).
+
+If generation asks a **clarifying question**, just type your answer to continue. After `/save`, the files are ordinary `_test.md` tests under `.testmuai/tests/` — run them with [`kane-cli testmd run`](../testmd/running.md).
 
 ## How a result is shaped
 
