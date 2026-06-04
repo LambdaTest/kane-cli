@@ -58,7 +58,7 @@ The request id (`23271` above) is printed at the end of each generation and is h
 
 ## Interactive mode (TUI)
 
-The commands above are the scripted surface. Running `kane-cli generate "<objective>"` in a terminal **without `--agent`** instead opens the interactive **Generate mode** in the kane-cli TUI and submits your objective. (From Run mode, `/generate` switches in; `/run` switches back.)
+The commands above are the scripted surface. The kane-cli TUI **launches in Run mode** (for running tests) by default — switch to **Generate mode** with **`/generate`**, and back with `/run`. Or jump straight in: running `kane-cli generate "<objective>"` in a terminal (without `--agent`) opens the TUI directly in Generate mode and submits your objective.
 
 Unlike the one-turn command-line surface, the TUI is a **live session** — generated scenarios stay pinned in a **Scenarios** box that you refine and browse in place:
 
