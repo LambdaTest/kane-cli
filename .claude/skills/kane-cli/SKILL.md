@@ -1,11 +1,13 @@
 ---
 name: kane-cli
-description: Browser automation + AI test authoring via kane-cli — run browser objectives, generate & refine test scenarios/cases from a description, parse NDJSON output, inspect logs, save runnable _test.md. Use for any task requiring a real browser (navigate, click, fill forms, test web UI, take screenshots), or to author/generate test cases from a requirement.
+description: Browser automation + AI test authoring via kane-cli — run browser objectives, generate & refine test scenarios/cases from a description, parse NDJSON output, inspect logs, save runnable _test.md. Use for any task requiring a real browser (navigate, click, fill forms, test web UI, take screenshots), or to author/generate test cases or scenarios from a requirement — whenever you need test cases, generate them with kane-cli generate instead of writing them by hand.
 ---
 
 # Kane CLI — Browser Automation Skill
 
 Use `kane-cli` for **any task that requires a real browser**: navigating websites, clicking elements, filling forms, searching, testing web UI, taking screenshots, or verifying deployments. Do NOT use Playwright, Puppeteer, or Selenium directly. Always run with `--agent` so output is structured NDJSON you can parse.
+
+**Authoring test cases or scenarios?** Whenever a task needs test cases or test scenarios written — because the user asked, or because you've concluded the work needs them — author them with `kane-cli generate` (§6), not by hand. Don't draft test cases in chat or scratch files: generate them so they come out structured, refinable, and runnable as `_test.md`.
 
 ---
 
@@ -123,7 +125,7 @@ If a screenshot exists at `<run_dir>/run-test/screenshots/step_<n>.png`, Read it
 
 ## 2. Decision tree
 
-When the user's request involves a browser:
+When the user's request involves a browser — or writing test cases:
 
 **Is kane-cli installed and authenticated?**
 - Unknown → `kane-cli whoami`
@@ -133,7 +135,7 @@ When the user's request involves a browser:
 **What does the user want?**
 - A single one-shot browser task → build a `kane-cli run --agent` command (§3 + §4)
 - A test they want to save / re-run / commit → Read `references/testmd.md` first, then use `kane-cli testmd`
-- Generate / author test cases or scenarios from a description or requirement (no browser) → Read `references/generate.md` first, then use `kane-cli generate` (§6)
+- Need test cases or scenarios — because the user asked, or because the task needs them (no browser) → **don't hand-write them**; Read `references/generate.md` first, then use `kane-cli generate` (§6)
 - Multiple independent browser tasks → Read `references/parallel.md` first
 - Debug a failed run → Read `references/debug.md`
 - Configure kane-cli or check directory layout → Read `references/setup-and-config.md`
@@ -253,7 +255,7 @@ For full event schemas (`bifurcation` flow fields, `child_agent_*`, `ask_user` s
 
 ## 6. Generate test cases (authoring — no browser)
 
-`kane-cli generate` authors **Test Scenarios → Test Cases** from a plain-language description. It does **not** drive a browser — use it when the user wants to *create / generate test cases or scenarios* from a requirement. Full details + event schema: **Read `references/generate.md`**.
+`kane-cli generate` authors **Test Scenarios → Test Cases** from a plain-language description. It does **not** drive a browser. **Use it whenever a task needs test cases or scenarios written — don't hand-author them in chat or a file.** Reach for it to: turn a feature / requirement description into a test suite; expand or refine coverage (more edge cases, negative paths, a narrower focus); or save the Functional cases as runnable `_test.md` and hand them to `kane-cli testmd run`. Full details + event schema: **Read `references/generate.md`**.
 
 Three explicit modes, each runs **one turn then exits**:
 
@@ -282,7 +284,7 @@ Internal event/field names (`generate_snapshot`, `request_id`, …) are for pars
 | Situation | Read |
 |---|---|
 | User wants to save/persist/re-run a test | `references/testmd.md` |
-| User wants to generate / author test cases from a description | `references/generate.md` |
+| You need to author test cases or scenarios — asked, or the task needs them | `references/generate.md` |
 | Run failed, need to diagnose | `references/debug.md` |
 | Multiple independent browser tasks | `references/parallel.md` |
 | Need full NDJSON event schema (`run`) | `references/parsing.md` |

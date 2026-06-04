@@ -4,7 +4,7 @@
 
 `kane-cli generate` turns a plain-language description of *what to test* into structured **Test Scenarios** (logical groupings) each containing **Test Cases** (typed Positive / Negative / Edge). It calls the AI Test Case Generator — **no browser is launched**. The result is a tree of scenarios + cases you present to the user, refine conversationally, and optionally save as runnable `_test.md` files.
 
-Use it when the user wants to **create / generate / author test cases or scenarios** from a requirement — not when they want to drive a browser (that's `kane-cli run`, §3 of SKILL.md).
+**Use this whenever a task needs test cases or scenarios written — don't hand-author them in chat or a scratch file.** Reach for it to: turn a requirement / feature description into a test suite; expand or refine coverage (more edge cases, negative paths, a narrower or broader focus); or save the Functional cases as runnable `_test.md`. It is **not** for driving a browser — that's `kane-cli run` (§3 of SKILL.md).
 
 > For the full web-product picture (richer inputs, dashboards), see the public docs: <https://www.testmuai.com/support/docs/generate-test-cases-with-ai/>. The CLI surface here is **text-objective only**.
 
