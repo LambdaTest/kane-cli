@@ -299,7 +299,7 @@ The frontmatter table is the single source of truth for the keys a `_test.md` fi
 
 | Key you reached for | Where the value actually lives |
 |---|---|
-| `startUrl`, `url`, `baseUrl` | The first step's prose body. There is no frontmatter key for the start URL — the agent reads it from the step text, e.g. `## Open the app\nOpen https://example.com.`. The `target` frontmatter key looks similar but selects the **browser transport** (`chrome` / `cdp` / `ws`), not a URL. |
+| `startUrl`, `url`, `baseUrl` | The first step's prose body. There is no frontmatter key for the start URL — the agent reads it from the step text, e.g. a step `## Open the app` whose body is `Open https://example.com.`. The `target` frontmatter key looks similar but selects the **browser transport** (`chrome` / `cdp` / `ws`), not a URL. |
 | `name`, `title` | The file name (which is what `kane-cli testmd run` reports) and the per-step `## H2` headings. The optional `# Title` above the first step is decorative; the parser ignores anything before the first `## ` heading. |
 | `objective`, `description`, `goal` | The prose body of each step, directly under the `## H2` heading. The agent reads the step body as the objective. |
 | `auth`, `username`, `access_key`, `api_key` | CLI flags or your active profile, never frontmatter. Frontmatter rejects these with `auth/identity keys are CLI-only: <key>`. |
