@@ -12,6 +12,7 @@ This page lists common problems you may hit while using kane-cli, what causes th
 - [Run timed out or max steps exceeded](#run-timed-out-or-max-steps-exceeded)
 - [Variables not resolving](#variables-not-resolving)
 - [Upload failed or TMS error](#upload-failed-or-tms-error)
+- [testmd: unknown config key](#testmd-unknown-config-key)
 - [CLI exits with code 2 and no output](#cli-exits-with-code-2-and-no-output)
 - [Update available notice](#update-available-notice)
 - [Reporting bugs](#reporting-bugs)
@@ -167,6 +168,20 @@ kane-cli uploads run artifacts to TestmuAI TMS at the end of the session. If the
    ```
 
    If `project_id` is empty, set it with `kane-cli config project` or pick one in the TUI.
+
+## testmd: "unknown config key"
+
+If `kane-cli testmd run` aborts at parse time with:
+
+```
+error: [<file>:1] unknown config key: <key>
+```
+
+the key you put in the `--- ... ---` frontmatter block isn't one the parser accepts. Frontmatter has a fixed schema — see the [frontmatter table](./testmd/overview.md#frontmatter) for the complete list of valid keys.
+
+Common cases that trip people up — `name`, `objective`, `startUrl`, `url`, `description` — are not frontmatter keys at all. Each one belongs somewhere else in the file (file name, step heading, or step prose). The mapping is laid out in [Common key-name confusions](./testmd/overview.md#common-key-name-confusions).
+
+The exit code is `2`. No browser is launched and no upload is attempted, so it is safe to fix the key and re-run.
 
 ## CLI exits with code 2 and no output
 

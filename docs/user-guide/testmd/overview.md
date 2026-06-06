@@ -286,12 +286,25 @@ Mistakes the parser catches before any browser launches:
 | `step config 'optional' must be boolean: got <type>` | `optional` was set to a non-boolean. |
 | `variable '<k>' must be a string or { value: ... } object` | A variable entry is the wrong shape. |
 | `auth/identity keys are CLI-only: <key>` | `username`, `access_key`, or another auth key appeared in frontmatter. |
-| `unknown config key: <key>` | A frontmatter or per-step key is not recognised. |
+| `unknown config key: <key>` | A frontmatter or per-step key is not recognised. See [Common key-name confusions](#common-key-name-confusions) below. |
 | `chrome config is global-only: <key>` | A Chrome-related key was set on an individual step. |
 | `'<key>' is run-level and cannot be set per-step` | `mode` or `on_lock_conflict` was set on an individual step. |
 | `step config on @import may only contain 'optional': got <key>` | An `@import` step's `yaml` block contains anything other than `optional`. |
 
 Parse errors abort the run before any browser launch, auth call, or upload. The exit code is `2`.
+
+### Common key-name confusions
+
+The frontmatter table is the single source of truth for the keys a `_test.md` file accepts. A few intuitive-sounding keys are **not** in that table and produce `unknown config key: <key>`. The right place for each:
+
+| Key you reached for | Where the value actually lives |
+|---|---|
+| `startUrl`, `url`, `baseUrl` | The first step's prose body. There is no frontmatter key for the start URL — the agent reads it from the step text, e.g. `## Open the app\nOpen https://example.com.`. The `target` frontmatter key looks similar but selects the **browser transport** (`chrome` / `cdp` / `ws`), not a URL. |
+| `name`, `title` | The file name (which is what `kane-cli testmd run` reports) and the per-step `## H2` headings. The optional `# Title` above the first step is decorative; the parser ignores anything before the first `## ` heading. |
+| `objective`, `description`, `goal` | The prose body of each step, directly under the `## H2` heading. The agent reads the step body as the objective. |
+| `auth`, `username`, `access_key`, `api_key` | CLI flags or your active profile, never frontmatter. Frontmatter rejects these with `auth/identity keys are CLI-only: <key>`. |
+
+If your error is `unknown config key:` and the key you tried isn't covered above, double-check it against the [frontmatter table](#frontmatter) — every accepted key is listed there.
 
 ## Next steps
 
