@@ -76,7 +76,7 @@ In TUI mode, the same setting can be edited through an interactive window-size p
 kane-cli config project
 ```
 
-In a TTY, this opens an interactive project picker. The picker fetches the projects available to your active profile, lets you search and arrow-key through them, and saves the chosen `project_id` and `project_name`. Login is required before the picker can fetch projects.
+In a TTY, this opens an interactive project picker. The picker fetches the projects available to your active profile, lets you search and arrow-key through them, and saves the chosen `project_id` and `project_name`. Either OAuth or basic-auth credentials are sufficient — you no longer have to also store a username/access-key pair to use the picker.
 
 You can also set a project ID directly without the picker:
 
@@ -84,7 +84,9 @@ You can also set a project ID directly without the picker:
 kane-cli config project <project-id>
 ```
 
-See [tms-integration.md](./tms-integration.md) for how project selection feeds into uploads.
+In a non-interactive shell (CI, pipes), pass an explicit `<project-id>`. To discover the right ID first, use `kane-cli projects list` (see [test-manager-integration.md](./test-manager-integration.md)).
+
+If you don't configure a project at all, kane-cli auto-resolves a sensible default when the first run starts — see "Auto-default on first run" in [test-manager-integration.md](./test-manager-integration.md).
 
 ### TMS folder
 
@@ -92,7 +94,7 @@ See [tms-integration.md](./tms-integration.md) for how project selection feeds i
 kane-cli config folder
 ```
 
-Opens an interactive folder picker for the currently selected project. Folders are searchable and shown with their hierarchy. The picker writes both `folder_id` and `folder_name`. You must have a project selected first.
+Opens an interactive folder picker for the currently selected project. Folders are searchable and shown with their hierarchy. The picker writes both `folder_id` and `folder_name`. You must have a project selected first. OAuth and basic-auth profiles are both supported.
 
 To set a folder ID without the picker:
 
@@ -100,7 +102,11 @@ To set a folder ID without the picker:
 kane-cli config folder <folder-id>
 ```
 
-See [tms-integration.md](./tms-integration.md) for how folder selection feeds into uploads.
+For scripted discovery in non-TTY contexts, use `kane-cli folders list` — see [test-manager-integration.md](./test-manager-integration.md).
+
+### Self-healing for stale IDs
+
+If a previously-configured project or folder later becomes unusable (deleted, renamed, you lost access, or you typed an invalid ID by accident), kane-cli detects the bad ID on the next run, clears it, and auto-resolves a new default instead of letting the run proceed with a dead value and silently failing the upload. To rebind explicitly, run `kane-cli config project` again (or `kane-cli projects list` followed by `kane-cli config project <id>`).
 
 ### Mode
 
@@ -126,7 +132,7 @@ The `code_export` block enables and configures generated code output that is pro
   - `--code-language <lang>` to pick the output language (only `python` is supported today).
   - `--skip-code-validation` / `--no-skip-code-validation` to control post-codegen worker-side validation.
 
-Code export requires a TMS upload to run, so it is only meaningful when `mode` is `testing` and a project/folder are configured. See [tms-integration.md](./tms-integration.md) for the full upload pipeline.
+Code export requires a TMS upload to run, so it is only meaningful when `mode` is `testing` and a project/folder are configured (or auto-defaulted). See [test-manager-integration.md](./test-manager-integration.md) for the full upload pipeline.
 
 ## Chrome management
 

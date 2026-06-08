@@ -1,7 +1,7 @@
 ---
 name: "kane-cli"
-displayName: "Kane CLI — Browser Automation"
-description: "Drive a real browser from natural-language objectives. Kane CLI manages Chrome, an AI agent, and a TestMu AI session, then emits structured NDJSON Kiro can parse. Use for any task that needs a real browser: navigation, form fills, search, UI checks, screenshots, deploy verification. Includes a Markdown test framework (`kane-cli testmd`) for committable, replay-cached browser tests."
+displayName: "Kane CLI — Browser Automation & AI Test Authoring"
+description: "Drive a real browser from natural-language objectives, AND author structured test cases / scenarios from a feature description. Kane CLI manages Chrome, an AI agent, and a TestMu AI session, then emits structured NDJSON Kiro can parse. Use for any task that needs a real browser (navigation, form fills, search, UI checks, screenshots, deploy verification), to author test cases / scenarios from a requirement (`kane-cli generate`), or for committable, replay-cached browser tests (`kane-cli testmd`)."
 keywords:
   - "kane-cli"
   - "kaneai"
@@ -16,6 +16,11 @@ keywords:
   - "verify-deploy"
   - "smoke-test"
   - "testmd"
+  - "test-case-generation"
+  - "test-scenarios"
+  - "test-authoring"
+  - "ai-test-generation"
+  - "qa"
 author: "TestMu AI"
 ---
 
@@ -90,16 +95,29 @@ kane-cli config show
 
 If the verification fails, surface the error and re-run login with whatever the user corrects — do not loop on the same bad credentials.
 
-## Step 3 — Pick a project and folder (optional but recommended)
+## Step 3 — Pick a project and folder (optional)
 
-Tests land in a TestMu AI project + folder. Set them once, then forget:
+Tests land in a TestMu AI project + folder. **Setting them is optional** — if nothing is configured, the run-startup gate auto-defaults a project/folder on the first run and announces the choice. Set them explicitly only when the user wants tests filed in a specific place:
 
 ```bash
 kane-cli config project <project-id>       # or the interactive picker in a TTY: kane-cli config project
 kane-cli config folder  <folder-id>        # or:                                 kane-cli config folder
 ```
 
-If Kiro's shell is non-TTY, ask the user for the IDs (or have them run the picker themselves), then set them with the literal ID forms above. Verify with `kane-cli config show`.
+The interactive picker works for **both** OAuth and basic-auth profiles.
+
+If Kiro's shell is non-TTY and the user wants a specific project/folder, browse and create from the command line:
+
+```bash
+kane-cli projects list   [--search <q>] [--limit <n>] [--offset <n>] --agent
+kane-cli projects create "<name>" [--description "<text>"] --agent
+kane-cli folders  list   [--search <q>] [--limit <n>] [--offset <n>] --agent
+kane-cli folders  create "<name>" [--description "<text>"] --agent
+```
+
+NDJSON output: `{id, name}` per row, terminated by `{_meta: "page", limit, offset, returned, has_more}`. Persist the chosen id with `kane-cli config project <id>` / `kane-cli config folder <id>`.
+
+Self-healing: a stale, deleted, revoked, or typo'd project/folder ID is detected on the next run and auto-replaced via the gate — no need to clear it by hand. Verify the current state any time with `kane-cli config show`.
 
 ## Step 4 — (Optional) Install the verify-on-deploy hook
 
@@ -107,14 +125,15 @@ A sample hook file ships in this power at `hooks/kane-verify.kiro.hook`. Copy it
 
 # Overview
 
-`kane-cli` is a CLI for driving Chrome from natural-language objectives. Each run is a single shot: Kane CLI launches (or attaches to) Chrome, asks an agent to perform the objective, emits one NDJSON event per agent step on stdout, and terminates with a single `run_end` event when the objective is finished.
+`kane-cli` is a CLI with two surfaces: driving Chrome from natural-language objectives, **and** authoring structured test cases from a plain-language description. Browser invocations are single-shot — Kane CLI launches (or attaches to) Chrome, asks an agent to perform the objective, emits one NDJSON event per agent step on stdout, and terminates with a single `run_end` event. Generation invocations are also single-shot — one turn, then exit, with continuity carried by a request id.
 
-Two ways Kiro uses it:
+Three ways Kiro uses it:
 
 1. **Ad-hoc browser tasks — `kane-cli run`.** One-shot natural-language objectives. The process exits when the agent reports `run_end`. Use this for navigation, form fills, search, verification, screenshots, data extraction, and deploy smoke tests.
 2. **Committable, replayable tests — `kane-cli testmd`.** Tests live as `_test.md` files in the repo. The first run authors each step (agent figures the page out); every later run replays from a cache — no agent, no LLM cost, much faster. Use this for regression suites, CI gates, and validation hooks.
+3. **AI test-case authoring — `kane-cli generate`.** Turns a plain-language description of *what to test* into structured Test Scenarios + typed Test Cases (Positive / Negative / Edge). **No browser is launched.** Reach for it whenever a task needs test cases written — don't hand-draft them in chat or a scratch file. `--save` writes Functional cases as runnable `_test.md`, which feeds straight into `kane-cli testmd run` (the generate → testmd pipeline).
 
-**Always invoke with `--agent`.** It makes Kane CLI emit structured NDJSON to stdout (progress events, then a terminal `run_end` event) that Kiro can parse. Without `--agent` you get a TUI Kiro can't read.
+**Always invoke with `--agent`.** It makes Kane CLI emit structured NDJSON to stdout (progress events, then a terminal `run_end` / `generate_done` event) that Kiro can parse. Without `--agent` you get a TUI Kiro can't read.
 
 Other capabilities to know about:
 
@@ -130,10 +149,11 @@ Kane CLI requires a TestMu AI account. Configuration is per-flag — do not rely
 
 When the user's task makes one of these patterns relevant, load the matching steering file before composing the command:
 
-- **`steering/kane-cli-run.md`** — every `kane-cli run` invocation. Covers objective patterns (action / assertion / extraction), the full flag reference, NDJSON parsing, results presentation, failure diagnosis, and parallel execution.
+- **`steering/kane-cli-run.md`** — every `kane-cli run` invocation. Covers objective patterns (action / assertion / extraction), the full flag reference, NDJSON parsing, results presentation, failure diagnosis, parallel execution, and project/folder management.
 - **`steering/kane-cli-testmd.md`** — any time the user wants a committable test, or is reading / editing / running a `_test.md` file. Covers the `kane-cli testmd` commands, `_test.md` file format and frontmatter, `@import` composition, the replay-vs-author cache model, `Result.md`, lock conflicts, and CI patterns.
+- **`steering/kane-cli-generate.md`** — any time the user wants test cases or scenarios **written** (no browser action). Covers the three generate modes (new / refine / save), clarification round-trips, the refine→save→run loop, the typed NDJSON event schema, and the generate → testmd handoff.
 
-Default to `kane-cli-run.md` for one-shot browser tasks. Switch to `kane-cli-testmd.md` the moment the user says anything like "save this test", "commit this", "regression / smoke test", "make this replayable", or "run in CI" — or asks about a `_test.md` file by name.
+Default to `kane-cli-run.md` for one-shot browser tasks. Switch to `kane-cli-testmd.md` the moment the user says anything like "save this test", "commit this", "regression / smoke test", "make this replayable", or "run in CI" — or asks about a `_test.md` file by name. Switch to `kane-cli-generate.md` when the user says anything like "write test cases for", "give me a test suite for", "generate tests for", "what edge cases should we cover" — or when the task needs cases authored but no browser. **Don't hand-draft test cases in chat or a scratch file** — load the generate steering and use `kane-cli generate`.
 
 # Command reference (condensed)
 

@@ -44,6 +44,8 @@ Run it:
 kane-cli testmd run amazon_test.md --agent
 ```
 
+> Before the test launches, kane-cli validates the cached project/folder. If none is configured (or the cached one is stale/invalid), the run-startup gate auto-defaults a project/folder and emits a `project_folder_auto_defaulted` event on stdout. Surface it as a one-line note for the user and keep parsing — full handling lives in `references/test-manager.md`.
+
 ## File format
 
 Four parts in order:

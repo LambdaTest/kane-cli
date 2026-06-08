@@ -36,6 +36,7 @@ Shared with `run` (NOT generate-specific — don't treat as part of the generate
 
 | `type` | Fields | Meaning |
 |---|---|---|
+| `project_folder_auto_defaulted` | resolved project + folder (id, name) | Run-startup gate auto-resolved a project/folder when none was configured (or the cached one was stale/invalid). Fires before `generate_start`. Translate to plain language (see `references/test-manager.md`). |
 | `error` | `message` | A failure occurred; pair with the exit code to decide retry vs abort. |
 | `update_available` | `current`, `latest`, `severity` | A newer kane-cli exists. Informational; emitted before `generate_start`. |
 

@@ -28,6 +28,7 @@ These are **untyped** — they have no `type` field. Do **not** key on `event.ty
 
 | Event (`type` field) | Key Fields | Purpose |
 |-------|-----------|---------|
+| `project_folder_auto_defaulted` | resolved project + folder (id, name) | Run-startup gate auto-resolved a project/folder when none was configured (or the cached one was stale/invalid). Fires before any progress event on `run` / `testmd run` / `generate`. Translate to plain language (see `references/test-manager.md`). |
 | `bifurcation` | `flows[]`, `count` | Agent split objective into sub-flows |
 | `child_agent_start` | `child_id`, `objective`, `parent_step` | Child agent spawned |
 | `child_agent_end` | `child_id`, `success`, `steps_taken`, `summary` | Child agent finished |

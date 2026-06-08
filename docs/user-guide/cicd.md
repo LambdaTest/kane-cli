@@ -10,6 +10,7 @@ These patterns apply to every CI system; the recipes below differ only in how th
 - Always pass `--timeout <seconds>`. A hung run cannot be allowed to block the pipeline.
 - Authenticate with `--username` and `--access-key` from CI secrets. Do not call `kane-cli login` in CI — that flow opens a browser for OAuth and will not work on a runner.
 - Load test data with `--variables-file <path>`. Check the file into your repo (without secret values), or generate it before the step.
+- **Project and folder are optional.** If you want uploads filed under a specific Test Manager project/folder, pre-configure with `kane-cli config project <id>` / `kane-cli config folder <id>` (use `kane-cli projects list` / `kane-cli folders list` to find the IDs). If you skip this, kane-cli auto-defaults a project/folder on first run and reports which one it picked — see [test-manager-integration.md](./test-manager-integration.md).
 - Check the exit code. The mapping is documented in [running tests](./running-tests.md#exit-codes); the short form is `0` passed, `1` failed, `2` error, `3` timeout or cancellation.
 
 The runner spawns Chrome itself, so the CI image must have Chrome available on `PATH`. If your runner image cannot install Chrome, point kane-cli at a remote browser with `--cdp-endpoint <url>` or `--ws-endpoint <url>` (for example, a TestmuAI `wss://` endpoint).

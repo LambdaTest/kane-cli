@@ -17,7 +17,7 @@ If the upload fails, kane-cli prints the error and exits. The local session dire
 
 ## Choosing where uploads land
 
-Each test case is filed under a Test Manager project. Optionally, you can also choose a folder inside that project.
+Each test case is filed under a Test Manager project. Optionally, you can also choose a folder inside that project. You can configure either explicitly, list and create from the command line, or let kane-cli auto-default one for you on first run.
 
 ### Project
 
@@ -27,7 +27,7 @@ Configure your project once, and every subsequent session uploads under it.
 kane-cli config project
 ```
 
-With no value, this opens a search-as-you-type picker. Projects are loaded from your Test Manager account on demand. Type to filter, use the arrow keys to navigate pages of five, press `Enter` to select, or `Tab` to create a new project. If your account has no projects yet, the picker jumps straight to the create flow.
+With no value, this opens a search-as-you-type picker. Projects are loaded from your Test Manager account on demand. Type to filter, use the arrow keys to navigate pages, press `Enter` to select, or `Tab` to create a new project. If your account has no projects yet, the picker jumps straight to the create flow. The picker works with either OAuth or basic-auth credentials.
 
 You can also set a project non-interactively by ID:
 
@@ -53,9 +53,33 @@ kane-cli config folder <folder-id>
 
 If you try to set a folder before choosing a project, kane-cli asks you to pick a project first.
 
+### Browse and create from the command line
+
+For scripts, CI, and any non-interactive shell where the picker is not appropriate, kane-cli exposes the same data as commands:
+
+```bash
+kane-cli projects list [--search <q>] [--limit <n>] [--offset <n>]
+kane-cli projects create "<name>" [--description "<text>"]
+
+kane-cli folders list  [--search <q>] [--limit <n>] [--offset <n>]
+kane-cli folders create "<name>" [--description "<text>"]
+```
+
+In a TTY, list commands render a paginated table. When stdout is piped or redirected — or when `--agent` is passed — the output switches to NDJSON, one JSON object per line, terminated by a small pagination summary. Use `--search` to filter by name on the server, and `--limit` / `--offset` to page through results.
+
+`folders list` and `folders create` operate inside the currently configured project, so set a project before calling them.
+
+After creating, persist the new id with `kane-cli config project <id>` or `kane-cli config folder <id>` so subsequent runs upload there.
+
+### Auto-default on first run
+
+If you launch a run without ever configuring a project or folder, kane-cli auto-resolves a sensible default at run start — find-or-create against your account — and tells you which one it picked. The same fallback fires for `kane-cli testmd run` and `kane-cli generate`. You don't have to pre-configure anything for the first run to succeed.
+
+The same auto-default kicks in if a previously-configured project or folder has been deleted, renamed, or revoked, or if you set an invalid ID by hand (for example, a typo). kane-cli detects the bad ID, clears it, and resolves a working default rather than letting the run proceed and silently failing the upload at the end. To rebind explicitly, run `kane-cli config project` (or `kane-cli projects list` followed by `kane-cli config project <id>`).
+
 ### Finding your test case in Test Manager
 
-After a successful upload, kane-cli prints two links to the terminal (see [Share links at session exit](#share-links-at-session-exit)). Both lead into the TestmuAI Test Manager UI for the test case that was just created. From there you can browse the project and folder you configured, view the run summary, and dig into individual steps and screenshots.
+After a successful upload, kane-cli prints two links to the terminal (see [Share links at session exit](#share-links-at-session-exit)). Both lead into the TestmuAI Test Manager UI for the test case that was just created. From there you can browse the project and folder you configured (or that were auto-defaulted), view the run summary, and dig into individual steps and screenshots.
 
 ## Code export
 
