@@ -55,7 +55,7 @@ Progress events have `step`/`status`/`remark` fields and **no `type` field**.
 #### What to skip
 
 - Individual passing steps — fold them into the overall progress line
-- Internal field names (`step`, `status`, `remark`, `run_end`, `final_state`, `bifurcation`, `session_dir`, etc.) — translate to plain language
+- Internal field names (`step`, `status`, `remark`, `run_end`, `final_state`, `bifurcation`, `session_dir`, `project_folder_auto_defaulted`, etc.) — translate to plain language. A `project_folder_auto_defaulted` event fires before progress when the run-startup gate auto-resolves a project/folder; surface it as one line ("kane-cli auto-selected project X / folder Y for this run") and move on. Details: `references/test-manager.md`.
 
 #### Example output for a 15-step run with one failure
 
@@ -151,6 +151,8 @@ When the user's request involves a browser — or writing test cases:
 kane-cli run "<objective>" --agent [options]
 ```
 
+> The `run` subcommand is **mandatory**. `kane-cli "<objective>"` (no `run`) does **not** work — unknown first tokens exit `2` with a "did you mean" suggestion. Same rule applies to `kane-cli testmd run …` and `kane-cli generate …`.
+
 `--agent` is mandatory — it switches stdout to NDJSON. Most-used flags:
 
 | Flag | Purpose | Default |
@@ -234,7 +236,7 @@ Action → extraction → assertion in one objective:
 Stdout is NDJSON, one event per line. There are two shapes:
 
 - **Progress events** (most events) have `step` (1-based), `status` (`passed`/`failed`), `remark` — and **no `type` field**.
-- **Typed events** have a `type` field: `bifurcation`, `child_agent_start`, `child_agent_end`, `ask_user`, `error`, and finally `run_end`.
+- **Typed events** have a `type` field: `project_folder_auto_defaulted` (run-startup gate, fires before any progress when no project/folder is configured), `bifurcation`, `child_agent_start`, `child_agent_end`, `ask_user`, `error`, and finally `run_end`.
 
 Parsing strategy:
 

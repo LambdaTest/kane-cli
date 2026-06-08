@@ -65,6 +65,8 @@ kane-cli testmd run amazon_test.md --agent
 
 The first run authors every step (the agent figures the page out). The second run replays each step from `output-amazon/.internal/` in seconds. Commit both the `_test.md` and the `output-amazon/` directory.
 
+Before the test launches, `kane-cli testmd run` validates the cached Test Manager project/folder. If none is configured (or the cached value is stale/invalid), the run-startup gate auto-defaults a project/folder and emits a `project_folder_auto_defaulted` event on stdout — surface it as a one-line note ("Kane CLI auto-selected project X / folder Y for this test") and continue parsing. Browse / create explicitly with `kane-cli projects list|create` and `kane-cli folders list|create` (see the `kane-cli-run` steering file).
+
 ---
 
 # Command reference

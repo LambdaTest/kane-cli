@@ -90,16 +90,29 @@ kane-cli config show
 
 If the verification fails, surface the error and re-run login with whatever the user corrects — do not loop on the same bad credentials.
 
-## Step 3 — Pick a project and folder (optional but recommended)
+## Step 3 — Pick a project and folder (optional)
 
-Tests land in a TestMu AI project + folder. Set them once, then forget:
+Tests land in a TestMu AI project + folder. **Setting them is optional** — if nothing is configured, the run-startup gate auto-defaults a project/folder on the first run and announces the choice. Set them explicitly only when the user wants tests filed in a specific place:
 
 ```bash
 kane-cli config project <project-id>       # or the interactive picker in a TTY: kane-cli config project
 kane-cli config folder  <folder-id>        # or:                                 kane-cli config folder
 ```
 
-If Kiro's shell is non-TTY, ask the user for the IDs (or have them run the picker themselves), then set them with the literal ID forms above. Verify with `kane-cli config show`.
+The interactive picker works for **both** OAuth and basic-auth profiles.
+
+If Kiro's shell is non-TTY and the user wants a specific project/folder, browse and create from the command line:
+
+```bash
+kane-cli projects list   [--search <q>] [--limit <n>] [--offset <n>] --agent
+kane-cli projects create "<name>" [--description "<text>"] --agent
+kane-cli folders  list   [--search <q>] [--limit <n>] [--offset <n>] --agent
+kane-cli folders  create "<name>" [--description "<text>"] --agent
+```
+
+NDJSON output: `{id, name}` per row, terminated by `{_meta: "page", limit, offset, returned, has_more}`. Persist the chosen id with `kane-cli config project <id>` / `kane-cli config folder <id>`.
+
+Self-healing: a stale, deleted, revoked, or typo'd project/folder ID is detected on the next run and auto-replaced via the gate — no need to clear it by hand. Verify the current state any time with `kane-cli config show`.
 
 ## Step 4 — (Optional) Install the verify-on-deploy hook
 

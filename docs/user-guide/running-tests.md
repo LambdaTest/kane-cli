@@ -195,7 +195,7 @@ When stdin is not a TTY, kane-cli automatically switches to plain NDJSON mode (t
 |------|---------|
 | `0` | Run passed. |
 | `1` | Run failed (agent reached an unrecoverable failure or upload failed). |
-| `2` | Error (auth, configuration, Chrome, or unhandled exception). |
+| `2` | Error (auth, TMS credential exchange, configuration, Chrome, unknown subcommand, or unhandled exception). |
 | `3` | Run was cancelled or hit the `--timeout`. |
 
 Use these codes to gate downstream CI steps.

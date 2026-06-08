@@ -21,10 +21,11 @@ When a dependency check fails, run the fix yourself. Only ask the user when the 
 - Yes → continue.
 
 **What does the user want?**
-- One browser task → build a single `kane-cli run "<objective>" --agent …` command.
+- One browser task → build a single `kane-cli run "<objective>" --agent …` command. **The `run` subcommand is mandatory** — `kane-cli "<objective>"` exits `2` with a "did you mean" hint.
 - Test / verify something → same, with assertion phrasing.
 - Extract data from a page → same, using the `store … as '<name>'` pattern.
 - Save / re-run / commit a test → switch to `kane-cli testmd`. Load the **`kane-cli-testmd`** steering file.
+- Browse / create a Test Manager project or folder, or interpret a `project_folder_auto_defaulted` event → use `kane-cli projects list|create` / `kane-cli folders list|create` (NDJSON under `--agent`). The run-startup gate auto-defaults a project/folder when nothing is configured and emits `project_folder_auto_defaulted` before the first progress event.
 - Multiple independent flows → decompose into N self-contained sub-objectives and run them in parallel.
 - Debug a failed run → inspect logs at `run_dir/run-test/actions.ndjson` and the failing-step screenshot.
 
@@ -240,13 +241,14 @@ Override either per-run with `--global-context` / `--local-context`.
 
 | `type` | Key fields | Purpose |
 |---|---|---|
+| `project_folder_auto_defaulted` | resolved project + folder (id, name) | Run-startup gate auto-resolved a project/folder when none was configured (or the cached one was stale/invalid). Fires **before** any progress event. Translate to a one-line note ("kane-cli auto-selected project X / folder Y for this run") and continue parsing. |
 | `bifurcation`       | `flows[]`, `count`                          | Agent split the objective into sub-flows |
 | `child_agent_start` | `child_id`, `objective`, `parent_step`      | Child agent spawned |
 | `child_agent_end`   | `child_id`, `success`, `steps_taken`, `summary` | Child agent finished |
 | `ask_user`          | `question`, `step_index`, `options?`        | Agent needs input (auto-disabled when stdin is non-TTY) |
 | `error`             | `message`                                   | Error |
 
-There is no `run_start` event — the first line is either a `bifurcation` or a progress object.
+There is no `run_start` event — the first line is either `project_folder_auto_defaulted`, a `bifurcation`, or a progress object.
 
 `ask_user` is auto-disabled when stdin is not a TTY. Since Kiro runs Kane CLI as a subprocess, `ask_user` events will not be emitted — write objectives that don't require interactive input.
 
@@ -414,7 +416,9 @@ The `run_end` event tells you `session_dir` and `run_dir`. Use those paths direc
 | 🔄 Agent repeats the same action | Stuck in a loop / page didn't change | Rephrase the objective, add an explicit wait or assertion |
 | 🎯 Agent clicks the wrong element | Ambiguous UI, multiple similar elements | Be more specific ("click the **blue** Submit button in the **checkout form**") |
 | 👁️ Agent says "done" but nothing happened | Objective too vague | Add a concrete assertion ("assert the confirmation page shows an order number") |
-| 💀 Exit `2`, no steps | Auth or Chrome failure | Check `kane-cli whoami`; ensure Chrome is installed |
+| 💀 Exit `2`, no steps | Auth, TMS credential exchange, or Chrome failure | Check `kane-cli whoami`; ensure Chrome is installed |
+| ❓ Exit `2` with "did you mean …" | Missing `run` subcommand — agent invoked `kane-cli "<objective>"` instead of `kane-cli run "<objective>"` | Re-invoke with `run` (same rule for `testmd run` / `generate`) |
+| 📤 Upload silently fails after setting a project/folder by hand | Saved ID is invalid (typo, deleted, no access) | No action needed — the next run detects the 4xx and auto-defaults a working project/folder. To rebind: `kane-cli config project` or `kane-cli projects list` → `kane-cli config project <id>` |
 | ⏱️ Exit `3` | Timeout or cancelled | Raise `--timeout`, raise `--max-steps`, or split the objective |
 | 🚫 `CDP endpoint not reachable` | Chrome not running | Drop `--cdp-endpoint` and let Kane CLI auto-launch Chrome |
 
@@ -495,9 +499,32 @@ kane-cli whoami
 kane-cli config show
 kane-cli config set-window 1920x1080
 kane-cli config chrome-profile <path>     # or the interactive picker in TTY
-kane-cli config project <project-id>      # or the interactive picker in TTY
+kane-cli config project <project-id>      # or the interactive picker in TTY (OAuth + basic both work)
 kane-cli config folder  <folder-id>       # or the interactive picker in TTY
 kane-cli feedback --test-id <id> --feedback-type <positive|negative> --details "..."
 ```
+
+## Browsing / creating projects and folders (non-TTY)
+
+When Kiro's shell is non-TTY, the picker is not appropriate. Use the agent surface:
+
+```bash
+kane-cli projects list   [--search <q>] [--limit <n>] [--offset <n>] --agent
+kane-cli projects create "<name>" [--description "<text>"] --agent
+kane-cli folders  list   [--search <q>] [--limit <n>] [--offset <n>] --agent
+kane-cli folders  create "<name>" [--description "<text>"] --agent
+```
+
+NDJSON wire shape — each result row is `{id, name}`, terminated by `{_meta: "page", limit, offset, returned, has_more}` (no `total` — paginate while `has_more === true`). `folders` operate inside the currently configured project.
+
+## The run-startup auto-default gate
+
+Every `run`, `testmd run`, and `generate` validates the cached project/folder before launching. Three outcomes:
+
+1. Cached project/folder still valid → run proceeds, no event.
+2. Nothing configured **or** cached IDs are gone / invalid / inaccessible → Kane CLI auto-resolves (find-or-create) and emits `project_folder_auto_defaulted` on stdout before any progress event. Surface as a one-liner ("Kane CLI auto-selected project X / folder Y for this run").
+3. No usable credentials in a non-TTY context → exit `2` (auth/setup).
+
+Self-healing: stale, deleted, revoked, or typo'd project IDs trigger 4xx from TMS and the gate re-resolves automatically — no need to clear them by hand.
 
 Project-local overrides live in `./.testmuai/` (`context.md`, `variables/*.json`). Global config and history live in `~/.testmuai/kaneai/`. Pass everything through flags — do **not** rely on environment variables for Kane CLI configuration.
