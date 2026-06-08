@@ -33,6 +33,8 @@ There is **no interactive session**. Each invocation runs exactly one generation
 | `--project <id>` / `--folder <id>` | Test Manager project / folder |
 | `--env prod\|stage` · `--username` / `--access-key` | Environment / auth (same as `run`) |
 
+If neither `--project`/`--folder` nor a saved project/folder is set when generation starts, kane-cli auto-resolves one headlessly and emits a `project_folder_auto_defaulted` event before `generate_start`. Translate it to a one-line note for the user — full handling lives in `references/test-manager.md`.
+
 ## Presenting a result (adaptive)
 
 The terminal data carries the full scenarios + cases. **Present it based on size**:

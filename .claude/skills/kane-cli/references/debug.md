@@ -30,7 +30,9 @@ The `run_end` event provides `session_dir` and `run_dir` paths. Use those direct
 | 🔄 Agent repeats same action | Stuck in a loop / page didn't change | Rephrase objective, add explicit wait or assertion |
 | 🎯 Agent clicks wrong element | Ambiguous UI, multiple similar elements | Be more specific: "click the **blue** 'Submit' button in the **checkout form**" |
 | 👁️ Agent says done but didn't finish | Objective too vague | Add explicit assertions: "assert the confirmation page shows order number" |
-| 💀 Exit code 2, no steps | Auth or Chrome failure | Check `kane-cli whoami`, verify Chrome is available |
+| 💀 Exit code 2, no steps | Auth, TMS credential exchange, or Chrome failure | Check `kane-cli whoami`, verify Chrome is available |
+| ❓ Exit code 2 with "did you mean …" | Bare-objective shortcut — agent ran `kane-cli "<objective>"` without the `run` subcommand | Re-invoke as `kane-cli run "<objective>" --agent` (same rule for `testmd run` / `generate`) |
+| 📤 Upload silently fails after configuring a project/folder by hand | Saved ID is invalid (typo, deleted, no access) | No action needed — the next run detects the 4xx and auto-defaults a working project/folder. To rebind manually: `kane-cli config project` (TTY picker) or `kane-cli projects list` → `kane-cli config project <id>` (see `references/test-manager.md`) |
 | ⏱️ Exit code 3 | Timeout or cancelled | Increase `--timeout` or `--max-steps`, or split into smaller objectives |
 | 🚫 "CDP endpoint not reachable" | Chrome not running | Let kane-cli manage Chrome (remove `--cdp-endpoint`) |
 
