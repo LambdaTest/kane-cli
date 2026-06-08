@@ -160,13 +160,7 @@ kane-cli uploads run artifacts to TestmuAI TMS at the end of the session. If the
 
 1. **Authentication.** Re-check `kane-cli whoami` and re-login if needed. TMS upload requires a valid token (or basic auth) for the configured environment.
 2. **Network connectivity.** The upload talks to the TestmuAI control plane and a cloud storage endpoint. Verify outbound HTTPS to your environment's TestmuAI hosts is not blocked by a proxy or firewall.
-3. **Project is set.** The pipeline will not commit a test case without a project. Confirm one is configured:
-
-   ```bash
-   kane-cli config show
-   ```
-
-   If `project_id` is empty, set it with `kane-cli config project` or pick one in the TUI.
+3. **Project / folder.** If `kane-cli config show` reports `project_id` empty, you don't need to do anything — kane-cli auto-defaults a project on first run. If you want uploads in a specific project or folder, set it explicitly with `kane-cli config project <id>` / `kane-cli config folder <id>` (use `kane-cli projects list` / `kane-cli folders list` to discover IDs), or pick one in the TUI. A previously-configured project that has been deleted or renamed is detected automatically and replaced via auto-default; an invalid ID typed by mistake is handled the same way. See [test-manager-integration.md](./test-manager-integration.md) for the full behavior.
 
 ## CLI exits with code 2 and no output
 

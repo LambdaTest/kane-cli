@@ -221,8 +221,8 @@ Below the summary, kane-cli prints any of the following links that apply to the 
 | `TestCase` | The test case detail page in TestmuAI TMS. |
 | `CodeExport` | The local directory containing the generated code (when code export is enabled). |
 
-Modern terminals render these as clickable hyperlinks. For details on what each link leads to, see [./tms-integration.md](./tms-integration.md).
+Modern terminals render these as clickable hyperlinks. For details on what each link leads to, see [./test-manager-integration.md](./test-manager-integration.md).
 
 ## Feedback prompt
 
-After the result and links print, kane-cli prompts you to rate the session with thumbs up or thumbs down. Use the left and right arrow keys to choose, Enter to submit, or Esc to skip. The rating is sent to TestmuAI TMS for the active test case; see [./tms-integration.md](./tms-integration.md) for what is recorded.
+After the result and links print, kane-cli prompts you to rate the session with thumbs up or thumbs down. Use the left and right arrow keys to choose, Enter to submit, or Esc to skip. The rating is sent to TestmuAI TMS for the active test case; see [./test-manager-integration.md](./test-manager-integration.md) for what is recorded.

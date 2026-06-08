@@ -93,6 +93,8 @@ kane-cli config project <project-id>          # TMS project ID (or interactive p
 kane-cli config folder <folder-id>            # TMS folder ID (or interactive picker in TTY)
 ```
 
+> **Project / folder management — Read `references/test-manager.md`** for the full agent surface: `kane-cli projects list|create` and `kane-cli folders list|create` (with `--search` / `--limit` / `--offset` / `--description`), the NDJSON wire shape for `--agent` callers, and the `project_folder_auto_defaulted` event the run-startup gate emits when nothing is configured.
+
 ### Feedback
 
 Submit feedback on a completed test run:

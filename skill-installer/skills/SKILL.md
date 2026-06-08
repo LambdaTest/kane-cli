@@ -138,6 +138,7 @@ When the user's request involves a browser — or writing test cases:
 - Multiple independent browser tasks → Read `references/parallel.md` first
 - Debug a failed run → Read `references/debug.md`
 - Configure kane-cli or check directory layout → Read `references/setup-and-config.md`
+- Browse / create / pick a Test Manager project or folder, or interpret the auto-default event → Read `references/test-manager.md`
 - You need the full NDJSON event schema (rare — §5's summary covers 90% of cases) → Read `references/parsing.md`
 
 **Every run, always:** follow §1 above.
@@ -300,4 +301,5 @@ Internal event/field names (`generate_snapshot`, `request_id`, …) are for pars
 | Multiple independent browser tasks | `references/parallel.md` |
 | Need full NDJSON event schema (`run`) | `references/parsing.md` |
 | Need the `generate` NDJSON event schema | `references/generate-parsing.md` |
+| Browse / create projects or folders, or parse the auto-default event | `references/test-manager.md` |
 | First-time install, auth, or full config | `references/setup-and-config.md` |
