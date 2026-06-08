@@ -206,6 +206,28 @@ On exit, Kane CLI writes the session to `<cwd>/.testmuai/tests/amazon-search_tes
 
 Slug rules: `[a-zA-Z0-9_-]+`. Pick a slug that reads as a filename — e.g. `login-smoke`, `checkout-happy-path`, `dashboard-regression`.
 
+## Authoring `_test.md` from a description — the generate → testmd pipeline
+
+When the user wants test cases written from scratch — from a feature spec, a requirement, or just a description of what to test — **don't hand-draft them and don't capture them via a live `--name` session.** Use `kane-cli generate` to author structured Functional cases first, save them as runnable `_test.md`, then run them here:
+
+```bash
+# 1. Author scenarios + cases from a description
+kane-cli generate "checkout flow on a shopping site" --agent
+#    → capture the request id (e.g. 23271)
+
+# 2. Refine if needed (repeat as often as needed)
+kane-cli generate "also cover an expired card and an out-of-stock item" --refine --req 23271 --agent
+
+# 3. Save the Functional cases as runnable _test.md files
+kane-cli generate --save --req 23271 --agent
+#    → <cwd>/.testmuai/tests/<suite>/<scenario>/<case>_test.md
+
+# 4. Run them — back in testmd territory
+kane-cli testmd run .testmuai/tests/<suite>/<scenario>/<case>_test.md --agent
+```
+
+Full mechanics (the three modes, clarification round-trips, presenting scenarios + cases, the typed event schema) live in the **`kane-cli-generate`** steering file. Load that file the moment the user asks for cases to be written; come back here to run them.
+
 ---
 
 # Composition with `@import`

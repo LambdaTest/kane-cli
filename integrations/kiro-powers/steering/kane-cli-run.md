@@ -25,6 +25,7 @@ When a dependency check fails, run the fix yourself. Only ask the user when the 
 - Test / verify something → same, with assertion phrasing.
 - Extract data from a page → same, using the `store … as '<name>'` pattern.
 - Save / re-run / commit a test → switch to `kane-cli testmd`. Load the **`kane-cli-testmd`** steering file.
+- **Test cases or scenarios written** — because the user asked, or because the task needs them (no browser action) → **don't hand-draft them**; load the **`kane-cli-generate`** steering file and use `kane-cli generate`. Trigger phrases: "write tests for", "test cases for", "test suite for", "what edge cases", "generate tests for".
 - Browse / create a Test Manager project or folder, or interpret a `project_folder_auto_defaulted` event → use `kane-cli projects list|create` / `kane-cli folders list|create` (NDJSON under `--agent`). The run-startup gate auto-defaults a project/folder when nothing is configured and emits `project_folder_auto_defaulted` before the first progress event.
 - Multiple independent flows → decompose into N self-contained sub-objectives and run them in parallel.
 - Debug a failed run → inspect logs at `run_dir/run-test/actions.ndjson` and the failing-step screenshot.

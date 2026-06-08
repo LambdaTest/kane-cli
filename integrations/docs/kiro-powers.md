@@ -15,30 +15,35 @@ The `integrations/kiro-powers/` folder is a [Kiro power](https://kiro.dev/docs/p
 | Artifact | Path | Purpose |
 |---|---|---|
 | **Canonical skill** | `skill-installer/skills/SKILL.md` | Source of every CLI fact: command shapes, flags, exit codes, NDJSON essentials, decision tree, results presentation. **Edit this first.** Every other integration mirrors from here. |
-| **Canonical references** | `skill-installer/skills/references/*.md` | On-demand reference content: `objectives-cookbook.md` (pattern catalog + checkpoint analyze methods), `testmd.md` (file format, replay), `parsing.md` (full NDJSON schema), `debug.md` (log layout), `parallel.md`, `setup-and-config.md`. Equally authoritative — facts in any of these must mirror through. |
+| **Canonical references** | `skill-installer/skills/references/*.md` | On-demand reference content: `objectives-cookbook.md` (pattern catalog + checkpoint analyze methods), `testmd.md` (file format, replay), `generate.md` + `generate-parsing.md` (AI test-case authoring), `test-manager.md` (project/folder agent surface + auto-default event), `parsing.md` (full NDJSON schema), `debug.md` (log layout), `parallel.md`, `setup-and-config.md`. Equally authoritative — facts in any of these must mirror through. |
 | Kiro power root | `integrations/kiro-powers/POWER.md` | Frontmatter (name/displayName/keywords/author), onboarding, condensed command reference, steering-file mapping. |
-| `kane-cli run` steering | `integrations/kiro-powers/steering/kane-cli-run.md` | Full reference for one-shot `kane-cli run`: objective patterns + checkpoint analyze methods (Visual / Textual-DOM / URL / Title / DevTools→Network/Console/Performance/Cookies/localStorage), full flag table, NDJSON parsing, results presentation, failure diagnosis, parallel execution. |
-| `kane-cli testmd` steering | `integrations/kiro-powers/steering/kane-cli-testmd.md` | Full reference for `kane-cli testmd`: file format, frontmatter, `@import`, replay/author cache, `Result.md`, CI patterns, parse errors. |
+| `kane-cli run` steering | `integrations/kiro-powers/steering/kane-cli-run.md` | Full reference for one-shot `kane-cli run`: objective patterns + checkpoint analyze methods (Visual / Textual-DOM / URL / Title / DevTools→Network/Console/Performance/Cookies/localStorage), full flag table, NDJSON parsing (including `project_folder_auto_defaulted`), results presentation, failure diagnosis, parallel execution, project/folder management (`projects`/`folders list|create`, auto-default gate). |
+| `kane-cli testmd` steering | `integrations/kiro-powers/steering/kane-cli-testmd.md` | Full reference for `kane-cli testmd`: file format, frontmatter, `@import`, replay/author cache, `Result.md`, CI patterns, parse errors, generate → testmd pipeline. |
+| `kane-cli generate` steering | `integrations/kiro-powers/steering/kane-cli-generate.md` | Full reference for `kane-cli generate`: the three modes (new / refine / save), clarification round-trips, the refine→save→run loop, typed NDJSON event schema (`generate_*`), result presentation, the generate → testmd handoff. |
 | Hook template | `integrations/kiro-powers/hooks/kane-verify.kiro.hook` | Sample agent hook the user copies to their workspace `.kiro/hooks/`. |
 
 If a fact appears in this integration that is **not** in `SKILL.md` or one of the `references/*.md`, that's a bug — either backfill the canonical source first, or delete the fact from the integration.
 
 ## SKILL.md (+ references) → Kiro Powers mapping
 
-The canonical skill restructured in May 2026 into a thin `SKILL.md` (6 sections, ~260 lines) plus six on-demand `references/*.md`. The Kiro power's two steering files absorb the equivalent depth — Kiro reads the right steering file per workflow, the way Claude Code reads the right reference file on demand.
+The canonical skill is a thin `SKILL.md` (7 sections, ~300 lines) plus on-demand `references/*.md`. The Kiro power's three steering files absorb the equivalent depth — Kiro reads the right steering file per workflow, the way Claude Code reads the right reference file on demand.
 
 | Canonical source | Where it lives in the Kiro power |
 |---|---|
 | `SKILL.md` §1 Live narration & results presentation (Monitor/Bash launch decision is Claude-Code-specific — Kiro keeps its own narration model) | `steering/kane-cli-run.md` → Presenting results |
-| `SKILL.md` §2 Decision tree | `steering/kane-cli-run.md` → Decision tree, and `steering/kane-cli-testmd.md` → Decision tree |
-| `SKILL.md` §3 Building a `run` command — flags, exit codes, examples | `POWER.md` → Command reference (condensed) **and** `steering/kane-cli-run.md` → Full flag reference |
+| `SKILL.md` §2 Decision tree | `steering/kane-cli-run.md` → Decision tree, `steering/kane-cli-testmd.md` → When to recommend `testmd`, and `steering/kane-cli-generate.md` → When to recommend `generate` |
+| `SKILL.md` §3 Building a `run` command — flags, exit codes, examples, bare-objective guardrail | `POWER.md` → Command reference (condensed) **and** `steering/kane-cli-run.md` → Full flag reference |
 | `SKILL.md` §4 Writing objectives — three patterns, "store as", do/don't | `steering/kane-cli-run.md` → Writing objectives — three patterns |
-| `SKILL.md` §5 Parsing `--agent` output — essentials | `steering/kane-cli-run.md` → Parsing the NDJSON output (Event types + Parsing strategy summary) |
-| `SKILL.md` §6 When to read which reference | Kiro analogue: `POWER.md`'s steering-file mapping (POWER.md tells Kiro when to load each steering file) |
+| `SKILL.md` §5 Parsing `--agent` output — essentials (includes `project_folder_auto_defaulted` in typed events) | `steering/kane-cli-run.md` → Parsing the NDJSON output (Event types + Parsing strategy summary) |
+| `SKILL.md` §6 Generate test cases (authoring — no browser) | `POWER.md` → Overview (the third "way Kiro uses it") **and** all of `steering/kane-cli-generate.md` |
+| `SKILL.md` §7 When to read which reference | Kiro analogue: `POWER.md`'s steering-file mapping (POWER.md tells Kiro when to load each steering file) |
 | `references/objectives-cookbook.md` — analyze methods (Visual / Textual-DOM / URL / Title / DevTools→Network/Console/Performance/Cookies/localStorage), operators, chaining, pitfalls, worked examples | `steering/kane-cli-run.md` → Analyze methods — picking the right checkpoint (plus the existing Combining patterns, Assertion specificity, and Do / Don't sections) |
-| `references/testmd.md` — testmd file format, replay & cascade, `@import`, commands, parse errors | All of `steering/kane-cli-testmd.md` |
-| `references/parsing.md` — full NDJSON event schemas (`bifurcation`, `child_agent_*`, `ask_user`, complete `run_end` fields) | `steering/kane-cli-run.md` → Parsing the NDJSON output (full event-type list + Terminal `run_end` event) |
-| `references/debug.md` — log layout, debugging flow, common failure patterns, bug-report heuristic | `steering/kane-cli-run.md` → Failure handling & log inspection + Bug-report heuristic |
+| `references/testmd.md` — testmd file format, replay & cascade, `@import`, commands, parse errors, gate-fires-before-launch note | All of `steering/kane-cli-testmd.md` |
+| `references/generate.md` — generate modes, refine→save→run loop, clarification handling, Functional-only save, generate→testmd handoff | All of `steering/kane-cli-generate.md` |
+| `references/generate-parsing.md` — typed `generate_*` event schema, terminal `generate_done`, exit codes | `steering/kane-cli-generate.md` → Parsing the NDJSON output + Terminal `generate_done` + Exit codes |
+| `references/parsing.md` — full NDJSON event schemas (`project_folder_auto_defaulted`, `bifurcation`, `child_agent_*`, `ask_user`, complete `run_end` fields) | `steering/kane-cli-run.md` → Parsing the NDJSON output (full event-type list + Terminal `run_end` event) |
+| `references/test-manager.md` — project/folder agent surface (`projects`/`folders list|create` NDJSON wire shape, pagination), run-startup auto-default gate, `project_folder_auto_defaulted` event, self-healing for stale IDs | `POWER.md` → Step 3 (project/folder onboarding) **and** `steering/kane-cli-run.md` → Browsing / creating projects and folders + The run-startup auto-default gate **and** `steering/kane-cli-testmd.md` → Quick start (gate note) **and** `steering/kane-cli-generate.md` → Configuration surface (gate note) |
+| `references/debug.md` — log layout, debugging flow, common failure patterns (incl. "did you mean" subcommand and self-healing rows), bug-report heuristic | `steering/kane-cli-run.md` → Failure handling & log inspection + Bug-report heuristic |
 | `references/parallel.md` — when to split, agent prompt template, batch summary | `steering/kane-cli-run.md` → Parallel execution |
 | `references/setup-and-config.md` — install / auth / variables precedence / context files / config commands / Chrome management / directory layout | `POWER.md` → Onboarding (Steps 1–3) + `steering/kane-cli-run.md` → Variables and secrets + Context files + Configuration surface |
 
