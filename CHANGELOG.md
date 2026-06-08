@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-06-08
+
+### Breaking & behavior changes
+   - **Bare-objective shortcut removed.** `kane-cli "<objective>"` no longer routes to `run`. Use `kane-cli run "<objective>"`.
+   Unknown first tokens now exit `2` with a "did you mean" suggestion instead of silently running.
+   - **Exit code `1 → 2` for TMS credential-exchange failures.** Aligns with the other auth/setup failure codes. CI scripts that
+   branch on exit `1` vs `2` should be updated.
+   - **`config show` and the new `list` commands emit JSON when stdout is piped or redirected** (`> file`, `| jq`) instead of  the human table. Useful for scripts; anyone scraping the human format will need to update.
+   - **Mid-run interactive project/folder picker removed.** When the startup gate finds nothing configured (or a stale/invalid cached value), it auto-defaults headlessly and announces the choice rather than prompting. The explicit `kane-cli config project` / `config folder` pickers still work in a TTY.
+
+### Project & folder selection
+   - **Zero-config first run** — every run path (`kane-cli run`, `kane-cli testmd run`, `kane-cli generate`) validates a
+   project/folder before launching. If nothing is configured, kane-cli auto-resolves (find-or-create) and announces the choice in the TUI scrollback and as a `project_folder_auto_defaulted` event under `--agent`.
+   - **New `projects` and `folders` subcommands** for scripted setup:
+     - `kane-cli projects list [--search] [--limit] [--offset]`
+     - `kane-cli projects create <name> [--description]`
+     - `kane-cli folders list [--search] [--limit] [--offset]`
+     - `kane-cli folders create <name> [--description]`
+
+     Human table in a TTY, NDJSON when piped or under `--agent`, with `_meta`-paginated output for agents.
+   - **Self-healing for stale, invalid, or typo'd IDs** — a cached project/folder that's been deleted, renamed, revoked, or set to a malformed value is detected at run start and replaced via auto-default, instead of silently breaking the upload at the end of the run.
+   - **OAuth users can use the interactive `config project` / `config folder` picker again** — a regression that required basic-auth credentials to reach the picker is fixed.
+   - **OAuth tokens refreshed in the projects/folders auth path** — expired tokens no longer cause silent failures when listing or selecting projects.
+
+### More faithful recorded tests
+- **Bare variable references are preserved in recorded `test.md`** — variable refs are written as-is, not coerced or mangled during recording.
+- **`--author` is honored in non-TTY and agent runs** — passing `--author` in CI or agent mode now takes effect as expected.
+
+### Variable handling in recorded tests
+- **`--variables-file` and auto-store values resolve as expected** ([LambdaTest/kane-cli#69](https://github.com/LambdaTest/kane-cli/issues/69), [#75](https://github.com/LambdaTest/kane-cli/issues/75)) — the runtime `{{VAR}}` resolver now tries the local resolver first and falls back to the ATMS lookup, instead of silently dropping values the file had set.
+- **Recorded `*_test.md` no longer double-prefixes variable namespaces** [#76](https://github.com/LambdaTest/kane-cli/issues/76) — replays previously produced `{{secrets.user.secrets.user.X}}` which never resolved; recorded objectives + frontmatter now persist bare `{{name}}` refs.
+
+### Non-TTY & agent runs
+- **`--author` is honored in non-TTY and `--agent` runs** ([LambdaTest/kane-cli#72](https://github.com/LambdaTest/kane-cli/issues/72)) — forcing re-authoring no longer falls back to the stale cached plan in headless mode.
+- **Typo'd subcommands fail loudly** instead of silently running your input as an objective (see Breaking).
+
+### Auth
+- **`login` / `whoami` verify credentials server-side** ([LambdaTest/kane-cli#58](https://github.com/LambdaTest/kane-cli/issues/58)) — previously both could report success while the backend rejected every API call; invalid tokens now fail immediately instead of after the first real command.
+
+### Cleaner output and display
+- **Project-list count shown as a lower bound while streaming** — the projects denominator is now marked as approximate during streaming, so the display is not misleading.
+
+---
+
 ## [0.4.0] - 2026-06-04
 
 ### AI test generation (`kane-cli generate`)
