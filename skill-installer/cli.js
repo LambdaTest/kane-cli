@@ -28,6 +28,9 @@ function install() {
   let installed = 0;
   for (const { dir, agent } of TARGETS) {
     try {
+      // Wipe before copy so files removed in newer skill releases don't
+      // linger in the target dir after an upgrade.
+      rmSync(dir, { recursive: true, force: true });
       mkdirSync(dir, { recursive: true });
       cpSync(SOURCE_DIR, dir, { recursive: true, force: true });
       writeFileSync(join(dir, "VERSION"), VERSION + "\n");
