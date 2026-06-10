@@ -58,10 +58,26 @@ There is **no interactive session**. Each invocation runs exactly one generation
 | `--name <name>` | Names the run and the saved suite folder. |
 | `--scenario-limit <n>` / `--per-scenario-limit <n>` | Cap scenarios / cases-per-scenario. |
 | `--memory` | Use the memory layer — reuse relevant existing cases, reduce duplicates. |
+| `--files <paths>` | Comma-separated local files to attach as context (new / refine only — see "Attaching files"). |
 | `--project <id>` / `--folder <id>` | Test Manager project / folder. |
 | `--env prod\|stage` · `--username` / `--access-key` | Environment / auth (same as `run`). |
 
 If neither `--project`/`--folder` nor a saved project/folder is set when generation starts, Kane CLI auto-resolves one headlessly and emits a `project_folder_auto_defaulted` event before `generate_start` — surface as a one-line note and continue parsing.
+
+## Attaching files
+
+Pass local files as extra context with `--files <comma-separated paths>` on a **new** generation or a **`--refine`** (not `--save`). The generator reads them and reflects them in the scenarios + cases — a spec, a UI screenshot, a PDF / Word doc, or a CSV of inputs.
+
+```bash
+kane-cli generate "test the login flow described in the attached spec" --files ./login-spec.pdf,./mockup.png --agent
+```
+
+- **Supported types** — documents (`.txt .json .xml .csv .pdf .docx .xlsx`), images (`.jpg .jpeg .png .gif .bmp .webp`), audio (`.mp3 .wav .m4a`), video (`.mp4 .mov .webm .mpeg .mpga`).
+- **Limits** — up to **10 files**, each **≤ 50 MB**.
+- **Validated as a set, up front** — if any path is missing, an unsupported type, too large, or over the count, the whole command is rejected (exit `2`) **before anything is sent** and the offending paths are listed; fix and re-run. Files outside the working directory are allowed but flagged with a warning on stderr.
+- **`new` / `--refine` only** — combining `--files` with `--save` exits `2`.
+
+Each attached file emits a `generate_upload` line (`status` `uploading` → `done`) **before** `generate_start` (see "Parsing the NDJSON output"). The `@`-mention palette is the interactive-TUI way to attach — **not** relevant to Kiro/agent usage; pass `--files`.
 
 ---
 
@@ -126,6 +142,7 @@ Generate-specific (typed `generate_*`):
 
 | `type` | Key fields | Meaning → what to do |
 |---|---|---|
+| `generate_upload` | `file`, `index`, `total`, `status` | Only when `--files` is used. One per attached file, **before `generate_start`**; `status` goes `"uploading"` → `"done"` (or `"failed"`). Progress only — narrate "attaching <file>…" or ignore. A failed upload surfaces as an `error` + non-zero exit. |
 | `generate_start` | `request_id`, `objective_chars`, `scenario_limit`, `per_scenario_limit`, `is_refine` | Turn began. **Capture `request_id`** — it's the handle for every later `--refine` / `--save`. `is_refine` distinguishes a new request from a continuation. |
 | `generate_thinking` | `took_ms` | Liveness only. Narrate "thinking…" or ignore. |
 | `generate_progress` | `pct` | Milestone (25 / 50 / 75 / 100). Optional progress display — not a completion signal. |
@@ -189,6 +206,7 @@ Invalid flag combinations exit `2` with a message on stderr. The full set:
 - `--save` without `--req`
 - `--save` with a description (it takes none)
 - `--out` without `--save`
+- `--files` with `--save` (files attach to a new generation or a refine, not a save)
 - `--req` without `--refine` or `--save`
 - a new generation with no description
 
@@ -250,6 +268,7 @@ Never expose `generate_snapshot`, `request_id`, `generate_done`, `polarity`, `ca
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | Exit `2` with "invalid flag combination" | Mixed `--refine` + `--save`, or missing `--req` | Re-invoke with the correct mode (see "The three modes" above). |
+| Exit `2` listing bad `--files` paths | A path is missing / unsupported type / >50 MB / >10 files | Fix the offending paths (the message lists them); nothing was uploaded. Don't pair `--files` with `--save`. |
 | Exit `2` with "auth/setup" | Credentials missing or environment unset | `kane-cli whoami`; re-run `kane-cli login` if needed. |
 | Turn ended with `generate_clarification` | Generator needs an answer — **this is exit 0, not a failure** | Read the question, decide on an answer (yourself or via the user), re-invoke `kane-cli generate "<answer>" --refine --req <id> --agent`. |
 | `generate_save_result` with `warning: "no functional test cases"` | The request has no Functional cases to save | Either refine to add Functional cases, or accept that the suite is non-functional (Security / Performance / etc.) and won't produce `_test.md` files. |

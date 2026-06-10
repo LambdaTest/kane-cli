@@ -38,6 +38,14 @@ kane-cli generate "checkout flow on a shopping site" --scenario-limit 4 --per-sc
 
 Add `--memory` to reuse relevant existing cases and avoid duplicating coverage you already have.
 
+Attach local files as context — a spec, a screenshot, a PDF or CSV — with `--files` (on a new generation or a refine):
+
+```bash
+kane-cli generate "cover the flows described in the attached spec" --files ./spec.pdf,./flows.csv
+```
+
+Up to 10 files, each 50 MB or smaller (documents, images, audio, video); all paths are validated before anything is sent. See [Attaching files for context](./overview.md#attaching-files-for-context).
+
 ## 2. Refine
 
 Refinement is a plain-language conversation. Each refine is a fresh command with `--refine --req <id>`:

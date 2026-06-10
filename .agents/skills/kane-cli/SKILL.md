@@ -287,6 +287,8 @@ Then offer the next commands from the terminal line's Refine / Save hints (they 
 
 **Clarification → refine (do not skip):** if the turn ends with a clarification, that's **exit 0 — not an error**. Act on it: answer it yourself, or ask your own user, then **re-invoke** `kane-cli generate "<answer>" --refine --req <id> --agent`. Never drop a clarification.
 
+**Attach files:** `--files a,b,c` adds local files (docs / images / PDF / CSV — up to 10, ≤ 50 MB each) as generation context on a **new** or **`--refine`** turn (not `--save`); each emits a `generate_upload` line before `generate_start`. Details in `references/generate.md`.
+
 **Save is Functional-only:** `--save` writes only **Functional** cases to `_test.md` (under `<cwd>/.testmuai/tests` by default). Non-functional cases (Security, Performance, …) are generated and shown but not saved. Run saved files with **`kane-cli testmd run`** (`references/testmd.md`) — that's the generate → testmd pipeline.
 
 Internal event/field names (`generate_snapshot`, `request_id`, …) are for parsing only — never show them to the user (§5 rule). Wire schema: `references/generate-parsing.md`.
