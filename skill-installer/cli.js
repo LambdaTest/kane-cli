@@ -17,9 +17,14 @@ const TARGETS = [
   { dir: join(homedir(), ".gemini", "skills", SKILL_NAME), agent: "Gemini CLI" },
 ];
 
-function install() {
+function install(force) {
   if (!existsSync(SOURCE_DIR)) {
     console.error("Error: skills directory not found in package.");
+    process.exit(1);
+  }
+
+  if (!existsSync(join(SOURCE_DIR, "SKILL.md"))) {
+    console.error("Error: SKILL.md not found in skills directory.");
     process.exit(1);
   }
 
@@ -27,6 +32,13 @@ function install() {
 
   let installed = 0;
   for (const { dir, agent } of TARGETS) {
+    if (!force && existsSync(join(dir, "VERSION"))) {
+      const installedVersion = readFileSync(join(dir, "VERSION"), "utf8").trim();
+      if (installedVersion === VERSION) {
+        console.log(`  - ${agent}  — already up to date`);
+        continue;
+      }
+    }
     try {
       // Wipe before copy so files removed in newer skill releases don't
       // linger in the target dir after an upgrade.
@@ -50,8 +62,7 @@ function install() {
     console.log("  Codex CLI    →  $kane-cli  or ask any browser task");
     console.log("  Gemini CLI   →  /skills list  or ask any browser task");
   } else {
-    console.error("Failed to install to any agent.");
-    process.exit(1);
+    console.log("Installation skipped or failed.");
   }
 }
 
@@ -71,10 +82,11 @@ function uninstall() {
 }
 
 const command = process.argv[2] || "install";
+const force = process.argv.includes("--force") || process.argv.includes("-f");
 
 switch (command) {
   case "install":
-    install();
+    install(force);
     break;
   case "uninstall":
   case "remove":
@@ -82,11 +94,12 @@ switch (command) {
     break;
   case "--help":
   case "-h":
-    console.log("Usage: npx @testmuai/kane-cli-skill [install|uninstall]");
+    console.log("Usage: npx @testmuai/kane-cli-skill [install|uninstall] [--force]");
     console.log();
     console.log("Commands:");
     console.log("  install      Install kane-cli skill for all AI agents (default)");
     console.log("  uninstall    Remove kane-cli skill from all AI agents");
+    console.log("  --force, -f  Force re-installation even if up-to-date");
     break;
   default:
     console.error(`Unknown command: ${command}`);
