@@ -9,7 +9,7 @@ A generation produces:
 
 You generate, review the result, **refine** it in plain language as many times as you like, and optionally **save** the functional cases as runnable `_test.md` files that [`kane-cli testmd`](../testmd/running.md) can execute and replay.
 
-> For the full picture of AI test-case generation — including richer inputs (files, PDFs, issue links) and pushing cases into Test Manager or automation — see the docs at <https://www.testmuai.com/support/docs/generate-test-cases-with-ai/>. The **CLI here takes a text description** and writes local `_test.md` files. See [Limits and scope](#limits-and-scope).
+> For the full picture of AI test-case generation — including issue-link inputs, dashboards, and pushing cases into Test Manager or automation — see the docs at <https://www.testmuai.com/support/docs/generate-test-cases-with-ai/>. The **CLI takes a text description** (optionally with local files attached via [`--files`](#attaching-files-for-context)) and writes local `_test.md` files. See [Limits and scope](#limits-and-scope).
 
 ## Quick start
 
@@ -52,9 +52,27 @@ The request id (`23271` above) is printed at the end of each generation and is h
 | `--scenario-limit <n>` | Maximum number of scenarios to generate. |
 | `--per-scenario-limit <n>` | Maximum test cases per scenario. |
 | `--memory` | Use the **memory layer** — reuse relevant existing test cases and reduce duplicates. |
+| `--files <paths>` | Comma-separated local files to attach as context (new generations and refines only). See [Attaching files for context](#attaching-files-for-context). |
 | `--project <id>` / `--folder <id>` | Test Manager project / folder. |
 | `--agent` | Emit structured NDJSON on stdout (auto-on when run non-interactively / piped). |
 | `--env`, `--username`, `--access-key` | Environment and authentication — same as [`kane-cli run`](../running-tests.md). See [Authentication](../authentication.md). |
+
+## Attaching files for context
+
+Give the generator more to work from by attaching local files with `--files` — a comma-separated list of paths — on a **new** generation or a **refine**:
+
+```bash
+kane-cli generate "test the login flow described in the attached spec" --files ./login-spec.pdf,./wireframe.png
+```
+
+The files are sent along with your description and reflected in the generated scenarios and cases — attach a spec, a screenshot of the UI, a PDF or Word document, or a CSV of inputs.
+
+- **Supported types** — documents (`.txt`, `.json`, `.xml`, `.csv`, `.pdf`, `.docx`, `.xlsx`), images (`.jpg`, `.jpeg`, `.png`, `.gif`, `.bmp`, `.webp`), audio (`.mp3`, `.wav`, `.m4a`), and video (`.mp4`, `.mov`, `.webm`, `.mpeg`, `.mpga`).
+- **Limits** — up to **10 files**, each **50 MB** or smaller.
+- **Checked before anything is sent** — all paths are validated as a set; if any is missing, an unsupported type, too large, or over the count, the command stops and lists the offending paths so nothing is uploaded by mistake. Files outside the current directory are allowed but flagged with a warning.
+- **Not with `--save`** — files attach to a generation or refine, not a save (`--files` with `--save` is rejected).
+
+In the interactive TUI, type `@` in the generate prompt to attach a file inline instead of passing `--files`.
 
 ## Interactive mode (TUI)
 
@@ -65,6 +83,7 @@ Unlike the one-turn command-line surface, the TUI is a **live session** — gene
 | Input | Action |
 |---|---|
 | *(type any text)* | **Refine** — describe a change in plain language; the set updates in place |
+| `@<file>` | **Attach a file** — type `@` to pick a local file to add as context (same files as `--files`) |
 | `/view [S<n>]` | Open the **scenario browser** — drill scenarios → cases → case detail |
 | `/save` | Save the functional cases to `<cwd>/.testmuai/tests/…` |
 | `/cancel` | Cancel the current generation |
@@ -95,7 +114,7 @@ This is the intended path: **generate authors test cases → testmd runs them.**
 
 ## Limits and scope
 
-- **Input is a text description.** File, PDF, audio, and issue-link inputs (and the web product's "Create / Create and Automate") are not part of the CLI.
+- **Input is a text description, optionally with attached files.** Attach local files with `--files` (see [Attaching files for context](#attaching-files-for-context)); issue-link inputs and the web product's "Create / Create and Automate" are not part of the CLI.
 - **Refinement is whole-request.** You refine the request as a whole in plain language; targeting an individual scenario or case from the CLI is not yet supported.
 - **Scenario and per-scenario counts** are bounded by `--scenario-limit` / `--per-scenario-limit`.
 

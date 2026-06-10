@@ -23,6 +23,7 @@ Generate-specific (typed `generate_*`):
 
 | `type` | Key fields | Meaning → what to do |
 |---|---|---|
+| `generate_upload` | `file`, `index`, `total`, `status` | Only when `--files` is used. Emitted once per attached file **before `generate_start`**, while the file uploads; `status` goes `"uploading"` → `"done"` (or `"failed"`). Progress only — narrate "attaching <file>…" or ignore. A failed upload surfaces as an `error` + non-zero exit. |
 | `generate_start` | `request_id`, `objective_chars`, `scenario_limit`, `per_scenario_limit`, `is_refine` | Turn began. **Capture `request_id`** — it's the handle for every later `--refine` / `--save`. `is_refine` distinguishes a new request from a continuation. |
 | `generate_thinking` | `took_ms` | Liveness only. Narrate "thinking…" or ignore. |
 | `generate_progress` | `pct` | Milestone (25 / 50 / 75 / 100). Optional progress display — not a completion signal. |

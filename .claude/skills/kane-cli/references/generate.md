@@ -6,7 +6,7 @@
 
 **Use this whenever a task needs test cases or scenarios written — don't hand-author them in chat or a scratch file.** Reach for it to: turn a requirement / feature description into a test suite; expand or refine coverage (more edge cases, negative paths, a narrower or broader focus); or save the Functional cases as runnable `_test.md`. It is **not** for driving a browser — that's `kane-cli run` (§3 of SKILL.md).
 
-> For the full web-product picture (richer inputs, dashboards), see the public docs: <https://www.testmuai.com/support/docs/generate-test-cases-with-ai/>. The CLI surface here is **text-objective only**.
+> For the full web-product picture (dashboards, issue-link inputs), see the public docs: <https://www.testmuai.com/support/docs/generate-test-cases-with-ai/>. The CLI takes a **text objective**, optionally with local files attached via **`--files`** (see "Attaching files" below).
 
 ## The three modes — one turn per invocation, then exit
 
@@ -30,10 +30,26 @@ There is **no interactive session**. Each invocation runs exactly one generation
 | `--name <name>` | Names the run and the saved suite folder |
 | `--scenario-limit <n>` / `--per-scenario-limit <n>` | Cap scenarios / cases-per-scenario |
 | `--memory` | Use the memory layer — reuse relevant existing cases, reduce duplicates |
+| `--files <paths>` | Comma-separated local files to attach as context (new / refine only — see "Attaching files") |
 | `--project <id>` / `--folder <id>` | Test Manager project / folder |
 | `--env prod\|stage` · `--username` / `--access-key` | Environment / auth (same as `run`) |
 
 If neither `--project`/`--folder` nor a saved project/folder is set when generation starts, kane-cli auto-resolves one headlessly and emits a `project_folder_auto_defaulted` event before `generate_start`. Translate it to a one-line note for the user — full handling lives in `references/test-manager.md`.
+
+## Attaching files
+
+Pass local files as extra context with `--files <comma-separated paths>` on a **new** generation or a **`--refine`** (not `--save`). The generator reads them and reflects them in the scenarios + cases — attach a spec, a screenshot of the UI, a PDF / Word doc, or a CSV of inputs.
+
+```bash
+kane-cli generate "test the login flow described in the attached spec" --files ./login-spec.pdf,./wireframe.png --agent
+```
+
+- **Supported types** — documents (`.txt .json .xml .csv .pdf .docx .xlsx`), images (`.jpg .jpeg .png .gif .bmp .webp`), audio (`.mp3 .wav .m4a`), video (`.mp4 .mov .webm .mpeg .mpga`).
+- **Limits** — up to **10 files**, each **≤ 50 MB**.
+- **Validated as a set, up front** — if any path is missing, an unsupported type, too large, or over the count, the whole command is rejected (exit `2`) **before anything is sent** and the offending paths are listed; fix and re-run. Files outside the current directory are allowed but flagged with a warning on stderr.
+- **`new` / `--refine` only** — combining `--files` with `--save` exits `2`.
+
+Under `--agent`, each file emits a `generate_upload` line (`status` `uploading` → `done`) **before** `generate_start` — see `references/generate-parsing.md`. *(Interactively in the TUI, type `@` in the generate prompt to attach a file inline.)*
 
 ## Presenting a result (adaptive)
 
@@ -114,6 +130,7 @@ Invalid flag combinations exit `2` with a message on stderr. The full set:
 - `--save` without `--req`
 - `--save` with a description (it takes none)
 - `--out` without `--save`
+- `--files` with `--save` (files attach to a new generation or a refine, not a save)
 - `--req` without `--refine` or `--save`
 - a new generation with no description
 
