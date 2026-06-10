@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-06-10
+
+### Attach files to generate sessions
+- **Local files in generate mode** — pass `--files` on the command line or type `@filename` inline to attach files to a generation request; kane-cli validates, uploads, and maps them automatically before submitting.
+- **`@`-mention selector with grouped categories** — typing `@` opens a unified palette that organizes matches into Files, Scenarios, and Test Cases, with a bounded 7-row scroll window so it never takes over the screen.
+- **Mistyped `@` paths are surfaced, not silently dropped** — if a referenced file can't be found, kane-cli warns you instead of ignoring it.
+- **Input locks during upload** — the prompt becomes inert while attachments are processing, and a "Processing files" label replaces any ambiguous spinner text.
+- **Uploads are cancellable** — pressing **Ctrl+C** during a file upload aborts cleanly and leaves a scrollback marker so you can see where the session stopped.
+
+### Smarter generate-mode interaction
+- **Per-session input history** — generate mode keeps its own history separate from run mode; press the up arrow to recall previous prompts.
+- **Duplicate submits are blocked** — hitting submit twice in quick succession no longer fires a second request; the guard resets correctly after upload completes rather than after the full session ends.
+- **Frozen refine input is fixed** — if a chat POST was rejected, the refine input could get stuck; it now resets correctly so you can type again.
+- **Generation failures visible in scrollback** — errors from failed generation requests appear inline in the terminal and are also written to a local `errors.log`, with the same event sent to telemetry.
+
+### Install subcommand
+- **`kane install` checks for updates** — a new `/public/skills/kane-cli` endpoint backs a version-map check so `kane install` knows when a newer agent version is available.
+- **`kane install <version>`** — pass a version as a positional argument to pin the install; already-installed targets are back-filled on re-runs so missing agent directories are never left behind.
+- **Network calls time out** — install-phase requests are now bounded with abort timeouts so a slow or unreachable endpoint doesn't hang the terminal indefinitely.
+
+### Project and folder gate in generate mode
+- **Generate mode enforces project/folder selection** — entering `/generate` now applies the same project and folder gate as `/run`, so sessions can't start without a valid context set.
+
+### Startup noise reduced
+- **Node 18 `buffer.File` warning suppressed** — the `ExperimentalWarning` that appeared on Node 18 at startup is now filtered out; other warnings are unaffected.
+
+---
+
 ## [0.4.1] - 2026-06-08
 
 ### Breaking & behavior changes
