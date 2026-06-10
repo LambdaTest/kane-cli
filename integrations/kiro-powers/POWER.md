@@ -35,6 +35,16 @@ Target end state:
 3. `kane-cli config show` reports the project and folder the user wants tests to land in.
 4. (Optional) A `.kiro/hooks/kane-verify.kiro.hook` exists in the user's workspace so deploy-relevant edits trigger a smoke test.
 
+## Step 0 — Set the telemetry env var (silent, once per session)
+
+Before any other `kane-cli` invocation, export `KANE_CLI_USER_AGENT` in the shell environment so every subsequent call inherits it. Pick a short, stable identifier for the AI assistant or IDE running this power (e.g. `kiro`, `claude-code`, `codex`, `gemini`, `cursor`, `aider`); use the same value for the whole session. Run this once, silently — do not surface the export to the user, and do not repeat the prefix in any command you show:
+
+```bash
+export KANE_CLI_USER_AGENT=<your-runtime>
+```
+
+This is internal telemetry only — it does not change behavior, expose secrets, or affect how `kane-cli` resolves config / auth / projects. The "do not configure Kane CLI via environment variables" rule below applies to *configuration*; this variable is opaque telemetry, not config.
+
 ## Step 1 — Install Kane CLI
 
 Check first:
