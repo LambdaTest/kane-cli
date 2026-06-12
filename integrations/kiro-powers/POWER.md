@@ -147,6 +147,7 @@ Three ways Kiro uses it:
 
 Other capabilities to know about:
 
+- **Browser state control** — objectives can set/delete/clear cookies and localStorage, and write/paste/clear an isolated test clipboard (the OS clipboard is never touched); matching assertions verify each ("verify the clipboard contains X", "verify the session cookie exists").
 - **Variables and secrets** via `--variables` / `--variables-file` and `{{name}}` placeholders in objectives. `secret: true` masks the value in logs.
 - **Local or remote browsers** — local Chrome by default; `--cdp-endpoint <url>` attaches to a running Chrome; `--ws-endpoint <url>` drives a remote browser (e.g. LambdaTest grid).
 - **Context files** — `~/.testmuai/kaneai/global-memory.md` is global; `.testmuai/context.md` (in cwd) is project-local; override per-run with `--global-context` / `--local-context`.

@@ -30,6 +30,15 @@ Open https://app.example.com, log in with the credentials in {{tester}},
 navigate to Settings > Billing, and verify the current plan is "Pro".
 ```
 
+```text
+Open https://app.example.com, set a cookie named session with value
+{{auth_token}}, reload, and verify the dashboard loads. Then click the
+"Copy invite link" button and verify the clipboard contains "/invite/".
+```
+
+Objectives can also set, delete, and clear cookies, localStorage, and the
+test clipboard directly — see [Browser State Actions](./features/browser-state.md).
+
 ### Bad to better
 
 | | Objective |

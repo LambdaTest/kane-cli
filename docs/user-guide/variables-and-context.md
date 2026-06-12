@@ -8,6 +8,8 @@ This page covers how `kane-cli` discovers and merges variables, how to mark valu
 
 ### Variable format
 
+`{{variables}}` resolve anywhere a value is typed or set — form fills, cookie and localStorage values, and clipboard writes alike.
+
 Variables are JSON objects keyed by name. Each entry describes a single variable.
 
 ```json

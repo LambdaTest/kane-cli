@@ -37,9 +37,17 @@ Reference list. Use these in your prose; the agent recognizes them all.
 | **Scroll/drag** | scroll to, scroll down/up, drag to, drop on |
 | **Wait** | wait for, wait until, pause for |
 | **File** | upload, attach, download |
+| **Cookies** | set cookie name=value, delete the X cookie, clear all cookies |
+| **localStorage** | set localStorage key=value, delete the X key from localStorage, clear localStorage |
+| **Clipboard** | write X to the clipboard, paste from the clipboard, clear the clipboard |
 | **Misc** | dismiss, accept dialog, switch frame, take screenshot |
 
 Always include a **starting URL** somewhere in the first action verb if the agent needs to navigate. Never assume the agent knows where to start.
+
+Browser-state notes:
+- **Cookies**: values accept `{{variables}}`. A cookie without a domain applies to the current page's site — navigate first. Reload after setting if the page must pick it up.
+- **localStorage**: per-site — navigate to the target site before setting. Reload if the app only reads storage on load.
+- **Clipboard**: the run uses an **isolated test clipboard** — your real OS clipboard is never read or written. Site Copy buttons are captured into it automatically. To paste: click/focus the target field first, then say paste (Ctrl/Cmd+V works too). Text and images both paste.
 
 ---
 
@@ -168,6 +176,19 @@ Get all localStorage keys
 
 If localStorage has "onboarding_complete" then show dashboard, else start onboarding
 ```
+
+#### Clipboard
+
+The test's isolated clipboard (the OS clipboard is never involved). Holds **one current entry** — every copy or clipboard write replaces it, so **verify a clipboard value before the next clipboard write/clear**. An entry can carry text, HTML, and an image at once (e.g. a site's "Copy image" button).
+
+```text
+Click the Copy link button, then verify the clipboard contains "/inv/42"
+Store the copied coupon code as 'coupon'
+Verify an image was copied to the clipboard
+Write "INV-2026-042" to the clipboard, verify the clipboard contains "INV-2026-042", then clear the clipboard and verify the clipboard text is empty
+```
+
+Do **not** paste into a field just to check a copied value — assert on the clipboard directly. For absence checks, prefer positive phrasing ("verify the clipboard text is empty") over negations.
 
 ### 3.3 Operators
 
@@ -313,6 +334,9 @@ Positional assertions check where something is on the page:
 ---
 
 ## 8. Common pitfalls
+
+- **Setting localStorage or clipboard before navigating** — both need a page loaded first (storage is per-site; the clipboard tools live in the page). Navigate, then mutate.
+- **Clipboard checkpoint after the next clipboard mutation** — the clipboard holds one entry; a later write/clear replaces it. Verify immediately after the copy/write you're checking.
 
 | ❌ Don't | ✅ Do | Why |
 |---|---|---|
