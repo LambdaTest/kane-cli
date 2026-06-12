@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.3] - 2026-06-12
+
+### New browser-automation tools
+- **Clipboard, cookie, and localStorage are now first-class tools** — test flows can read and write the virtual clipboard, and can perform full create/read/update/delete operations on cookies and localStorage, matching what a real browser session can do.
+
+### Contextual hints in the footer
+- **A live hints bar at the bottom of the TUI** — a new footer row shows tips relevant to your current mode, cycling through a remote catalog that updates automatically (cached for 1 hour).
+- **Hints can be turned off** — run `/config` inside the TUI to toggle hints on or off; the setting is saved locally and defaults to on.
+
 ## [0.4.2] - 2026-06-10
 
 ### Attach files to generate sessions
