@@ -11,6 +11,7 @@ DevTools assertions let you verify data that isn't visible on the page — HTTP 
 | [Performance](./performance.md) | Core Web Vitals | LCP, CLS, INP, FCP, TTFB |
 | [Cookies](./cookies.md) | Browser cookies | Names, values, flags (httpOnly, secure, sameSite) |
 | [localStorage](./local-storage.md) | Browser localStorage | Key-value pairs stored in the browser |
+| [Clipboard](./clipboard.md) | Test clipboard | Copied text/HTML/images — verify Copy buttons, extract copied values |
 
 ## How It Works
 

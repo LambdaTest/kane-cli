@@ -22,7 +22,7 @@ Each checkpoint uses an analyze method to determine *where* to look for the data
 | [Textual (DOM)](./textual.md) | Page DOM elements | Element states (disabled, checked), CSS properties, HTML attributes |
 | [URL](./url.md) | Browser URL bar | URL path, query params, redirects |
 | [Title](./title.md) | Page title | Document title verification |
-| [DevTools](./devtools/) | Browser internals | Network traffic, console logs, performance, cookies, localStorage |
+| [DevTools](./devtools/) | Browser internals | Network traffic, console logs, performance, cookies, localStorage, clipboard |
 
 ## How to Use
 
@@ -38,6 +38,7 @@ Assert: no console errors                      → DevTools (Console)
 Assert: page LCP is under 2500ms               → DevTools (Performance)
 Assert: session cookie exists                  → DevTools (Cookies)
 Assert: auth_token exists in localStorage      → DevTools (localStorage)
+Assert: clipboard contains the copied link     → DevTools (Clipboard)
 ```
 
 Extractions work the same way:
@@ -68,4 +69,4 @@ Assertions support these comparison operators:
 - [Textual (DOM) Assertions](./textual.md) — element states and attributes
 - [URL Assertions](./url.md) — URL-based checks
 - [Title Assertions](./title.md) — page title checks
-- [DevTools Assertions](./devtools/) — network, console, performance, cookies, localStorage
+- [DevTools Assertions](./devtools/) — network, console, performance, cookies, localStorage, clipboard
