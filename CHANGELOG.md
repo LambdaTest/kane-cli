@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.4] - 2026-06-14
+
+### One place to set your start URL
+- **Default URL in config** — set a default start URL with `config set-url` and the CLI will use it for every run automatically. The `/config` menu in interactive mode now includes a "Default URL" item, and `show` displays whatever value you've stored.
+- **Per-run `--url` flag** — pass `--url <address>` on any `kane run` or `testmd run` call to override the default for that run without touching your config.
+- **URL in `.testmd` frontmatter** — add a `url:` key to a test file's frontmatter and it becomes that file's built-in start URL. Resolution order: `--url` flag → frontmatter → stored default.
+
+### Clearer errors when a URL is missing
+- **Missing URL is now a hard stop, not a silent fallback** — previously the CLI could fall back to a hardcoded placeholder (google.com). Now, if no URL can be resolved, an overlay in the TUI or an error in the CLI tells you immediately and asks you to supply one.
+- **Skip the requirement when you need to** — pass `--allow-missing-url` on non-TTY runs to opt out of the URL requirement entirely, useful for headless pipelines where the URL comes from another source.
+
+### Fewer surprises in long sessions
+- **URL is only sent for the first run, not replayed** — after the first completed run in a session, the start URL is no longer re-injected into subsequent sub-flows, which prevents stale navigation on `/new` or follow-up runs.
+- **Session reset clears URL state cleanly** — `/new` and `/reset` now properly reset the internal "has completed run" flag, so a fresh session behaves exactly like the first one.
+- **Non-TTY testmd runs no longer prompt** — when running in a non-interactive environment, the CLI no longer blocks waiting for user input if a URL is missing.
+
 ## [0.4.3] - 2026-06-12
 
 ### New browser-automation tools
