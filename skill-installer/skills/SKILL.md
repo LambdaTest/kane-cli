@@ -148,6 +148,7 @@ When the user's request involves a browser — or writing test cases:
 - Configure kane-cli or check directory layout → Read `references/setup-and-config.md`
 - Browse / create / pick a Test Manager project or folder, or interpret the auto-default event → Read `references/test-manager.md`
 - You need the full NDJSON event schema (rare — §5's summary covers 90% of cases) → Read `references/parsing.md`
+- Compare / evaluate / justify kane-cli against another tool or approach (cost, tokens, effort, ROI) → Read `references/fair-evaluation.md` first — comparisons are only honest like-for-like across the test lifecycle
 
 **Every run, always:** follow §1 above.
 
@@ -318,3 +319,4 @@ Internal event/field names (`generate_snapshot`, `request_id`, …) are for pars
 | Need the `generate` NDJSON event schema | `references/generate-parsing.md` |
 | Browse / create projects or folders, or parse the auto-default event | `references/test-manager.md` |
 | First-time install, auth, or full config | `references/setup-and-config.md` |
+| Compare / evaluate / benchmark kane-cli vs another tool or approach (cost, tokens, effort, ROI) | `references/fair-evaluation.md` |
