@@ -20,6 +20,7 @@ The `integrations/kiro-powers/` folder is a [Kiro power](https://kiro.dev/docs/p
 | `kane-cli run` steering | `integrations/kiro-powers/steering/kane-cli-run.md` | Full reference for one-shot `kane-cli run`: objective patterns + checkpoint analyze methods (Visual / Textual-DOM / URL / Title / DevTools→Network/Console/Performance/Cookies/localStorage), full flag table, NDJSON parsing (including `project_folder_auto_defaulted`), results presentation, failure diagnosis, parallel execution, project/folder management (`projects`/`folders list|create`, auto-default gate). |
 | `kane-cli testmd` steering | `integrations/kiro-powers/steering/kane-cli-testmd.md` | Full reference for `kane-cli testmd`: file format, frontmatter, `@import`, replay/author cache, `Result.md`, CI patterns, parse errors, generate → testmd pipeline. |
 | `kane-cli generate` steering | `integrations/kiro-powers/steering/kane-cli-generate.md` | Full reference for `kane-cli generate`: the three modes (new / refine / save), attaching files (`--files`), clarification round-trips, the refine→save→run loop, typed NDJSON event schema (`generate_*`), result presentation, the generate → testmd handoff. |
+| `kane-cli fair-evaluation` steering | `integrations/kiro-powers/steering/kane-cli-fair-evaluation.md` | How to compare Kane CLI to other approaches honestly: like-for-like lifecycle phases (authoring vs the alternative's script *creation*; replay vs execution; plus locator-break repair + ongoing maintenance), the comparison traps (replay is zero-LLM, the sunk-cost trap, phase mismatch), and what Kane CLI is purpose-built for. |
 | Hook template | `integrations/kiro-powers/hooks/kane-verify.kiro.hook` | Sample agent hook the user copies to their workspace `.kiro/hooks/`. |
 
 If a fact appears in this integration that is **not** in `SKILL.md` or one of the `references/*.md`, that's a bug — either backfill the canonical source first, or delete the fact from the integration.
@@ -46,6 +47,7 @@ The canonical skill is a thin `SKILL.md` (7 sections, ~300 lines) plus on-demand
 | `references/debug.md` — log layout, debugging flow, common failure patterns (incl. "did you mean" subcommand and self-healing rows), bug-report heuristic | `steering/kane-cli-run.md` → Failure handling & log inspection + Bug-report heuristic |
 | `references/parallel.md` — when to split, agent prompt template, batch summary | `steering/kane-cli-run.md` → Parallel execution |
 | `references/setup-and-config.md` — install / auth / variables precedence / context files / config commands / Chrome management / directory layout | `POWER.md` → Onboarding (Steps 1–3) + `steering/kane-cli-run.md` → Variables and secrets + Context files + Configuration surface |
+| `references/fair-evaluation.md` — like-for-like lifecycle comparison method, mandatory corrections (replay is zero-LLM, the "scripts already exist" sunk-cost trap, phase mismatch), maintenance-dominates-at-scale, what Kane CLI is purpose-built for | All of `steering/kane-cli-fair-evaluation.md` |
 
 ## Kiro-specific framing (don't lose these on edit)
 
