@@ -35,32 +35,33 @@ kane-cli testmd run /Users/me/project/tests/checkout_test.md
 
 Every flag accepted by `kane-cli testmd run`:
 
-| Flag | Type | Default | Description |
-|---|---|---|---|
-| `--headless` | flag | off | Launch Chrome without a visible window. Per-run; no persistent setting. Equivalent to `headless: true` in frontmatter. |
-| `--max-steps <n>` | integer | `30` | Maximum agent reasoning steps per test step. |
-| `--timeout <s>` | integer | none | Hard kill timer per step, in seconds. |
-| `--cdp-endpoint <url>` | string | none | Reuse an external Chrome over CDP. |
-| `--ws-endpoint <url>` | string | none | LambdaTest / Playwright WebSocket endpoint. |
-| `--global-context <file>` | path | `~/.testmuai/kaneai/global-memory.md` | Override the global context file. |
-| `--local-context <file>` | path | `<cwd>/.testmuai/context.md` | Override the local context file. |
-| `--variables <json>` | JSON string | none | Inline variables JSON for this run. |
-| `--variables-file <path>` | path | none | Load variables from a JSON file. |
-| `--session-context <json>` | JSON string | none | Pre-loaded prior-run context for the agent. |
-| `--username <user>` | string | profile | Basic-auth username. Skips OAuth for this run. |
-| `--access-key <key>` | string | profile | Basic-auth access key. Skips OAuth for this run. |
-| `--mode <name>` | `action` \| `testing` | profile or `testing` | Agent behaviour on auth walls and error pages. See [Run mode](#run-mode). |
-| `--agent` | flag | auto when stdin not TTY | Plain NDJSON output; no TUI. Use this in CI. |
-| `--code-export` | flag | off | Generate Playwright code after the run. See [Code export](#code-export). |
-| `--code-language <lang>` | `python` \| `javascript` | `python` | Code-export target language. |
-| `--skip-code-validation` | flag | on | Skip the post-codegen validation pass. |
-| `--no-skip-code-validation` | flag | off | Force the post-codegen validation pass. |
-| `--name <name>` | string | none | Persist a session name. Must match `[a-zA-Z0-9_-]+`. |
-| `--on-lock-conflict <mode>` | `readonly` \| `fail` \| `wait` | none | Policy when another user holds the lock. See [Lock conflicts](#lock-conflicts). |
-| `--push` | flag | off | Always commit at the end of the run. |
-| `--retry` | flag | off | On replay failure, restart the run with a shrinking replay window. |
-| `--retry-count <n>` | integer | `3` | Maximum replay restart attempts before falling back to a full re-author. |
-| `--author` | flag | off | Skip the replay decision and author every step from scratch. |
+| Flag                        | Type                           | Default                               | Description                                                                                                                                                                                                                                                                                                    |
+| --------------------------- | ------------------------------ | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--url <url>`               | string                         | none                                  | Start URL for the **first step only**. Overrides frontmatter `url:` and the configured `default_url`. The browser navigates to this URL before step 1 runs. Steps 2 and later inherit browser state (cookies, login session, current page) — use a prose objective like `Open https://…` to navigate mid-flow. |
+| `--headless`                | flag                           | off                                   | Launch Chrome without a visible window. Per-run; no persistent setting. Equivalent to `headless: true` in frontmatter.                                                                                                                                                                                         |
+| `--max-steps <n>`           | integer                        | `30`                                  | Maximum agent reasoning steps per test step.                                                                                                                                                                                                                                                                   |
+| `--timeout <s>`             | integer                        | none                                  | Hard kill timer per step, in seconds.                                                                                                                                                                                                                                                                          |
+| `--cdp-endpoint <url>`      | string                         | none                                  | Reuse an external Chrome over CDP.                                                                                                                                                                                                                                                                             |
+| `--ws-endpoint <url>`       | string                         | none                                  | LambdaTest / Playwright WebSocket endpoint.                                                                                                                                                                                                                                                                    |
+| `--global-context <file>`   | path                           | `~/.testmuai/kaneai/global-memory.md` | Override the global context file.                                                                                                                                                                                                                                                                              |
+| `--local-context <file>`    | path                           | `<cwd>/.testmuai/context.md`          | Override the local context file.                                                                                                                                                                                                                                                                               |
+| `--variables <json>`        | JSON string                    | none                                  | Inline variables JSON for this run.                                                                                                                                                                                                                                                                            |
+| `--variables-file <path>`   | path                           | none                                  | Load variables from a JSON file.                                                                                                                                                                                                                                                                               |
+| `--session-context <json>`  | JSON string                    | none                                  | Pre-loaded prior-run context for the agent.                                                                                                                                                                                                                                                                    |
+| `--username <user>`         | string                         | profile                               | Basic-auth username. Skips OAuth for this run.                                                                                                                                                                                                                                                                 |
+| `--access-key <key>`        | string                         | profile                               | Basic-auth access key. Skips OAuth for this run.                                                                                                                                                                                                                                                               |
+| `--mode <name>`             | `action` \| `testing`          | profile or `testing`                  | Agent behaviour on auth walls and error pages. See [Run mode](#run-mode).                                                                                                                                                                                                                                      |
+| `--agent`                   | flag                           | auto when stdin not TTY               | Plain NDJSON output; no TUI. Use this in CI.                                                                                                                                                                                                                                                                   |
+| `--code-export`             | flag                           | off                                   | Generate Playwright code after the run. See [Code export](#code-export).                                                                                                                                                                                                                                       |
+| `--code-language <lang>`    | `python` \| `javascript`       | `python`                              | Code-export target language.                                                                                                                                                                                                                                                                                   |
+| `--skip-code-validation`    | flag                           | on                                    | Skip the post-codegen validation pass.                                                                                                                                                                                                                                                                         |
+| `--no-skip-code-validation` | flag                           | off                                   | Force the post-codegen validation pass.                                                                                                                                                                                                                                                                        |
+| `--name <name>`             | string                         | none                                  | Persist a session name. Must match `[a-zA-Z0-9_-]+`.                                                                                                                                                                                                                                                           |
+| `--on-lock-conflict <mode>` | `readonly` \| `fail` \| `wait` | none                                  | Policy when another user holds the lock. See [Lock conflicts](#lock-conflicts).                                                                                                                                                                                                                                |
+| `--push`                    | flag                           | off                                   | Always commit at the end of the run.                                                                                                                                                                                                                                                                           |
+| `--retry`                   | flag                           | off                                   | On replay failure, restart the run with a shrinking replay window.                                                                                                                                                                                                                                             |
+| `--retry-count <n>`         | integer                        | `3`                                   | Maximum replay restart attempts before falling back to a full re-author.                                                                                                                                                                                                                                       |
+| `--author`                  | flag                           | off                                   | Skip the replay decision and author every step from scratch.                                                                                                                                                                                                                                                   |
 
 Most flags have a frontmatter counterpart with the same name (with underscores). Where both are set, the CLI flag wins — except for `variables`, which the file owns; see [overview.md](./overview.md#variables).
 
@@ -153,34 +154,37 @@ Followed by one entry per root-level step:
 
 ```markdown
 ## Open Amazon ✓ passed (3s)
+
 Open https://www.amazon.com.
 
 ## Search ✓ passed (15s)
+
 Type "wireless headphones" into the search box and submit.
 
 ## Add to cart ✗ failed (12s)
+
 Click "Add to Cart" on the product page.
 ```
 
 Step status icons:
 
-| Icon | Meaning |
-|---|---|
-| `✓ passed` | The step completed successfully. |
-| `✗ failed` | The step failed and the run did not continue. |
-| `⏭ skipped` | The step did not run because an earlier non-optional step failed. |
+| Icon         | Meaning                                                                        |
+| ------------ | ------------------------------------------------------------------------------ |
+| `✓ passed`   | The step completed successfully.                                               |
+| `✗ failed`   | The step failed and the run did not continue.                                  |
+| `⏭ skipped` | The step did not run because an earlier non-optional step failed.              |
 | `(optional)` | Suffix added when a step marked `optional: true` failed but the run continued. |
 
 When an `@import` step fails, the badge points at the failing leaf inside the helper, e.g. `✗ failed (via @import ./helpers/login.md — at sub-step 2 → 3, 8s → ./helpers/helper-output-login-checkout-3)`. The sub-step chain walks from the import down to the actual failing step.
 
 ## Exit codes
 
-| Code | Meaning |
-|---|---|
-| `0` | Run passed (or the file had no steps). |
-| `1` | At least one non-optional step failed. |
-| `2` | Error before or during the run: parse error, auth error, organisation mismatch, Chrome launch failure, invalid flag, lock conflict with `--on-lock-conflict fail`. |
-| `3` | Cancelled (Ctrl+C confirmed) or timed out (including `--on-lock-conflict wait` timing out). |
+| Code | Meaning                                                                                                                                                            |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `0`  | Run passed (or the file had no steps).                                                                                                                             |
+| `1`  | At least one non-optional step failed.                                                                                                                             |
+| `2`  | Error before or during the run: parse error, auth error, organisation mismatch, Chrome launch failure, invalid flag, lock conflict with `--on-lock-conflict fail`. |
+| `3`  | Cancelled (Ctrl+C confirmed) or timed out (including `--on-lock-conflict wait` timing out).                                                                        |
 
 Use these to gate downstream CI steps.
 
@@ -188,11 +192,11 @@ Use these to gate downstream CI steps.
 
 Each test in Test Manager has a single-writer lock so two engineers cannot author the same test at the same time. When you run a test and someone else already holds the lock, `--on-lock-conflict` decides what to do:
 
-| Policy | Behaviour | Exit |
-|---|---|---|
-| `readonly` | Proceed in replay-only mode. No commit, no upload. Useful when you just want to verify a test still passes. | `0` on success |
-| `fail` | Abort immediately. Use this in CI to flag contention rather than waiting. | `2` |
-| `wait` | Block until the lock releases or times out. Use this for serialised CI lanes. | `0` on success, `3` on timeout |
+| Policy     | Behaviour                                                                                                   | Exit                           |
+| ---------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| `readonly` | Proceed in replay-only mode. No commit, no upload. Useful when you just want to verify a test still passes. | `0` on success                 |
+| `fail`     | Abort immediately. Use this in CI to flag contention rather than waiting.                                   | `2`                            |
+| `wait`     | Block until the lock releases or times out. Use this for serialised CI lanes.                               | `0` on success, `3` on timeout |
 
 The lock is acquired before Chrome launches, so a `fail` policy aborts with zero side effects.
 
@@ -202,7 +206,7 @@ The lock is acquired before Chrome launches, so a `fail` policy aborts with zero
 
 ```yaml
 code_export: true
-code_language: "python"   # or "javascript"
+code_language: "python" # or "javascript"
 ```
 
 …or for a single run, with flags:

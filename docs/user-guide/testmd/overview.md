@@ -23,9 +23,11 @@ max_steps: 30
 # Amazon search
 
 ## Open Amazon
+
 Open https://www.amazon.com.
 
 ## Search for headphones
+
 Type "wireless headphones" into the search box and submit.
 Verify at least one product result is visible.
 ```
@@ -40,26 +42,32 @@ The agent launches Chrome, works through each step in order, writes a result fil
 
 ## File anatomy
 
-```markdown
+````markdown
 ---
-key: value         # frontmatter (YAML)
+key: value # frontmatter (YAML)
 ---
 
 # Optional title
 
 ## Step 1 heading
+
 Plain prose objective describing what the agent should do.
 
 ## Step 2 heading
-```yaml             # optional per-step config block
+
+```yaml # optional per-step config block
 timeout: 60
 optional: true
 ```
+````
+
 Another prose objective.
 
 ## Step 3 heading
+
 @import ./helpers/login.md
-```
+
+````
 
 Four pieces:
 
@@ -85,6 +93,7 @@ Frontmatter is YAML inside `---` fences at the top of the file. Every key is opt
 | `local_context` | string or file path | root + per-step | Project-scoped guidance. Same shape as `global_context`. |
 | `variables` | object | root + per-step | Named values usable as `{{name}}` in objectives. See [Variables](#variables). |
 | `session_context` | `{ prior_runs: [...] }` | root + per-step | Pre-loaded prior-run context for the agent. |
+| `url` | string (URL) | root only | Start URL for the **first step only**. The browser is launched and navigated to this URL before step 1 runs. Steps 2 and later inherit page state (cookies, login session, current URL) from the previous step — use a prose objective like `Open https://…` to navigate mid-flow. Overridden by `--url` on the CLI. |
 | `target` | `"chrome"` \| `"cdp"` \| `"ws"` | root only | How kane-cli reaches a browser. Default is `chrome`. |
 | `chrome_profile` | string | root only | Named Chrome profile under `~/.testmuai/kaneai/chrome-profiles/`. |
 | `cdp_endpoint` | string | root only | Reuse an external Chrome over CDP. |
@@ -98,7 +107,7 @@ Keys not in this table are rejected with `unknown config key: <key>` at parse ti
 
 ### Root-only vs root-or-per-step
 
-- **Root only** — Chrome settings (`target`, `chrome_profile`, `cdp_endpoint`, `ws_endpoint`, `headless`), `mode`, and `on_lock_conflict`. These apply to the whole run; setting them on an individual step is a parse error.
+- **Root only** — Chrome settings (`target`, `chrome_profile`, `cdp_endpoint`, `ws_endpoint`, `headless`), `mode`, `on_lock_conflict`, and `url`. These apply to the whole run; setting them on an individual step has no effect (and a future release will make it a parse error). Note: `url` is a special case — it controls the first-step navigation target, not Chrome launch; it is root-only because later steps inherit browser state from the previous step.
 - **Root or per-step** — everything else can appear in the per-step `yaml` block to override the frontmatter for that step only.
 
 ## Steps
@@ -114,9 +123,11 @@ A step can carry its own settings in a fenced ` ```yaml ``` ` block placed direc
 ```yaml
 timeout: 90
 optional: true
-```
+````
+
 Click submit and verify the confirmation banner.
-```
+
+````
 
 Allowed keys: any root-or-per-step key from the frontmatter table, plus `optional` (see below). Chrome keys, `mode`, and `on_lock_conflict` are rejected with a clear error if you try to set them here.
 
@@ -151,7 +162,7 @@ Click the cart icon and verify two items are listed.
 ## NOT OK — both
 Click the cart icon.
 @import ./helpers/login.md
-```
+````
 
 ## Variables
 
@@ -159,6 +170,7 @@ Variables let you parameterise objectives with reusable values and secrets. Refe
 
 ```markdown
 ## Sign in
+
 Open the login page and sign in as {{tester_email}} with password {{tester_password}}.
 ```
 
@@ -166,7 +178,7 @@ Open the login page and sign in as {{tester_email}} with password {{tester_passw
 
 Variables can be set in three places inside a `_test.md` file, in order of increasing specificity:
 
-```markdown
+````markdown
 ---
 variables:
   tester_email:
@@ -177,12 +189,16 @@ variables:
 ---
 
 ## Switch to the staging tenant
+
 ```yaml
 variables:
   tenant: "staging-eu"
 ```
+````
+
 Open https://{{tenant}}.example.com and verify the login page loads.
-```
+
+````
 
 Shorthand `name: "value"` works too — `tester_email: "alice@example.com"` is equivalent to `tester_email: { value: "alice@example.com" }`.
 
@@ -209,7 +225,7 @@ variables:
   api_key:
     value: "sk-live-abc123"
     secret: true
-```
+````
 
 ## Context
 
@@ -240,7 +256,7 @@ The recorded file is a regular `_test.md` — it is parsed and executed exactly 
 
 A complete test that signs in, searches, adds to cart, and verifies the badge — using a variable for the search term and a per-step timeout.
 
-```markdown
+````markdown
 ---
 mode: testing
 max_steps: 35
@@ -253,22 +269,29 @@ variables:
 # Amazon — add to cart
 
 ## Open Amazon
+
 Open https://www.amazon.com.
 
 ## Search
+
 Type "{{search_term}}" into the search box and submit.
 Verify at least one product result is visible.
 
 ## Open the first result
+
 ```yaml
 timeout: 60
 ```
+````
+
 Click the first non-sponsored product card. Verify the product detail page loads.
 
 ## Add to cart
+
 Click "Add to Cart" on the product page.
 Verify the cart icon shows a count of 1 or higher.
-```
+
+````
 
 Running this file on a fresh machine takes one author pass — the agent figures out the page and records each step. Re-running it later replays each passed step from cache, taking a fraction of the time. Edit any step's objective and that step (and the steps after it in the same file) author again on the next run; see [Replay vs author](./running.md#replay-vs-author) for the rules.
 
@@ -298,3 +321,4 @@ Parse errors abort the run before any browser launch, auth call, or upload. The 
 - [Running a test.md](./running.md) — the `kane-cli testmd run` command, flags, the replay model, and what the output directory contains.
 - [Composition with @import](./composition.md) — break a long test into reusable helpers.
 - [Variables and context](../variables-and-context.md) — the full variables pipeline.
+````
