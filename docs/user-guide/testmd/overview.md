@@ -79,6 +79,7 @@ Frontmatter is YAML inside `---` fences at the top of the file. Every key is opt
 | Key | Type | Scope | Description |
 |---|---|---|---|
 | `mode` | `"action"` \| `"testing"` | root only | How the agent reacts to auth walls, blocked pages, and error pages. `testing` (default) pushes through so negative-test assertions can run; `action` halts so you can intervene. See [Run mode](./running.md#run-mode). |
+| `url` | string | root only | Start URL for the test's first step. Bare domains are normalized to `https://`. Overridden by the `--url` flag; falls back to the configured `default_url`. See [Default start URL](../configuration.md#default-start-url). |
 | `max_steps` | integer | root + per-step | Maximum agent reasoning steps for the run or step. Default is `30`. |
 | `timeout` | integer (seconds) | root + per-step | Hard kill timer applied per step. No default. |
 | `global_context` | string (Markdown text) or file path | root + per-step | Standing instructions inlined into the agent's context. See [variables-and-context.md](../variables-and-context.md). |
@@ -98,7 +99,7 @@ Keys not in this table are rejected with `unknown config key: <key>` at parse ti
 
 ### Root-only vs root-or-per-step
 
-- **Root only** — Chrome settings (`target`, `chrome_profile`, `cdp_endpoint`, `ws_endpoint`, `headless`), `mode`, and `on_lock_conflict`. These apply to the whole run; setting them on an individual step is a parse error.
+- **Root only** — Chrome settings (`target`, `chrome_profile`, `cdp_endpoint`, `ws_endpoint`, `headless`), `url`, `mode`, and `on_lock_conflict`. These apply to the whole run; setting them on an individual step is a parse error.
 - **Root or per-step** — everything else can appear in the per-step `yaml` block to override the frontmatter for that step only.
 
 ## Steps

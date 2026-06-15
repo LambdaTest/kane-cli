@@ -85,6 +85,8 @@ All `kane-cli run` flags also apply. The flags below are `testmd`-specific.
 
 | Flag | Default | Description |
 |---|---|---|
+| `--url <url>` | frontmatter `url:` / config `default_url` | Start URL for the first step. Overrides the `url:` frontmatter key and config `default_url`; bare domains get `https://`. |
+| `--allow-missing-url` | off | Non-TTY only: start from the browser's current page instead of failing when the first step has no start URL. |
 | `--name <name>` | none | Persist the run under this name. Slug: `[a-zA-Z0-9_-]+`. |
 | `--on-lock-conflict <readonly\|fail\|wait>` | none | Behavior when another user holds the test's edit lock. `readonly` = replay-only / no upload; `fail` = exit `2`; `wait` = block until released. |
 | `--retry` | off | On replay failure, restart with a shrinking replay window. |
@@ -148,6 +150,7 @@ Every key is optional. Unrecognised keys are rejected at parse time.
 | Key | Scope | Description |
 |---|---|---|
 | `mode` | **root only** | `testing` (default) pushes through auth walls and error pages so negative-test assertions can fire. `action` halts on those pages so a human can intervene. |
+| `url` | **root only** | Start URL for the test's first step (bare domains get `https://`). Overridden by `--url`; falls back to config `default_url`. |
 | `max_steps` | root + per-step | Max agent reasoning steps. Default `30`. |
 | `timeout` | root + per-step | Hard kill timer per step, seconds. No default. |
 | `headless` | **root only** | Launch Chrome without a window. |
@@ -448,6 +451,8 @@ Why each flag:
 - `--headless` — Chrome runs without a window.
 - `--on-lock-conflict wait` — block instead of failing if a teammate is editing the same test.
 - `--retry` — recover transient replay failures without a full re-author.
+
+Two non-TTY behaviors to know (Kiro always runs Kane CLI non-TTY): interactive `ask_user` prompts are disabled, so a step that would wait for input fails cleanly instead of hanging; and the first step needs a resolvable start URL (the `url:` frontmatter key, the `--url` flag, or a site named in the step's prose) or the run fails — pass `--allow-missing-url` to start from the current page instead.
 
 Capturing the exit code in shell:
 

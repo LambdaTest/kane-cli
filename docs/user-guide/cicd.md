@@ -9,11 +9,14 @@ These patterns apply to every CI system; the recipes below differ only in how th
 - Always pass `--headless`. CI runners have no display.
 - Always pass `--timeout <seconds>`. A hung run cannot be allowed to block the pipeline.
 - Authenticate with `--username` and `--access-key` from CI secrets. Do not call `kane-cli login` in CI — that flow opens a browser for OAuth and will not work on a runner.
+- Provide a start URL. A CI run has no interactive prompt, so if neither the objective names a site, the `--url` flag is passed, nor a `default_url` is configured, the run fails fast instead of waiting for input. The simplest options are to start the objective with the site ("Go to https://… and …") or pass `--url <url>`. To deliberately start from the browser's current page instead, add `--allow-missing-url`. See [Default start URL](./configuration.md#default-start-url).
 - Load test data with `--variables-file <path>`. Check the file into your repo (without secret values), or generate it before the step.
 - **Project and folder are optional.** If you want uploads filed under a specific Test Manager project/folder, pre-configure with `kane-cli config project <id>` / `kane-cli config folder <id>` (use `kane-cli projects list` / `kane-cli folders list` to find the IDs). If you skip this, kane-cli auto-defaults a project/folder on first run and reports which one it picked — see [test-manager-integration.md](./test-manager-integration.md).
 - Check the exit code. The mapping is documented in [running tests](./running-tests.md#exit-codes); the short form is `0` passed, `1` failed, `2` error, `3` timeout or cancellation.
 
 The runner spawns Chrome itself, so the CI image must have Chrome available on `PATH`. If your runner image cannot install Chrome, point kane-cli at a remote browser with `--cdp-endpoint <url>` or `--ws-endpoint <url>` (for example, a TestmuAI `wss://` endpoint).
+
+On slow or cold CI runners Chrome can be slow to come up over the DevTools Protocol. If you see intermittent "Chrome failed to launch" errors, raise `KANE_CLI_CDP_TIMEOUT_MS` (per-attempt readiness timeout, default `30000`) and/or `KANE_CLI_CDP_RETRIES` (launch retries after the first, default `2`). If Chrome lives at a non-standard path in the image, set `KANE_CLI_CHROME_PATH`. See [Chrome environment variables](./configuration.md#chrome-environment-variables).
 
 ## GitHub Actions
 

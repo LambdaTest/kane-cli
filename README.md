@@ -75,9 +75,11 @@ kane-cli launches your locally installed Google Chrome (stable channel) via the 
 
 - **Homebrew** auto-installs Chrome via the `google-chrome` cask — nothing to do.
 - **`npm install -g` / `npx`**: install Chrome separately if not already present. On first `kane-cli run`, kane-cli verifies Chrome is reachable and produces a clean per-platform error with install instructions if not — re-run after installing Chrome.
-- **Skip the runtime check** (CI / air-gapped) — set `KANE_CLI_SKIP_BROWSER_DOWNLOAD=1`. kane-cli will fall back to whatever `chrome` resolves on PATH.
+- **Non-standard Chrome location** — point kane-cli at the binary with `KANE_CLI_CHROME_PATH=/path/to/chrome`.
+- **Skip the runtime check** (CI / air-gapped) — set `KANE_CLI_SKIP_BROWSER_DOWNLOAD` to any truthy value (`1` / `true` / `yes`). kane-cli will fall back to whatever `chrome` resolves on PATH.
+- **Slow / cold CI runners** — if Chrome is slow to come up, raise the per-attempt CDP readiness timeout with `KANE_CLI_CDP_TIMEOUT_MS` (default `30000`) and/or the launch-retry count with `KANE_CLI_CDP_RETRIES` (default `2`; `0` = single attempt).
 
-> Full install reference (platforms, updates, uninstall): [docs/user-guide/installation.md](docs/user-guide/installation.md).
+> Full install reference (platforms, updates, uninstall): [docs/user-guide/installation.md](docs/user-guide/installation.md). Chrome environment variables: [docs/user-guide/configuration.md](docs/user-guide/configuration.md#chrome-environment-variables).
 
 ## First run (under 60 seconds)
 
@@ -190,6 +192,7 @@ kane-cli balance [--profile <name>]    # Show current credit balance.
 # Configuration
 kane-cli config show                   # Show all current configuration.
 kane-cli config set-window <W>x<H>     # Browser window size (e.g. 1920x1080).
+kane-cli config set-url <url>          # Default start URL for runs (used when --url / test.md url: is absent).
 kane-cli config set-mode <action|testing>
                                        # Agent behaviour on auth walls / blocked pages.
 kane-cli config project [<id>]         # Default project for uploads (interactive picker if no id).
@@ -212,6 +215,8 @@ TUI slash commands (`/run`, `/login`, `/logout`, `/whoami`, `/balance`, `/profil
 | `--headless`                | off                                   | Run Chrome with no visible window. Required in CI.                      |
 | `--max-steps <n>`           | `30`                                  | Cap on agent reasoning steps.                                           |
 | `--timeout <s>`             | none                                  | Hard kill the run after N seconds.                                      |
+| `--url <url>`               | config `default_url`                  | Start URL for the run. Overrides the configured default; bare domains get `https://`. |
+| `--allow-missing-url`       | off                                   | Non-TTY only: proceed from the browser's current page instead of failing when no start URL resolves. |
 | `--mode <name>`             | config value, otherwise `testing`     | `action` (strict) or `testing` (lenient) on auth walls / blocked pages. |
 | `--env <name>`              | active profile's env                  | Environment (e.g. `prod`).                                              |
 | `--cdp-endpoint <url>`      | none                                  | Connect to an existing Chrome via the Chrome DevTools Protocol.         |
@@ -413,7 +418,9 @@ For a longer list of failure patterns and a full debugging flow (reading per-ste
 | Platform | Architecture          | Status                |
 | -------- | --------------------- | --------------------- |
 | macOS    | ARM64 (Apple Silicon) | Signed + notarized    |
+| macOS    | x64 (Intel)           | Signed + notarized    |
 | Linux    | x64                   | Signed (OpenSSL)      |
+| Linux    | ARM64 (aarch64)       | Signed (OpenSSL)      |
 | Windows  | x64                   | Signed (Authenticode) |
 
 Signature verification details: [SECURITY.md](SECURITY.md).

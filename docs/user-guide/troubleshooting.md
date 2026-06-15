@@ -21,15 +21,18 @@ This page lists common problems you may hit while using kane-cli, what causes th
 kane-cli manages a Chrome process for you and connects to it over the Chrome DevTools Protocol (CDP). If launch fails, the most likely causes are:
 
 - **Chrome is not installed** in any of the locations kane-cli searches. On macOS it looks under `/Applications/Google Chrome.app` and equivalent user paths; on Linux it looks for `google-chrome`, `google-chrome-stable`, `chromium`, and similar binaries; on Windows it looks under `Program Files\Google\Chrome\Application\chrome.exe` and the user's `AppData\Local`.
+- **Chrome is installed in a non-standard location** kane-cli does not search. Point it at the binary with `KANE_CLI_CHROME_PATH=/path/to/chrome`.
 - **All CDP ports in the 9222–9230 range are in use.** kane-cli scans this nine-port range for an open port; if every port is busy you will see an error like `All CDP ports 9222-9230 are in use. Close other Chrome instances.`
 - **Profile lock from another running Chrome.** If a separate Chrome instance is already using the same user-data directory, the new instance can fail to start cleanly.
+- **Chrome is slow to become reachable.** On cold or resource-starved machines — often CI runners — Chrome can launch but not respond over the DevTools Protocol within the per-attempt timeout (default 30s). kane-cli retries the launch automatically (twice by default), but persistent slowness needs a longer timeout or more retries.
 
 Remediation:
 
-1. Install Google Chrome (or Chromium / Chrome for Testing) from the official source for your platform.
+1. Install Google Chrome (or Chromium / Chrome for Testing) from the official source for your platform. If it is installed but in an unusual path, set `KANE_CLI_CHROME_PATH` to the binary.
 2. Quit any extra Chrome processes that may be hoarding the 9222–9230 port range. On macOS / Linux you can list them with `lsof -i :9222-9230`.
 3. Pick a different Chrome user-data directory, or quit the Chrome instance currently using it. See [Chrome management](./configuration.md#chrome-management) for how kane-cli chooses and configures the profile.
 4. If you only need to connect to your own already-running Chrome, start it with `--remote-debugging-port=9222` and pass `--cdp-endpoint http://127.0.0.1:9222` to `kane-cli run`.
+5. On a slow runner, raise the readiness timeout with `KANE_CLI_CDP_TIMEOUT_MS` (milliseconds, default `30000`) and/or the retry count with `KANE_CLI_CDP_RETRIES` (default `2`; `0` = a single attempt). A missing or invalid binary fails immediately and is *not* retried, so retries only help with transient startup slowness. See [Chrome environment variables](./configuration.md#chrome-environment-variables).
 
 ## "Authentication failed"
 

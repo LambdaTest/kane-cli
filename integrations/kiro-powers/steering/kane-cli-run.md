@@ -165,6 +165,8 @@ kane-cli run "<objective>" --agent [flags]
 | `--headless` | Run Chrome without a window. | off |
 | `--max-steps <n>` | Cap agent reasoning steps. | `30` |
 | `--timeout <s>` | Hard kill after N seconds. | none |
+| `--url <url>` | Start URL for the run. Overrides config `default_url`; bare domains get `https://`. | config `default_url` |
+| `--allow-missing-url` | Non-TTY only: start from the browser's current page instead of failing when no start URL resolves. | off |
 | `--variables '<json>'` | Inline variables JSON. | none |
 | `--variables-file <path>` | Load variables from a JSON file. | none |
 | `--global-context <file>` | Override global agent context. | `~/.testmuai/kaneai/global-memory.md` |
@@ -173,6 +175,10 @@ kane-cli run "<objective>" --agent [flags]
 | `--cdp-endpoint <url>` | Connect to existing Chrome via CDP. | auto-launch Chrome |
 | `--code-export` | Generate a Playwright code export after upload. | off |
 | `--name <slug>` | Persist this run as `<cwd>/.testmuai/tests/<slug>_test.md` on exit. Slug: `[a-zA-Z0-9_-]+`. | none — the run is ephemeral |
+
+## Start URL (required)
+
+Every run needs a start URL for the first navigation, resolved as `--url` flag → config `default_url` (`kane-cli config set-url <url>`) → a site named in the objective. There is **no** silent default site. Because Kiro runs Kane CLI non-TTY, a run that resolves **no** start URL **fails** (exit `2`) rather than prompting — so always either start the objective with the site ("Go to https://… and …") or pass `--url <url>`. To deliberately start from the browser's current page, add `--allow-missing-url`.
 
 ## Exit codes
 
@@ -499,11 +505,25 @@ kane-cli run "Go to http://localhost:5173/settings/profile, click 'Save', assert
 kane-cli whoami
 kane-cli config show
 kane-cli config set-window 1920x1080
+kane-cli config set-url <url>             # default start URL (used when --url is absent)
 kane-cli config chrome-profile <path>     # or the interactive picker in TTY
 kane-cli config project <project-id>      # or the interactive picker in TTY (OAuth + basic both work)
 kane-cli config folder  <folder-id>       # or the interactive picker in TTY
 kane-cli feedback --test-id <id> --feedback-type <positive|negative> --details "..."
 ```
+
+## Chrome launch overrides (environment variables)
+
+These are **launch/CI overrides**, not Kane CLI configuration — they tune how Chrome is located and started, and are read from the process environment:
+
+| Variable | Effect |
+|---|---|
+| `KANE_CLI_CHROME_PATH` | Absolute path to the Chrome binary (non-standard installs). |
+| `KANE_CLI_SKIP_BROWSER_DOWNLOAD` | Truthy (`1`/`true`/`yes`) skips the Chrome-availability startup check; uses whatever `chrome` is on PATH. |
+| `KANE_CLI_CDP_TIMEOUT_MS` | Per-attempt CDP readiness timeout in ms (default `30000`). Raise on slow/cold runners. |
+| `KANE_CLI_CDP_RETRIES` | Extra launch attempts after the first on CDP-readiness failure (default `2`; `0` = single attempt). |
+
+If a run fails with a Chrome-launch error on a slow runner, raise the timeout/retries before retrying. A missing/invalid binary fails immediately and is not retried.
 
 ## Browsing / creating projects and folders (non-TTY)
 
