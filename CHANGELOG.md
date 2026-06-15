@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.5] - 2026-06-15
+
+### Smarter retries and timeouts
+- **Chrome no longer hangs on startup** — the CDP launch now has a bounded retry loop and a configurable timeout, so a stuck browser process fails fast instead of blocking your run indefinitely.
+- **Retry logic handles edge cases correctly** — previously, certain hung or degenerate branching states could cause retries to stall or misbehave; these are now resolved cleanly.
+
+### More reliable variable and URL handling
+- **`{{var}}` placeholders in start URLs are passed through as-is** — the CLI no longer tries to resolve or rewrite template variables in start URLs before the run begins, so your parameterized URLs reach the browser exactly as written.
+- **Value comparisons and cross-page checks are more robust** — boundary values, if/else branching logic, and comparisons that span multiple pages are handled more consistently during test execution.
+
+### Cleaner run lifecycle
+- **Cancelling a run releases its playground lock** — if a run was cancelled or never committed, the TMS playground lock could be left held, blocking future runs. That lock is now released automatically.
+
 ## [0.4.4] - 2026-06-14
 
 ### One place to set your start URL
