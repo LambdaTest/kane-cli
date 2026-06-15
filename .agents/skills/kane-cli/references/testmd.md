@@ -71,6 +71,7 @@ Click submit and verify the confirmation banner.
 | Key | Scope | Description |
 |---|---|---|
 | `mode` | root | `action` (halts on auth walls) or `testing` (default — pushes through so negative-test assertions can fire) |
+| `url` | root | Start URL for the first step (bare domains get `https://`). Overridden by `--url`; falls back to config `default_url`. |
 | `max_steps` | root + step | Max agent reasoning steps. Default `30`. |
 | `timeout` | root + step | Hard kill per step in seconds. |
 | `headless` | root | No browser window. |
@@ -132,6 +133,8 @@ Editing a helper re-authors that step in **every test that imports it**, plus ev
 
 | Flag | Default | Description |
 |---|---|---|
+| `--url <url>` | frontmatter `url:` / config `default_url` | Start URL for the first step. Overrides the `url:` frontmatter key and config `default_url`. |
+| `--allow-missing-url` | off | Non-TTY only: start from the browser's current page instead of failing when the first step has no start URL. |
 | `--name <name>` | none | Persist the run under this name. Regex `[a-zA-Z0-9_-]+`. |
 | `--on-lock-conflict <readonly\|fail\|wait>` | none | Behavior when another user holds the test's edit lock. `readonly` = replay-only / no upload, `fail` = exit 2, `wait` = block until released |
 | `--retry` | off | On replay failure, restart with a shrinking replay window |
@@ -189,6 +192,8 @@ kane-cli testmd run ./tests/checkout_test.md \
 - `--headless` — no window.
 - `--on-lock-conflict wait` — block instead of failing if a teammate is editing the same test.
 - `--retry` — automatically recover transient replay failures.
+
+In non-TTY runs, interactive `ask_user` prompts are disabled — a step that would wait for input fails cleanly instead of hanging forever. Write CI test steps that don't depend on mid-run prompts. (Likewise, supply a start URL via the objective, `url:` frontmatter, or `--url`; a non-TTY run with no resolvable start URL fails unless you pass `--allow-missing-url`.)
 
 Exit codes:
 

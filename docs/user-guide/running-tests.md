@@ -83,7 +83,7 @@ Typing `/` in chat mode opens an autocomplete palette. Continue typing to filter
 | `/whoami` | `[--profile name]` | Show profile info. |
 | `/balance` | | Show credit balance. |
 | `/profiles` | `list\|switch\|delete` | Manage profiles. |
-| `/config` | `show\|set-window\|set-mode\|chrome-profile\|project\|folder` | Manage configuration. |
+| `/config` | `show\|set-window\|set-url\|set-mode\|chrome-profile\|project\|folder` | Manage configuration. |
 | `/new` | | Start a fresh session (uploads the current session first). |
 | `/summary` | `[index]` | View detailed run summaries. |
 | `/cancel` | | Abort the current run. |
@@ -162,6 +162,8 @@ The customer-facing flags accepted by `kane-cli run`:
 | `--headless` | Run Chrome in headless mode. | Off |
 | `--max-steps <n>` | Maximum agent steps. | `30` |
 | `--timeout <seconds>` | Kill the run after N seconds. | None |
+| `--url <url>` | Start URL for the run. Overrides the configured `default_url`; bare domains are normalized to `https://`. See [Default start URL](./configuration.md#default-start-url). | Config `default_url` |
+| `--allow-missing-url` | Non-TTY only: proceed from the browser's current page instead of failing when no start URL resolves (a provided `--url` is still used). | Off |
 | `--cdp-endpoint <url>` | Connect to an existing Chrome via CDP. | None |
 | `--ws-endpoint <url>` | Connect to a Playwright WebSocket endpoint (e.g. TestmuAI `wss://`). | None |
 | `--global-context <file>` | Override the global context Markdown file. | `~/.testmuai/kaneai/global-memory.md` |

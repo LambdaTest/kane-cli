@@ -11,6 +11,7 @@ kane-cli ships native binaries for the following platforms. Installing the main 
 | macOS | Apple Silicon (arm64) |
 | macOS | Intel (x64) |
 | Linux | x64 |
+| Linux | arm64 (aarch64) |
 | Windows | x64 |
 
 ## Install with npm

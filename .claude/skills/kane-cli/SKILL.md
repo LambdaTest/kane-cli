@@ -168,12 +168,15 @@ kane-cli run "<objective>" --agent [options]
 | `--headless` | No visible browser window | Off |
 | `--max-steps <n>` | Cap agent reasoning steps | 30 |
 | `--timeout <s>` | Hard kill after N seconds | No limit |
+| `--url <url>` | Start URL for the run (overrides config `default_url`; bare domains get `https://`) | Config `default_url` |
 | `--variables <json>` | Inline variables JSON (for `{{key}}` in objective) | None |
 | `--variables-file <path>` | Load variables from a JSON file | None |
 | `--ws-endpoint <url>` | Remote browser (LambdaTest grid) | Local Chrome |
 | `--code-export` | Generate code export after upload | Off |
 
-Other flags (`--global-context`, `--local-context`, `--cdp-endpoint`) and the full variables precedence chain live in `references/setup-and-config.md`.
+Other flags (`--global-context`, `--local-context`, `--cdp-endpoint`, `--allow-missing-url`) and the full variables precedence chain live in `references/setup-and-config.md`.
+
+**Start URL:** every run needs a start URL for the first navigation. Provide it the simplest way — start the objective with the site ("Go to https://… and …") — or pass `--url <url>`; a configured `default_url` is the fallback (`kane-cli config set-url`). There is no silent default site: if none of these supply one, a non-TTY run **fails** rather than guessing (pass `--allow-missing-url` to start from the current page instead).
 
 **Exit codes:** `0` passed · `1` failed · `2` auth/infra error · `3` timeout/cancelled.
 

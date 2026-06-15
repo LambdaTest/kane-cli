@@ -40,6 +40,8 @@ Every flag accepted by `kane-cli testmd run`:
 | `--headless` | flag | off | Launch Chrome without a visible window. Per-run; no persistent setting. Equivalent to `headless: true` in frontmatter. |
 | `--max-steps <n>` | integer | `30` | Maximum agent reasoning steps per test step. |
 | `--timeout <s>` | integer | none | Hard kill timer per step, in seconds. |
+| `--url <url>` | string | frontmatter `url:` / config `default_url` | Start URL for the first step. Overrides the frontmatter `url:` key and the configured `default_url`; bare domains are normalized to `https://`. |
+| `--allow-missing-url` | flag | off | Non-TTY only: proceed from the browser's current page instead of failing when the first step has no start URL (`url:` / `--url` are still used if present). |
 | `--cdp-endpoint <url>` | string | none | Reuse an external Chrome over CDP. |
 | `--ws-endpoint <url>` | string | none | LambdaTest / Playwright WebSocket endpoint. |
 | `--global-context <file>` | path | `~/.testmuai/kaneai/global-memory.md` | Override the global context file. |
@@ -231,6 +233,8 @@ kane-cli testmd run ./tests/checkout_test.md \
 - `--headless` — Chrome runs without a window.
 - `--on-lock-conflict wait` — block instead of failing if a teammate is editing the same test.
 - `--retry` — recover transient replay failures automatically.
+
+In a non-interactive run (stdin is not a TTY), there is no one to answer an interactive `ask_user` prompt, so kane-cli disables it: a step that would otherwise wait for input fails cleanly instead of blocking forever. Write test steps that do not depend on mid-run prompts when running in CI.
 
 Capture exit code in a shell script:
 

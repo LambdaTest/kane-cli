@@ -86,12 +86,15 @@ Override per-run with `--global-context` / `--local-context` flags.
 ## Config commands
 
 ```bash
-kane-cli config show                          # Show all current settings
+kane-cli config show                          # Show all current settings (includes default_url)
 kane-cli config set-window <W>x<H>           # Browser window size (e.g. 1920x1080)
+kane-cli config set-url <url>                 # Default start URL (bare domains get https://; used when --url / test.md url: is absent)
 kane-cli config chrome-profile <path>         # Chrome profile path (or interactive picker in TTY)
 kane-cli config project <project-id>          # TMS project ID (or interactive picker in TTY)
 kane-cli config folder <folder-id>            # TMS folder ID (or interactive picker in TTY)
 ```
+
+**Start URL resolution** (first match wins): `--url <url>` flag → (test.md only) `url:` frontmatter → config `default_url`. The built-in playground default counts as "unset". With none of these set, the agent uses a site named in the objective; if nothing supplies a URL, a TTY run asks and a non-TTY run fails — pass `--allow-missing-url` to a non-TTY run to start from the current page instead.
 
 > **Project / folder management — Read `references/test-manager.md`** for the full agent surface: `kane-cli projects list|create` and `kane-cli folders list|create` (with `--search` / `--limit` / `--offset` / `--description`), the NDJSON wire shape for `--agent` callers, and the `project_folder_auto_defaulted` event the run-startup gate emits when nothing is configured.
 
@@ -140,3 +143,16 @@ kane-cli auto-launches Chrome with CDP (DevTools Protocol) on ports 9222–9230.
 - `--ws-endpoint <url>` — connect to a remote browser (LambdaTest grid)
 
 If Chrome fails to launch, ensure Google Chrome is installed and no other process is using CDP ports 9222–9230.
+
+### Chrome environment variables
+
+Read from the process environment (not `tui-config.json`) — handy for CI:
+
+| Variable | Effect |
+|---|---|
+| `KANE_CLI_CHROME_PATH` | Absolute path to the Chrome binary, for non-standard installs. |
+| `KANE_CLI_SKIP_BROWSER_DOWNLOAD` | Truthy (`1`/`true`/`yes`) skips the Chrome-availability startup check; uses whatever `chrome` is on PATH. |
+| `KANE_CLI_CDP_TIMEOUT_MS` | Per-attempt CDP readiness timeout in ms (default `30000`). Raise on slow/cold CI runners. |
+| `KANE_CLI_CDP_RETRIES` | Extra Chrome launch attempts after the first on a CDP-readiness failure (default `2`; `0` = single attempt). |
+
+CDP timeout/retries only help with transient startup slowness — a missing or invalid binary fails immediately without retrying.

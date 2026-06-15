@@ -45,7 +45,7 @@ Every field in `tui-config.json`:
 | `window_size.width` | integer | `1920` | Chrome window width in pixels (800–3840) | `kane-cli config set-window <WxH>` |
 | `window_size.height` | integer | `1080` | Chrome window height in pixels (600–2160) | `kane-cli config set-window <WxH>` |
 | `chrome_profile_path` | string | `""` | Filesystem path to a Chrome user-data dir. Empty means a fresh, temporary profile is used per run. | `kane-cli config chrome-profile [path]` |
-| `default_url` | string \| null | `https://kaneai-playground.lambdatest.io` | Starting URL used when a run begins. | (internal default) |
+| `default_url` | string \| null | `https://kaneai-playground.lambdatest.io` | Default start URL for a run, used when neither `--url` nor a test.md `url:` key supplies one. The built-in playground value is treated as "unset". See [Default start URL](#default-start-url). | `kane-cli config set-url <url>` |
 | `model` | string | `"v16-alpha"` | Reasoning + vision model used by the agent. | (internal default) |
 | `project_id` | string \| null | `null` | TestmuAI TMS project ID for upload | `kane-cli config project [id]` |
 | `project_name` | string \| null | `null` | Display name of the selected project (set automatically by the picker) | set by `kane-cli config project` |
@@ -69,6 +69,24 @@ kane-cli config set-window 1280x800
 The format is `WIDTHxHEIGHT` (lowercase `x` separator). Width must be between 800 and 3840; height must be between 600 and 2160. Invalid values are rejected without changing the saved config.
 
 In TUI mode, the same setting can be edited through an interactive window-size picker that lets you type the width and height, validates the bounds, and previews the new size before saving.
+
+### Default start URL
+
+kane-cli needs a start URL for the first navigation of a run. It resolves one in this order, first match wins:
+
+1. The `--url <url>` flag on `kane-cli run` / `kane-cli testmd run`.
+2. (test.md only) the `url:` key in the file's frontmatter.
+3. The configured `default_url` — set with `config set-url`.
+
+```bash
+kane-cli config set-url https://app.example.com
+```
+
+Bare domains are accepted and normalized — `config set-url example.com` stores `https://example.com`. The value is rejected without changing the saved config if it is not a valid URL. The built-in playground value (`https://kaneai-playground.lambdatest.io`) counts as "unset", so a fresh install behaves as if no default were configured.
+
+In TUI mode, set the same value with `/config set-url <url>`, or pick **Default URL** from the interactive `/config` menu.
+
+If none of the three sources supplies a URL, kane-cli falls back to a site named in the objective itself (e.g. "Go to amazon.com and …"). When nothing provides a start URL at all, an interactive terminal asks you for one, while a non-interactive (CI) run fails — pass `--allow-missing-url` to a non-TTY run to proceed from the browser's current page instead. See [running-tests.md](./running-tests.md#run-options).
 
 ### TMS project
 
@@ -169,6 +187,19 @@ Headless mode is per-run; there is no persistent setting in `tui-config.json`. I
 ### Window size
 
 The Chrome window dimensions used for both headed and headless modes come from the `window_size` setting. See [Window size](#window-size) above to update them.
+
+### Chrome environment variables
+
+A handful of environment variables control how kane-cli locates and launches Chrome. They are read from the process environment, not from `tui-config.json`, so they are convenient for CI and one-off overrides.
+
+| Variable | Effect |
+|----------|--------|
+| `KANE_CLI_CHROME_PATH` | Absolute path to the Chrome binary. Use it when Chrome is installed somewhere kane-cli does not search by default. |
+| `KANE_CLI_SKIP_BROWSER_DOWNLOAD` | Any truthy value (`1` / `true` / `yes`) bypasses the Chrome-availability startup check; kane-cli then uses whatever `chrome` resolves on `PATH`. Useful in air-gapped or pre-provisioned CI images. |
+| `KANE_CLI_CDP_TIMEOUT_MS` | Per-attempt timeout, in milliseconds, for Chrome to become reachable over the DevTools Protocol. Default `30000`. Raise it on slow or cold CI runners. |
+| `KANE_CLI_CDP_RETRIES` | Extra Chrome launch attempts after the first when CDP readiness fails. Default `2` (so up to three attempts total); set `0` for a single attempt. Each retry uses a short backoff. |
+
+The CDP timeout and retry settings only affect transient launch failures (Chrome started but did not become reachable in time) — a missing or invalid binary fails immediately without retrying. See [Chrome failed to launch](./troubleshooting.md#chrome-failed-to-launch) for the matching troubleshooting steps.
 
 ## Resetting settings
 
