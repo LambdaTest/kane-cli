@@ -1,4 +1,4 @@
-<!-- Read this when authoring objective strings — for either `kane-cli run "..."` or step bodies inside a `_test.md`. Owns the full catalog of action verbs, assertion patterns, checkpoint analyze methods (Visual, Textual/DOM, URL, Title, DevTools→Network/Console/Performance/Cookies/localStorage), operators, extraction patterns, chaining, variables, and common pitfalls. The same objective grammar applies to one-shot runs and testmd steps. -->
+<!-- Read this when authoring objective strings — for either `kane-cli run "..."` or step bodies inside a `_test.md`. Owns the full catalog of action verbs, assertion patterns, checkpoint analyze methods (Visual, Textual/DOM, URL, Title, DevTools→Network/Console/Performance/Cookies/localStorage), operators, extraction patterns, direct API calls, chaining, variables, and common pitfalls. The same objective grammar applies to one-shot runs and testmd steps. -->
 
 # Writing Kane-CLI Objectives — Pattern Cookbook
 
@@ -217,6 +217,43 @@ Assertions support these comparisons. Phrase them naturally — the agent maps t
 
 If you're not sure which method, default to **Visual** — that's what the agent does too.
 
+### 3.5 Calling an API directly
+
+Distinct from observing the page's network traffic (§3.2): you can have the agent **make an HTTP request itself** as part of an objective — to seed data, hit a backend, or check a service — then assert on or reuse the response.
+
+Phrase an explicit call and name the response with "save the response as …":
+
+```text
+Call POST https://api.example.com/orders with body {"item": "sku_42", "qty": 1}, save the response as order
+Hit GET https://api.example.com/orders/123, save the response as fetched
+```
+
+A pasted `curl` works too and is kept verbatim (method, headers, body, auth):
+
+```text
+curl -X POST https://api.example.com/login -H 'Content-Type: application/json' -d '{"u":"a","p":"b"}', save the response as login
+```
+
+Once saved, reference the response by name:
+
+| Reference | Resolves to |
+|---|---|
+| `{{order.status}}` | the HTTP status code (e.g. `201`) |
+| `{{order.response_body}}` | the whole response body |
+| `{{order.response_body.<field>}}` | a field from the JSON response body |
+
+Then assert or chain on it — API calls and browser actions mix freely in one objective:
+
+```text
+Call POST https://api.example.com/login with body {"u": "{{user}}", "p": "{{password}}"}, save the response as login,
+assert {{login.status}} is 200,
+then open https://app.example.com and verify the dashboard loads
+```
+
+**Direct call vs. DevTools/Network (§3.2):** use a **direct call** when *you* want the agent to make the request (seed a record, call a backend, set up state). Use **DevTools/Network** when you want to **observe the requests the page itself makes** during a UI flow. They compose: seed via a direct call, drive the UI, then assert on the page's traffic.
+
+**Tokens:** put any credential/token in a variable marked `secret: true` (§6) so it's masked and never logged.
+
 ---
 
 ## 4. Extraction — the "store as" rule
@@ -394,3 +431,15 @@ Store the order number as 'order_id'.
 ```
 
 The step body is exactly the same grammar as `kane-cli run`. Everything in this cookbook applies.
+
+### Example D — Seed via API, then verify in the UI
+
+```text
+"Call POST https://api.example.com/orders with body {"item": "sku_42", "qty": 1},
+ save the response as order,
+ assert {{order.status}} is 201,
+ then open https://app.example.com/orders,
+ assert an order for 'sku_42' is visible"
+```
+
+The agent makes the API call directly, captures the response, asserts on its status, then drives the UI to confirm the seeded data appears. (Direct call → UI verify — contrast with §3.2, where you observe the page's own traffic.)

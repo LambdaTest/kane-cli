@@ -39,6 +39,9 @@ Open https://app.example.com, set a cookie named session with value
 Objectives can also set, delete, and clear cookies, localStorage, and the
 test clipboard directly — see [Browser State Actions](./features/browser-state.md).
 
+Objectives can also make API calls directly — POST/GET a URL or paste a `curl`,
+save the response, and assert on it — see [API Calls](./features/api-calls.md).
+
 ### Bad to better
 
 | | Objective |
