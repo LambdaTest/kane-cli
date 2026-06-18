@@ -34,7 +34,7 @@ After every run: parse NDJSON, present a plain-language results card with any ex
 
 ---
 
-# Writing objectives — three patterns
+# Writing objectives — four patterns
 
 The objective string is the single most important input. It determines what the agent does.
 
@@ -43,6 +43,7 @@ The objective string is the single most important input. It determines what the 
 | 🎯 **Action**     | "go to", "click", "type", "search", "fill", "scroll" | Performs browser actions |
 | ✅ **Assertion**  | "assert", "verify", "confirm", "check that"          | Validates a condition (pass / fail) |
 | 📦 **Extraction** | "store X as 'name'"                                   | Reads a value from the page and persists it in `final_state` |
+| 🔌 **API call**   | "call", "POST/GET a URL", a pasted `curl`            | Makes the HTTP request itself; "save the response as X", then assert/reference `{{X.status}}` / `{{X.response_body…}}` |
 
 ## The "store as" pattern is mandatory for extraction
 
@@ -63,6 +64,17 @@ Vague phrasing does **not** persist values. The agent may "see" them but they wi
 "go to example.com, store the price of the first item as 'price'"
 "go to example.com, store the headline as 'headline'"
 ```
+
+## Calling APIs directly
+
+The agent can make API calls itself — not just observe the requests a page makes. Phrase an explicit call and name the response:
+
+```
+"Call POST https://api.example.com/login with body {...}, save the response as login,
+ assert {{login.status}} is 200"
+```
+
+Reference the saved response as `{{login.status}}` and `{{login.response_body.<field>}}`; a pasted `curl` works too. API calls and browser actions mix in one objective — use a direct call to set up state (seed a record, hit a backend), and DevTools/Network (below) to **observe** the requests the page itself makes.
 
 ## Combining patterns
 
