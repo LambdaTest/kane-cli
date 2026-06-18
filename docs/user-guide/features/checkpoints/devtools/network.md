@@ -2,6 +2,8 @@
 
 Network assertions let you verify HTTP traffic — API responses, status codes, headers, response bodies, and request timing.
 
+> These network assertions also cover API calls **you** make directly in an objective — not just the requests the page makes on its own. The agent records its own calls and you query them with the same fields below. To *make* a call (seed data, hit a backend), see [API Calls](../../api-calls.md).
+
 ## How Capture Works
 
 KaneAI captures all HTTP network traffic automatically during each test step:

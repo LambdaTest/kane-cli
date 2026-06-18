@@ -199,15 +199,16 @@ kane-cli run "Go to https://app.example.com and login with {{username}} and {{pa
 
 ## 4. Writing objectives
 
-How you phrase the objective string determines what the agent does. Three patterns:
+How you phrase the objective string determines what the agent does. Four patterns:
 
-> For the full catalog — every action verb, every assertion analyze method (Visual / Textual-DOM / URL / Title / DevTools→Network/Console/Performance/Cookies/localStorage/Clipboard), operators, chaining, conditional/negative patterns, and worked examples — Read `references/objectives-cookbook.md`. Same grammar applies to one-shot `kane-cli run` objectives and `_test.md` step bodies.
+> For the full catalog — every action verb, every assertion analyze method (Visual / Textual-DOM / URL / Title / DevTools→Network/Console/Performance/Cookies/localStorage/Clipboard), direct API calls, operators, chaining, conditional/negative patterns, and worked examples — Read `references/objectives-cookbook.md`. Same grammar applies to one-shot `kane-cli run` objectives and `_test.md` step bodies.
 
 | Pattern | Trigger words | Behavior |
 |---|---|---|
 | 🎯 **Action** | "go to", "click", "type", "search", "fill" | Performs browser actions |
 | ✅ **Assertion** | "assert", "verify", "confirm", "check that" | Pass/fail check on a condition |
 | 📦 **Extraction** | "store X as 'name'" | Persists a value into `run_end.final_state` |
+| 🔌 **API call** | "call", "POST/GET a URL", a pasted `curl` | The agent makes the HTTP request itself; "save the response as X", then assert/reference `{{X.status}}` / `{{X.response_body…}}` |
 
 ### The "store as" rule (critical for extraction)
 
@@ -217,6 +218,17 @@ Vague phrasing like "read", "tell me", "report" does NOT reliably extract data �
 ✅ `"go to example.com, store the page title as 'page_title'"`
 
 Stored values appear in `run_end.final_state` and become the second results table per §1.4.
+
+### Calling APIs directly
+
+The agent can make API calls itself — not just observe the page's traffic. Phrase an explicit call and name the response:
+
+```text
+"Call POST https://api.example.com/login with body {...}, save the response as login,
+ assert {{login.status}} is 200"
+```
+
+Reference the saved response as `{{login.status}}`, `{{login.response_body}}`, or `{{login.response_body.<field>}}`; a pasted `curl` works too. Full grammar in `references/objectives-cookbook.md` §3.5.
 
 ### Chaining
 
