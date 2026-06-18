@@ -2,7 +2,7 @@
 
 Network assertions let you verify HTTP traffic — API responses, status codes, headers, response bodies, and request timing.
 
-> To **make** an API call yourself (seed data, hit a backend) rather than observe the page's traffic, see [API Calls](../../api-calls.md).
+> These network assertions also cover API calls **you** make directly in an objective — not just the requests the page makes on its own. The agent records its own calls and you query them with the same fields below. To *make* a call (seed data, hit a backend), see [API Calls](../../api-calls.md).
 
 ## How Capture Works
 

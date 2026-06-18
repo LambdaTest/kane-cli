@@ -116,7 +116,7 @@ Five domains. Each captures data the user cannot see on screen. The agent picks 
 
 | Subdomain | Captures | Scope | Common phrasing |
 |---|---|---|---|
-| **Network** | HTTP requests/responses — status codes, headers, response bodies, timing | Resets each step | "no API calls returned 5xx", "the POST /api/login returned 200", "all API responses completed under 2 seconds" |
+| **Network** | HTTP requests/responses, incl. API calls you make directly — status codes, headers, response bodies, timing | Resets each step | "no API calls returned 5xx", "the POST /api/login returned 200", "all API responses completed under 2 seconds" |
 | **Console** | `console.log/warn/error/info/debug` + uncaught JS exceptions | Resets each step. Top frame only | "no console errors", "no uncaught JS exceptions", "console contains '…'" |
 | **Performance** | Core Web Vitals — LCP, CLS, INP, FCP, TTFB | Per-navigation, point-in-time | "page LCP is under 2500ms", "CLS is below 0.1", "TTFB under 800ms" |
 | **Cookies** | All cookies including `httpOnly` — name, value, flags | Point-in-time, persists across steps | "a cookie named 'session_id' exists", "the session cookie is httpOnly", "no cookies without the Secure flag" |

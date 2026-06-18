@@ -81,6 +81,8 @@ Five subdomains. Each one is the right choice when the data you care about lives
 
 The agent captures every HTTP request/response per step. **Resets each step** — assert on traffic in the same step it happens (or extract and carry forward).
 
+These assertions also cover API calls **you** make directly in an objective (§3.5), not just the requests the page makes on its own — the agent records its own calls and you query them with the same fields below.
+
 Queryable fields: `method`, `url`, `domain`, `path`, `query_params`, `resource_type`, `request_headers`, `request_body`, `response_status`, `response_headers`, `response_body`, `timing.duration_ms`, `timing.ttfb_ms`, `failed`, `failure_reason`.
 
 ```text

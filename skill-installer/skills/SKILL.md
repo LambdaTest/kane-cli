@@ -228,7 +228,7 @@ The agent can make API calls itself — not just observe the page's traffic. Phr
  assert {{login.status}} is 200"
 ```
 
-Reference the saved response as `{{login.status}}` and `{{login.response_body.<field>}}`; a pasted `curl` works too. Full grammar (curl, chaining, direct-call vs DevTools/Network) is in `references/objectives-cookbook.md` §3.5.
+Reference the saved response as `{{login.status}}`, `{{login.response_body}}`, or `{{login.response_body.<field>}}`; a pasted `curl` works too. Full grammar in `references/objectives-cookbook.md` §3.5.
 
 ### Chaining
 
