@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.6] - 2026-06-18
+
+### API steps inside test flows
+- **Call external APIs as first-class test steps** — flows can now include `execute_api` steps that dispatch a named API call, store the response, and pass it forward to later steps in the same run.
+- **Child flows inherit API context** — when a flow spawns a child, the child has access to the parent's API registry and writes its response back so the parent can read it; this chains correctly across multiple nesting levels.
+- **API variables resolve by dot-path** — output values from an API step can be referenced with dot-path syntax in subsequent conditions and actions, including inside `if_else` branches that follow an API step.
+
+### Capture and observability
+- **API request captures are no longer silently dropped** — every upload attempt (prompt, tools, output, usage) now logs success or error explicitly, so missing data is always visible in the run log.
+- **Bifurcation decisions are written to disk** — phase-segmentation bifurcation logs are persisted to `runs/<n>/bifurcation.log` in both normal and testing mode, so the branching decision is always inspectable after a run.
+
+### Reliability and failure surfacing
+- **Fixed: child flows ran without their tools** — a flow spawned from another flow wasn't receiving its tools (tab switching, the ask-user prompt, file upload, etc.), so nested flows silently couldn't perform actions a top-level flow could. Spawned flows now inherit the parent's full tool set and behave the same as top-level flows.
+- **No orphan run directories on early exit** — the run directory is allocated lazily, so runs that return early (e.g. due to a pre-flight error) no longer leave empty directories behind
+
+---
+
 ## [0.4.5] - 2026-06-15
 
 ### Smarter retries and timeouts
