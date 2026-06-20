@@ -5,6 +5,7 @@
 [![npm version](https://img.shields.io/npm/v/@testmuai/kane-cli)](https://www.npmjs.com/package/@testmuai/kane-cli)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 ![Platforms](https://img.shields.io/badge/platforms-macOS%20%7C%20Linux%20%7C%20Windows-brightgreen)
+[![Discord](https://img.shields.io/badge/Discord-Join%20the%20community-5865F2?logo=discord&logoColor=white)](https://discord.gg/kanQPEx9)
 
 ---
 
@@ -445,6 +446,7 @@ curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh
   - test.md files: [overview](docs/user-guide/testmd/overview.md) · [running](docs/user-guide/testmd/running.md) · [composition](docs/user-guide/testmd/composition.md)
   - [Test Manager integration](docs/user-guide/test-manager-integration.md) · [CI/CD recipes](docs/user-guide/cicd.md) · [Troubleshooting](docs/user-guide/troubleshooting.md)
 - **Agent setup guide** (deep reference for AI coding agents): [testmuai.com/kane-cli/agents.md](https://testmuai.com/kane-cli/agents.md)
+- **Community:** [Join us on Discord](https://discord.gg/kanQPEx9) — questions, discussion, and release announcements
 - **Issues / bug reports:** [GitHub Issues](https://github.com/LambdaTest/kane-cli/issues/new/choose)
 - **Security:** see [SECURITY.md](SECURITY.md)
 - **Contributing:** see [CONTRIBUTING.md](CONTRIBUTING.md) — improvements to documentation and skills are welcome

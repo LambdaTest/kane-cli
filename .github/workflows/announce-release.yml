@@ -1,0 +1,99 @@
+name: Announce release on Discord
+
+# Posts every published GitHub Release to the kane-cli Discord announcement
+# channel and crossposts (publishes) it to servers that follow that channel.
+# Requires the DISCORD_BOT_TOKEN secret (a bot with View Channels + Send
+# Messages + Embed Links in the announcement channel).
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  announce:
+    runs-on: ubuntu-latest
+    # Skip drafts/pre-releases on the release trigger; always run for manual dispatch.
+    if: ${{ github.event_name == 'workflow_dispatch' || !github.event.release.prerelease }}
+    steps:
+      - name: Post release announcement to Discord
+        uses: actions/github-script@v7
+        env:
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+        with:
+          script: |
+            const CHANNEL_ID = '1513614044165312522';
+            const API = 'https://discord.com/api/v10';
+            const token = process.env.DISCORD_BOT_TOKEN;
+
+            if (!token) {
+              core.warning('DISCORD_BOT_TOKEN is not set; skipping announcement.');
+              return;
+            }
+
+            // Use the release from the event, or fall back to the latest published
+            // release so a manual workflow_dispatch run can be used to re-send/test.
+            let release = context.payload.release;
+            if (!release) {
+              const { data } = await github.rest.repos.getLatestRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+              });
+              release = data;
+            }
+
+            const url = release.html_url;
+            const title = (release.name || release.tag_name || 'New release').slice(0, 256);
+            const body = (release.body || '').trim();
+
+            // Discord embed descriptions are capped at 4096 chars; leave room for the link.
+            const LIMIT = 4000;
+            let description;
+            if (!body) {
+              description = `A new version of kane-cli is out.\n\n[Release notes →](${url})`;
+            } else if (body.length > LIMIT) {
+              description = body.slice(0, LIMIT).trimEnd() + `\n\n…\n\n[Full release notes →](${url})`;
+            } else {
+              description = body;
+            }
+
+            const embed = {
+              title,
+              url,
+              description,
+              color: 0x5865F2,
+              timestamp: release.published_at || undefined,
+              footer: { text: 'kane-cli' },
+            };
+
+            const headers = {
+              Authorization: `Bot ${token}`,
+              'Content-Type': 'application/json',
+            };
+
+            // 1) Post the announcement to the channel.
+            const postRes = await fetch(`${API}/channels/${CHANNEL_ID}/messages`, {
+              method: 'POST',
+              headers,
+              body: JSON.stringify({ embeds: [embed] }),
+            });
+            if (!postRes.ok) {
+              throw new Error(`Discord post failed: ${postRes.status} ${await postRes.text()}`);
+            }
+            const message = await postRes.json();
+            core.info(`Posted announcement message ${message.id} for "${title}".`);
+
+            // 2) Crosspost/publish it to follower servers. Non-fatal: the message is
+            //    already visible in the channel even if crossposting fails.
+            const cpRes = await fetch(`${API}/channels/${CHANNEL_ID}/messages/${message.id}/crosspost`, {
+              method: 'POST',
+              headers,
+            });
+            if (cpRes.ok) {
+              core.info('Crossposted announcement to follower servers.');
+            } else {
+              core.warning(`Crosspost failed (message still posted): ${cpRes.status} ${await cpRes.text()}`);
+            }
