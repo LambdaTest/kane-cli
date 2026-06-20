@@ -25,7 +25,7 @@ jobs:
           DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
         with:
           script: |
-            const CHANNEL_ID = '1513614044165312522';
+            const CHANNEL_ID = '1517976469190606848';
             const API = 'https://discord.com/api/v10';
             const token = process.env.DISCORD_BOT_TOKEN;
 
