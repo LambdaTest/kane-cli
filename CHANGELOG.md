@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.7] - 2026-06-22
+
+### A live run view that shows what's happening
+- **Step labels appear as the AI reasons** — instead of waiting until a step completes, the label streams in with a typewriter effect and a blinking cursor, so you can follow along in real time.
+- **A dedicated describe panel in the run view** — a bordered box below the activity line shows a plain-English description of what the browser just did, updating live as each step finishes.
+- **The objective header is now a proper bordered box** — replaces the flat grey bar, making it easier to visually separate your goal from the step activity below.
+- **Long objectives no longer overflow the terminal** — the run box wraps long objective text and pins itself to your terminal width. The step timer no longer flickers on updates.
+
+### More accurate assertions and text extraction
+- **A new text-based assertion path checks page content via code, not just screenshots** — for assertions, kane-cli can now extract structured DOM content and run a code extractor against it, giving more stable and replay-safe results.
+- **Boolean checks now steer toward presence vs. state** — rather than brittle exact-match comparisons, the AI now uses a dedicated mode that asks whether something is present or in a given state, reducing false failures.
+- **Assertion intent carries through to code export** — the query, expected value, and unit-conversion flag from a heal/assertion step now travel all the way into exported automation code.
+
+### Cleaner, more accurate step labels
+- **Step labels are generated in parallel with execution** — the humanizer runs alongside the action node so labels appear faster, without blocking the step.
+- **Labels are cleaner by default** — auto-generated step labels strip autopilot grounding descriptors and redundant "wait" language, and whitespace-only names are normalized at ingestion.
+- **The initial navigate step now always gets a label and rationale** — the first `navigate` step no longer silently skips humanization.
+
+### Reliability and display fixes
+- **Loopback URLs get the right scheme** — hosts like `localhost` now correctly get `http://` instead of being flagged as unresolvable.
+- **Screenshots are labeled correctly** — images were being sent as `image/png` even when they were JPEG; the content type is now correct.
+
+---
+
 ## [0.4.6] - 2026-06-18
 
 ### API steps inside test flows
