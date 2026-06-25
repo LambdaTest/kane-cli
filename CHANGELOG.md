@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.8] - 2026-06-25
+
+### WebSocket capture, now surfaced end-to-end
+- **Toggle WebSocket capture from the TUI** — a new switch in Config > Run lets you turn WS frame capture on or off without editing config files.
+- **WS frames appear alongside network activity** — WebSocket traffic is folded into the devtools network view, so HTTP and WS events show up in one place during both test runs and authoring sessions.
+
+### Smarter AI-generated test steps
+- **No more invented response field names** — when extracting values from API responses, kane-cli now insists on named extractions tied to real fields rather than making up key names.
+- **Conditionals inside multi-step flows wrap correctly** — flows that mix conditional logic with multiple actions no longer produce malformed step sequences.
+- **Driver and block payloads are treated as literal data** — previously, the runner could misinterpret structured payloads; they are now passed through as-is.
+
+### Version check that actually works
+- **`check-version` reliably detects when a newer release is published** — the gate was previously missing live published versions; it now correctly compares against the registry.
+
 ## [0.4.7] - 2026-06-22
 
 ### A live run view that shows what's happening
