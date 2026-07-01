@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.9] - 2026-07-01
+
+### Live SSE streaming in the TUI
+- **Network SSE is now a toggleable mode** — a new `network_sse` flag (and matching TUI toggle) lets you stream server-sent events through the run pipeline rather than waiting for full responses.
+- **SSE activity is visible in the run view** — connection summaries and an analyzer log surface what SSE connections are active, so you can see streaming traffic at a glance without leaving the terminal.
+- **Replay arms and runs automatically with SSE** — when SSE mode is on, replay start and stop are handled for you; no manual setup required.
+
+### Faster, more reliable navigation
+- **`back` and `forward` navigations no longer hang for 30 seconds** — navigation completes as soon as the browser commits, not after a full load timeout.
+
+### Local assertions
+- **Assertion evaluations are now local** — the evaluations for assertions are now local, previously they were managed at server even though they were deterministic.
+
+### Fixes and edge cases
+- **System-only API nodes no longer error on empty input** — a guard prevents sending a blank request to the LLM when there is no user message.
+- **Multi-line `@` branch events are matched correctly** — if/else branch events spanning multiple lines are now captured and routed as expected.
+- **SSE response bodies are skipped during network capture** — `text/event-stream` responses no longer attempt a full body read, which avoids stalling the capture pipeline.
+
 ## [0.4.8] - 2026-06-25
 
 ### WebSocket capture, now surfaced end-to-end
