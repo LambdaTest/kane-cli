@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.10] - 2026-07-03
+
+### Smarter visual checks
+- **"Element not found" is no longer a silent failure** — when a presence check is uncertain, kane-cli now escalates to a visual scan instead of confidently returning false, reducing missed detections.
+- **Hover actions work on vision coordinates** — previously, hovering over a vision-identified coordinate would fail; it now maps correctly to a click-compatible action.
+
+### More reliable text input
+- **Special characters in typed text are handled correctly** — literal tokens inside `type` and `fill` actions are now properly re-escaped, preventing misinterpretation of characters that would otherwise be treated as control sequences.
+
+### Clearer error feedback
+- **Validation errors now show what was sent** — on a 422 response, the full request body is logged so you can see exactly what the server rejected without extra debugging steps.
+- **Status codes pass through accurately** — 422 errors are only raised for request-body validation problems; other upstream errors now forward their original status codes instead of being masked.
+
 ## [0.4.9] - 2026-07-01
 
 ### Live SSE streaming in the TUI
