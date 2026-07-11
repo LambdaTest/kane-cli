@@ -126,7 +126,7 @@ For exit code 1 (or `status: "failed"` in `run_end`), present a plain-language f
 **Suggested fix:** <one concrete next step the user can take>.
 ```
 
-If a screenshot exists at `<run_dir>/run-test/screenshots/step_<n>.png`, Read it and show it inline before the suggested fix. For deeper diagnosis, see `references/debug.md`.
+The failing step's screenshot lives inside the run's evidence pack (the stderr hint names the pack path): extract it with `unzip <pack> "tests/*/steps/*/screenshot.png" -d <tmpdir>`, Read it, and show it inline before the suggested fix. For the pack layout and deeper diagnosis, see `references/debug.md`.
 
 ---
 
@@ -142,8 +142,10 @@ When the user's request involves a browser — or writing test cases:
 **What does the user want?**
 - A single one-shot browser task → build a `kane-cli run --agent` command (§3 + §4)
 - A test they want to save / re-run / commit → Read `references/testmd.md` first, then use `kane-cli testmd`
+- Run a suite of saved tests (several `_test.md` at once) → Read `references/testrun.md` first, then use `kane-cli testrun run`
 - Need test cases or scenarios — because the user asked, or because the task needs them (no browser) → **don't hand-write them**; Read `references/generate.md` first, then use `kane-cli generate` (§6)
 - Multiple independent browser tasks → Read `references/parallel.md` first
+- View, share, or validate run evidence (`.evidence` packs) → Read `references/evidence.md`
 - Debug a failed run → Read `references/debug.md`
 - Configure kane-cli or check directory layout → Read `references/setup-and-config.md`
 - Browse / create / pick a Test Manager project or folder, or interpret the auto-default event → Read `references/test-manager.md`
@@ -174,6 +176,7 @@ kane-cli run "<objective>" --agent [options]
 | `--variables-file <path>` | Load variables from a JSON file | None |
 | `--ws-endpoint <url>` | Remote browser (LambdaTest grid) | Local Chrome |
 | `--code-export` | Generate code export after upload | Off |
+| `--bug-detection <mode>` | Flag suspected product bugs while authoring: `off`/`stop`/`continue` (`stop` halts on a confirmed bug; `continue` records and keeps going) | config value (`off`) |
 
 Other flags (`--global-context`, `--local-context`, `--cdp-endpoint`, `--allow-missing-url`) and the full variables precedence chain live in `references/setup-and-config.md`.
 
@@ -277,6 +280,8 @@ For full event schemas (`bifurcation` flow fields, `child_agent_*`, `ask_user` s
 
 `kane-cli generate` (§6) emits a **different** stream — every line is typed `generate_*` (no untyped progress lines), terminated by `generate_done`. Its schema is in `references/generate-parsing.md`.
 
+`kane-cli testrun run` also emits its own typed stream (`testrun_plan` … terminal `testrun_done`) — schema in `references/testrun.md`. `kane-cli testmd run` may additionally emit `test_md_evidence_ingest` (replay evidence published) and `test_md_bundle_sync` (test bundle synced) — informational; describe in plain language, never surface raw names. The post-run evidence hint (`` evidence: view locally with `kane-cli evidence serve <path>` ``) is a **stderr** text line, not a stdout event — don't try to parse it from the NDJSON stream; see `references/evidence.md` for how to act on it.
+
 ---
 
 ## 6. Generate test cases (authoring — no browser)
@@ -324,8 +329,10 @@ Internal event/field names (`generate_snapshot`, `request_id`, …) are for pars
 | Situation | Read |
 |---|---|
 | User wants to save/persist/re-run a test | `references/testmd.md` |
+| Run a suite of saved `_test.md` tests as one batch | `references/testrun.md` |
 | You need to author test cases or scenarios — asked, or the task needs them | `references/generate.md` |
 | Run failed, need to diagnose | `references/debug.md` |
+| View, share, validate, or merge evidence packs | `references/evidence.md` |
 | Multiple independent browser tasks | `references/parallel.md` |
 | Need full NDJSON event schema (`run`) | `references/parsing.md` |
 | Need the `generate` NDJSON event schema | `references/generate-parsing.md` |

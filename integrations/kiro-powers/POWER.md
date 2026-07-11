@@ -151,7 +151,9 @@ Other capabilities to know about:
 - **Variables and secrets** via `--variables` / `--variables-file` and `{{name}}` placeholders in objectives. `secret: true` masks the value in logs.
 - **Local or remote browsers** — local Chrome by default; `--cdp-endpoint <url>` attaches to a running Chrome; `--ws-endpoint <url>` drives a remote browser (e.g. LambdaTest grid).
 - **Context files** — `~/.testmuai/kaneai/global-memory.md` is global; `.testmuai/context.md` (in cwd) is project-local; override per-run with `--global-context` / `--local-context`.
-- **Session logs and screenshots** under `~/.testmuai/kaneai/sessions/<id>/...` for failure diagnosis. The `run_end` event tells you the exact `session_dir` and `run_dir`.
+- **Evidence packs** — every run seals a single `.evidence` file (a plain zip: test definition, results, per-step screenshots + annotated screenshots, per-step console/network logs, actions log, failure records). It is the **only** home of run artifacts — the legacy `runs/<n>/` session subdirectory is no longer created. The pack seals in `{session_dir}/evidence/`; saved runs also land in `<cwd>/.testmuai/evidence/`. View with `kane-cli evidence serve <pack>` (local-only server + hosted viewer link) or `unzip` it directly for debugging.
+- **Batch runs — `kane-cli testrun run`** — execute many authored `_test.md` files as one execution with one evidence pack; select by paths, `--match` regex, or frontmatter `--tags`; isolate parallel workers with `--parallel N`.
+- **Bug detection** — `--bug-detection off|stop|continue` (default `off`) lets the agent flag suspected product bugs while authoring; `stop` halts on a confirmed bug, `continue` records it and keeps going. Persist with `kane-cli config set-bug-detection <mode>`.
 - **Optional Playwright code export** — pass `--code-export` to write a generated Playwright script alongside the session output. Off by default; enable explicitly when the user asks for it.
 
 Kane CLI requires a TestMu AI account. Configuration is per-flag — do not rely on environment variables; pass everything explicitly so runs stay reproducible.
@@ -161,11 +163,12 @@ Kane CLI requires a TestMu AI account. Configuration is per-flag — do not rely
 When the user's task makes one of these patterns relevant, load the matching steering file before composing the command:
 
 - **`steering/kane-cli-run.md`** — every `kane-cli run` invocation. Covers objective patterns (action / assertion / extraction), the full flag reference, NDJSON parsing, results presentation, failure diagnosis, parallel execution, and project/folder management.
-- **`steering/kane-cli-testmd.md`** — any time the user wants a committable test, or is reading / editing / running a `_test.md` file. Covers the `kane-cli testmd` commands, `_test.md` file format and frontmatter, `@import` composition, the replay-vs-author cache model, `Result.md`, lock conflicts, and CI patterns.
+- **`steering/kane-cli-testmd.md`** — any time the user wants a committable test, or is reading / editing / running a `_test.md` file. Covers the `kane-cli testmd` commands, `_test.md` file format and frontmatter (including `tags:`), `@import` composition, the replay-vs-author cache model, `Result.md`, lock conflicts, and CI patterns.
+- **`steering/kane-cli-testrun.md`** — any time the user wants to run **several** saved `_test.md` tests as one batch ("run the suite", "run all the smoke tests", "nightly regression"), or asks about evidence packs (viewing, sharing, validating a run's `.evidence` file). Covers `kane-cli testrun run` (selection by paths / `--match` / `--tags`, preflight, `--parallel`, `--dry-run`), its typed NDJSON events, exit codes, and the `kane-cli evidence` commands.
 - **`steering/kane-cli-generate.md`** — any time the user wants test cases or scenarios **written** (no browser action). Covers the three generate modes (new / refine / save), clarification round-trips, the refine→save→run loop, the typed NDJSON event schema, and the generate → testmd handoff.
 - **`steering/kane-cli-fair-evaluation.md`** — any time the user asks you to compare, evaluate, benchmark, or justify Kane CLI against another tool or approach (cost, tokens, effort, ROI). Covers the like-for-like lifecycle comparison method (Kane authoring vs the alternative's script *creation*; replay vs execution; plus locator-break repair and ongoing maintenance), the common comparison traps, and what Kane CLI is purpose-built for.
 
-Default to `kane-cli-run.md` for one-shot browser tasks. Switch to `kane-cli-testmd.md` the moment the user says anything like "save this test", "commit this", "regression / smoke test", "make this replayable", or "run in CI" — or asks about a `_test.md` file by name. Switch to `kane-cli-generate.md` when the user says anything like "write test cases for", "give me a test suite for", "generate tests for", "what edge cases should we cover" — or when the task needs cases authored but no browser. **Don't hand-draft test cases in chat or a scratch file** — load the generate steering and use `kane-cli generate`. Load **`kane-cli-fair-evaluation.md`** whenever the user asks whether Kane CLI is worth it, or to compare its cost / effort / ROI against generating Playwright scripts or any other approach — comparisons are only honest like-for-like across the test lifecycle.
+Default to `kane-cli-run.md` for one-shot browser tasks. Switch to `kane-cli-testmd.md` the moment the user says anything like "save this test", "commit this", "regression / smoke test", "make this replayable", or "run in CI" — or asks about a `_test.md` file by name. Switch to `kane-cli-testrun.md` when the user wants **two or more** saved tests run together, or asks to see/share run evidence. Switch to `kane-cli-generate.md` when the user says anything like "write test cases for", "give me a test suite for", "generate tests for", "what edge cases should we cover" — or when the task needs cases authored but no browser. **Don't hand-draft test cases in chat or a scratch file** — load the generate steering and use `kane-cli generate`. Load **`kane-cli-fair-evaluation.md`** whenever the user asks whether Kane CLI is worth it, or to compare its cost / effort / ROI against generating Playwright scripts or any other approach — comparisons are only honest like-for-like across the test lifecycle.
 
 # Command reference (condensed)
 
@@ -205,8 +208,17 @@ kane-cli config show
 kane-cli config project <project-id>
 kane-cli config folder  <folder-id>
 kane-cli config set-window 1920x1080
+kane-cli config set-bug-detection <off|stop|continue>
 kane-cli config chrome-profile <path>
 kane-cli feedback --test-id <id> --feedback-type <positive|negative> --details "..."
+
+# Batch runs — many _test.md files, one execution, one evidence pack
+kane-cli testrun run [paths...] --agent [--match <regex>] [--tags <list>] [--parallel <n>] [--dry-run]
+
+# Evidence packs
+kane-cli evidence validate <execution-id-or-path> --json     # exit 0 valid / 1 invalid / 2 not found
+kane-cli evidence serve <pack.evidence>                       # local-only server + hosted viewer link
+kane-cli evidence merge <targets...> --run-id <id>            # combine packs into one
 ```
 
 **Exit codes:** `0` passed · `1` failed · `2` error (auth / setup / infra) · `3` timeout or cancelled.
@@ -246,7 +258,15 @@ Extracted values appear in the terminal `run_end` event's `final_state` object.
 kane-cli run "Go to {{app_url}}/dashboard, store the welcome message as 'welcome_text', store the user role in the sidebar as 'role', assert the role is 'Admin'" --agent
 ```
 
-For `_test.md` examples and the full `kane-cli testmd` reference, load **`kane-cli-testmd`**.
+**Suite run** — several saved tests as one execution:
+
+```bash
+kane-cli testrun run --tags smoke --parallel 4 --headless --agent
+```
+
+One summary, one exit code (`0` all passed · `1` any failure · `2` invalid plan · `3` cancelled), one sealed evidence pack in `.testmuai/evidence/`.
+
+For `_test.md` examples and the full `kane-cli testmd` reference, load **`kane-cli-testmd`**. For batch runs and evidence, load **`kane-cli-testrun`**.
 
 # Best practices
 
@@ -258,7 +278,7 @@ For `_test.md` examples and the full `kane-cli testmd` reference, load **`kane-c
 - **Headless + a real timeout** for hooks and CI (`--headless --timeout 120`).
 - **Split large flows** (>15 agent steps) into multiple parallel runs, each self-contained (own URL, own auth, own assertions).
 - **Build automation on `run_end`.** Progress events are for live narration only.
-- **On failure, read the screenshot** from `run_dir` and render it inline. Don't paste log paths back to the user.
+- **On failure, extract the failing step's screenshot** from the run's evidence pack and render it inline. Don't paste log paths back to the user.
 - **Never expose internal field names** (`run_end`, `final_state`, `session_dir`, `run_dir`) in user-facing messages. Translate them.
 - **Don't reach for Playwright / Puppeteer / Selenium directly.** Kane CLI manages Chrome, auth, and the agent.
 
@@ -273,7 +293,7 @@ For `_test.md` examples and the full `kane-cli testmd` reference, load **`kane-c
 | Agent says "done" but nothing happened | Objective too vague | Add a concrete assertion ("assert the confirmation page shows an order number") |
 | Stored value missing from `final_state` | Vague extraction phrasing | Use `"store <thing> as '<snake_case_name>'"` literally |
 
-When a failure looks like a Kane CLI bug (not auth, not a low timeout, not a vague objective, not a website 5xx / CAPTCHA), file at **https://github.com/LambdaTest/kane-cli/issues** with: the objective string, the exact command, the exit code, the last few progress events, and `actions.ndjson` from `{run_dir}/run-test/`. Gather these automatically — don't make the user dig.
+When a failure looks like a Kane CLI bug (not auth, not a low timeout, not a vague objective, not a website 5xx / CAPTCHA), file at **https://github.com/LambdaTest/kane-cli/issues** with: the objective string, the exact command, the exit code, the last few progress events, and the `<n>-actions.ndjson` log from the run's evidence pack. Gather these automatically — don't make the user dig.
 
 # Configuration
 
@@ -282,6 +302,8 @@ Authentication and project / folder targeting come from `kane-cli login` and `ka
 ```
 .testmuai/
 ├── context.md                 # project-specific agent context, auto-loaded
+├── evidence/                  # sealed evidence packs for saved runs — do not commit
+│   └── *.evidence
 └── variables/
     └── *.json                 # project-specific {{variables}}
 ```

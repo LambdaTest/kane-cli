@@ -20,6 +20,8 @@ For `testmd run`, the `test_md_summary` / `test_md_done` events also carry a `sh
 
 Surface `test_url` (and `share_url` when present) as a "View in Test Manager" line per the §1.4 results table in `SKILL.md`. Never paste raw URLs into the middle of a summary — they belong in the results table.
 
+**Replays publish evidence, not uploads.** A pure replay of an authored `testmd` test skips the upload pipeline (and skips the project/folder gate entirely — no `project_folder_auto_defaulted` event fires for it), but its sealed evidence pack still publishes to the test's own project automatically (`test_md_evidence_ingest` event, informational). The dashboard therefore shows execution history even for cache-replayed runs. `testrun` executions publish one pack for the whole batch the same way.
+
 ---
 
 ## 2. Projects & folders — selecting where uploads land

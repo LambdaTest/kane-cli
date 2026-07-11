@@ -72,6 +72,7 @@ Click submit and verify the confirmation banner.
 |---|---|---|
 | `mode` | root | `action` (halts on auth walls) or `testing` (default — pushes through so negative-test assertions can fire) |
 | `url` | root | Start URL for the first step (bare domains get `https://`). Overridden by `--url`; falls back to config `default_url`. |
+| `tags` | root | Labels for batch selection: YAML list, `[a, b]`, or bare `a, b`. Trimmed, lowercased, deduped. Selected with `testrun --tags` (`references/testrun.md`); shown by `testmd list`. Empty → parse error; per-step → parse error. |
 | `max_steps` | root + step | Max agent reasoning steps. Default `30`. |
 | `timeout` | root + step | Hard kill per step in seconds. |
 | `headless` | root | No browser window. |
@@ -124,10 +125,13 @@ Editing a helper re-authors that step in **every test that imports it**, plus ev
 | Command | Use |
 |---|---|
 | `kane-cli testmd run <path> --agent [flags]` | Run a test |
-| `kane-cli testmd list` | List `*_test.md` files under cwd (NDJSON when non-TTY) |
+| `kane-cli testmd list` | List `*_test.md` files under cwd (NDJSON when non-TTY; records include `tags`) |
 | `kane-cli testmd status <path>` | Test Manager identity + local-sync state |
 | `kane-cli testmd export <path> [--code-language python\|javascript]` | Regenerate code export from existing recordings (no browser launch) |
 | `kane-cli testmd delete <path>` | Local-only delete: removes source + `output-<stem>/`. Does NOT delete from Test Manager. |
+| `kane-cli testmd sync <path>` | Re-push the test bundle (test + imports + outputs) to the cloud. Rarely needed — it happens automatically after every authored commit; use only to recover a failed auto-sync. |
+
+**Running several tests at once?** Use `kane-cli testrun run` — one execution, one pack, isolated parallel Chromes. Read `references/testrun.md`.
 
 **Flags on `testmd run` that don't exist on §3 `run`:**
 
@@ -140,6 +144,7 @@ Editing a helper re-authors that step in **every test that imports it**, plus ev
 | `--retry` | off | On replay failure, restart with a shrinking replay window |
 | `--retry-count <n>` | `3` | Max retry restarts before falling back to full re-author |
 | `--author` | off | Force authoring every step (skip replay decision) |
+| `--bug-detection <off\|stop\|continue>` | config (`off`) | Flag suspected product bugs while **authoring** (`stop` halts on a confirmed bug; `continue` records it). Replay failures always investigate regardless. |
 
 All §3 `run` flags also apply (`--agent`, `--headless`, `--max-steps`, `--timeout`, `--variables`, etc.).
 
@@ -167,6 +172,10 @@ For tests using `@import`, helper recordings land next to the helper file in `he
 - For `@import` steps that failed, a path to the failing sub-step inside the helper
 
 When the user asks "did the test pass?" or "where did it fail?" for a previously-run test, read `Result.md` rather than re-running the test.
+
+**Evidence pack:** every `testmd run` also seals an evidence pack into `<cwd>/.testmuai/evidence/` (screenshots, per-step console/network logs, failure records) — the richer artifact for debugging a failure; see `references/evidence.md`. Packs are run artifacts: do NOT commit `.testmuai/evidence/`.
+
+**Replays are self-sufficient:** a pure replay (all steps cached) needs no project/folder configuration — no picker, no auto-default event, no exit-2 setup dead end. It also publishes its pack to the test's own project automatically (`test_md_evidence_ingest` event, informational), and a failed replay is always investigated — the failure record lands in the pack.
 
 ## Recording a `_test.md` from a live session
 
@@ -217,7 +226,8 @@ Parse errors abort **before** any browser launch with exit `2`. Common ones and 
 | `cannot @import a test file` | Imports may only reference helpers (not ending in `_test.md`) |
 | `cyclic reference` | Restructure helpers to break the loop |
 | `chrome config is global-only` | Move Chrome key to root frontmatter |
-| `'<key>' is run-level and cannot be set per-step` | Move `mode` / `on_lock_conflict` to root frontmatter |
+| `'<key>' is run-level and cannot be set per-step` | Move `mode` / `tags` / `on_lock_conflict` to root frontmatter |
+| `tags must be a non-empty list of non-empty strings` | Give `tags:` at least one non-empty entry, or remove the key |
 | `unknown config key` | Remove or fix the key |
 | `auth/identity keys are CLI-only` | Pass `username` / `access_key` as CLI flags, not in frontmatter |
 

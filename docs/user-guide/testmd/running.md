@@ -12,7 +12,10 @@ kane-cli testmd list                 # list *_test.md files in the current direc
 kane-cli testmd status <path>        # show recorded status for a test
 kane-cli testmd delete <path>        # delete a test and its output directory
 kane-cli testmd export <path>        # regenerate code export from existing recordings
+kane-cli testmd sync <path>          # push the test bundle (test + imports + outputs) to the cloud
 ```
+
+To run **many** tests as one execution — selected by path or `tags:` — use [`kane-cli testrun run`](../testrun.md).
 
 In a TTY, `kane-cli testmd` with no subcommand opens an interactive picker that walks the current directory and lets you pick a `_test.md` to run.
 
@@ -63,6 +66,7 @@ Every flag accepted by `kane-cli testmd run`:
 | `--retry` | flag | off | On replay failure, restart the run with a shrinking replay window. |
 | `--retry-count <n>` | integer | `3` | Maximum replay restart attempts before falling back to a full re-author. |
 | `--author` | flag | off | Skip the replay decision and author every step from scratch. |
+| `--bug-detection <mode>` | `off` \| `stop` \| `continue` | config value (`off`) | Detect product bugs while authoring: `stop` halts the run on a confirmed bug; `continue` records it and keeps going. Overrides `config set-bug-detection`. Authoring steps only — replay failures always investigate. See [Configuration](../configuration.md#bug-detection). |
 
 Most flags have a frontmatter counterpart with the same name (with underscores). Where both are set, the CLI flag wins — except for `variables`, which the file owns; see [overview.md](./overview.md#variables).
 
@@ -110,6 +114,12 @@ A replay can fail if the site changed under you — a button moved, the page is 
 - **`--retry`** — on replay failure, kane-cli restarts the run with a smaller replay window: it authors the failing step and replays fewer earlier steps. This often recovers transient issues without a full re-author.
 - **`--retry-count <n>`** — maximum restart attempts. Default `3`. After this many retries, kane-cli falls back to a full re-author.
 
+Every failed replay is also **investigated automatically**: a failure record — the error, the page state at failure, and pointers into the step's console/network logs — is written into the run's [evidence pack](../evidence.md#debugging-a-failed-run-from-its-pack), so you can see *why* the replay broke, not just that it did.
+
+### Replays don't need a project or folder
+
+A pure replay of an already-authored test — every step replays from cache — no longer requires a Test Manager project/folder to be configured. There is no interactive picker, no auto-created project, and no setup dead end: the test already knows where it belongs, and the replay runs with that identity. Authoring runs (first runs, edited steps, `--author`) resolve a project and folder as before.
+
 ## Run mode
 
 The `--mode` flag controls how the agent handles authentication walls, blocked pages, and error pages. The same setting can be put in frontmatter as `mode:` (root-only).
@@ -134,6 +144,10 @@ output-amazon/
 `Result.md` is the human-readable run report. `.internal/` holds the recordings kane-cli replays on the next run. The whole `output-<stem>/` directory is safe — and recommended — to commit to git: it makes your tests reproducibly replayable on any teammate's machine and on CI.
 
 For tests that `@import` helpers, kane-cli also writes one `helper-output-...` directory per call site next to the helper file. See [composition.md](./composition.md#helper-outputs).
+
+### The evidence pack
+
+Besides the output directory, every `testmd run` seals an [evidence pack](../evidence.md) — screenshots, per-step console/network logs, and failure records for the whole run — and copies it into `<cwd>/.testmuai/evidence/`. In a terminal you're offered to open it in the browser viewer at the end of the run; replayed runs also publish their pack to your project's execution history in Test Manager. Do **not** commit `.testmuai/evidence/` to git — packs are run artifacts, not test sources.
 
 ## `Result.md`
 
@@ -294,9 +308,27 @@ kane-cli testmd export amazon_test.md --code-language python
 
 This is faster than a full run because the browser is not launched; it reuses what was recorded last time.
 
+## `kane-cli testmd sync <path>`
+
+Pushes a test's replay bundle to the cloud: the `_test.md` itself, every helper it `@import`s, and the replay-required outputs (`Result.md`, recordings). The bundle is tied to the test's last commit.
+
+```bash
+kane-cli testmd sync ./tests/checkout_test.md
+```
+
+| Flag | Description |
+|---|---|
+| `--env <name>` | Environment (`prod` or `stage`) |
+| `--username <user>` | Basic-auth username (skips OAuth) |
+| `--access-key <key>` | Basic-auth access key |
+
+You rarely need to run this by hand: after every successful authored commit, kane-cli pushes the same bundle **automatically**. The manual command exists for re-syncing a test whose automatic push failed (for example, a network drop at the end of a run).
+
 ## Next steps
 
 - [Writing test.md files](./overview.md) — file format, frontmatter, steps, variables.
+- [Batch runs with testrun](../testrun.md) — run many tests as one execution with one evidence pack.
+- [Evidence packs](../evidence.md) — what every run captures and how to view it.
 - [Composition with @import](./composition.md) — reusable helpers across tests.
 - [Configuration](../configuration.md) — persistent settings: Chrome profile, window size, code export defaults.
 - [Test Manager integration](../test-manager-integration.md) — what happens during the upload.

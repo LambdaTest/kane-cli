@@ -73,11 +73,14 @@ Before the test launches, `kane-cli testmd run` validates the cached Test Manage
 
 ```bash
 kane-cli testmd run <path>             # run a test
-kane-cli testmd list                    # list every *_test.md under cwd (NDJSON when stdin is non-TTY)
+kane-cli testmd list                    # list every *_test.md under cwd (NDJSON when stdin is non-TTY; records include tags)
 kane-cli testmd status <path>           # show TMS identity + local-sync state
 kane-cli testmd delete <path>           # local-only delete: removes source + output-<stem>/. Does NOT delete from Test Manager.
 kane-cli testmd export <path> [--code-language python|javascript]  # regenerate code export from cached recordings
+kane-cli testmd sync <path>             # re-push the test bundle (test + imports + outputs) to the cloud; automatic after every authored commit — manual use is for recovering a failed auto-sync
 ```
+
+**Running several tests at once?** Use `kane-cli testrun run` — one execution, one evidence pack, isolated parallel Chromes. Load the **`kane-cli-testrun`** steering file.
 
 ## `kane-cli testmd run` — flag reference
 
@@ -92,6 +95,7 @@ All `kane-cli run` flags also apply. The flags below are `testmd`-specific.
 | `--retry` | off | On replay failure, restart with a shrinking replay window. |
 | `--retry-count <n>` | `3` | Max restarts before falling back to full re-author. |
 | `--author` | off | Force authoring every step (skip the replay decision). |
+| `--bug-detection <off\|stop\|continue>` | config (`off`) | Flag suspected product bugs while **authoring** (`stop` halts on a confirmed bug; `continue` records it). Replay failures always investigate regardless. |
 
 **Flag vs frontmatter precedence:** flags win for everything **except** `variables`, where the file wins (a test's data stays close to the test). CLI variables can still **add** keys the file doesn't define.
 
@@ -151,6 +155,7 @@ Every key is optional. Unrecognised keys are rejected at parse time.
 |---|---|---|
 | `mode` | **root only** | `testing` (default) pushes through auth walls and error pages so negative-test assertions can fire. `action` halts on those pages so a human can intervene. |
 | `url` | **root only** | Start URL for the test's first step (bare domains get `https://`). Overridden by `--url`; falls back to config `default_url`. |
+| `tags` | **root only** | Labels for batch selection: YAML list, `[a, b]`, or bare `a, b`. Trimmed, lowercased, deduped. Selected with `testrun --tags`; shown by `testmd list`. Empty → parse error (`tags must be a non-empty list of non-empty strings`); per-step → parse error. |
 | `max_steps` | root + per-step | Max agent reasoning steps. Default `30`. |
 | `timeout` | root + per-step | Hard kill timer per step, seconds. No default. |
 | `headless` | **root only** | Launch Chrome without a window. |
@@ -332,6 +337,12 @@ A replay can fail when the site shifts under you:
 - **`--retry`** — on failure, Kane CLI restarts with a smaller replay window: it authors the failing step and replays fewer earlier ones.
 - **`--retry-count <n>`** — default `3`. After this many restarts, fall back to full re-author.
 
+Every failed replay is also **investigated automatically** — a failure record (error, page state, console/network pointers) is written into the run's evidence pack, so you can explain *why* the replay broke.
+
+## Replays are self-sufficient
+
+A pure replay (all steps cached) needs no project/folder configuration — no picker, no auto-default event, no exit-`2` setup dead end. It also publishes its evidence pack to the test's own project automatically (`test_md_evidence_ingest` event, informational), so the dashboard shows execution history even for cache-replayed runs.
+
 ## Edits inside helpers cascade too
 
 Editing a step in `helpers/login.md` invalidates:
@@ -381,6 +392,8 @@ output-amazon/
 For tests that `@import` helpers, Kane CLI also writes one `helper-output-<helper>-<test>-<step-index>/` directory next to each helper, one per call site.
 
 **Commit `output-<stem>/` and `helper-output-...` directories to git.** That is what makes the test reproducibly replayable on a teammate's machine and in CI.
+
+Every `testmd run` also seals an **evidence pack** into `<cwd>/.testmuai/evidence/` — screenshots, per-step console/network logs, failure records. It's the richer artifact for debugging a failure (load the **`kane-cli-testrun`** steering file for the evidence surface). Packs are run artifacts: do **not** commit `.testmuai/evidence/`.
 
 ---
 
@@ -495,7 +508,8 @@ The parser catches these **before any browser launches** — exit `2`, no side e
 | `auth/identity keys are CLI-only: <key>` | `username`, `access_key`, or another auth key appeared in frontmatter. |
 | `unknown config key: <key>` | A frontmatter or per-step key is not recognised. |
 | `chrome config is global-only: <key>` | A Chrome-related key was set on an individual step. |
-| `'<key>' is run-level and cannot be set per-step` | `mode` or `on_lock_conflict` was set on an individual step. |
+| `'<key>' is run-level and cannot be set per-step` | `mode`, `tags`, or `on_lock_conflict` was set on an individual step. |
+| `tags must be a non-empty list of non-empty strings` | `tags:` is present but empty, or one of its entries is empty. |
 | `step config on @import may only contain 'optional': got <key>` | An `@import` step's `yaml` block contains anything other than `optional`. |
 | `cannot @import a test file: only helpers may be imported (got <path>)` | An `@import` referenced a file ending in `_test.md`. |
 | `cyclic reference: a.md → b.md → a.md` | Import graph contains a cycle. |

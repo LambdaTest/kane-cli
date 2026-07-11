@@ -87,7 +87,7 @@ Typing `/` in chat mode opens an autocomplete palette. Continue typing to filter
 | `/balance` | | Show credit balance. |
 | `/profiles` | `list\|switch\|delete` | Manage profiles. |
 | `/config` | `show\|set-window\|set-url\|set-mode\|chrome-profile\|project\|folder` | Manage configuration. |
-| `/new` | | Start a fresh session (uploads the current session first). |
+| `/new` | | Start a fresh session (uploads the current session and seals its evidence pack first). |
 | `/summary` | `[index]` | View detailed run summaries. |
 | `/cancel` | | Abort the current run. |
 | `/help` | | Show the command reference. |
@@ -124,7 +124,7 @@ A two-row status bar sits at the bottom of the TUI. It shows:
 | Exit the TUI | `/exit`, or **Ctrl+C** twice in quick succession. |
 | Force exit during shutdown upload | **Ctrl+C** twice while exit is in progress. |
 
-A graceful `/exit` runs the upload pipeline (if applicable) and prints any final links to your terminal scrollback before the process ends.
+A graceful `/exit` runs the upload pipeline (if applicable), seals the session's [evidence pack](./evidence.md), offers to open it in the browser viewer, and prints any final links to your terminal scrollback before the process ends.
 
 ### Multi-run sessions
 
@@ -178,6 +178,7 @@ The customer-facing flags accepted by `kane-cli run`:
 | `--access-key <key>` | Basic auth access key (skip OAuth). | None |
 | `--env <name>` | Environment (`prod`). | Active profile's env |
 | `--mode <name>` | Run mode: `action` (strict) or `testing` (lenient). | Config value, otherwise `testing` |
+| `--bug-detection <mode>` | Detect product bugs while authoring: `off`, `stop` (halt the run on a confirmed bug), or `continue` (record it and keep going). Overrides `config set-bug-detection`. See [Configuration](./configuration.md#bug-detection). | Config value, otherwise `off` |
 | `--agent` | Plain NDJSON output, no colors or UI. | Off |
 | `--code-export` | Generate code export after upload. | Off |
 | `--code-language <lang>` | Code export language (currently `python`). | `python` |
@@ -236,6 +237,8 @@ Below the summary, kane-cli prints any of the following links that apply to the 
 | `CodeExport` | The local directory containing the generated code (when code export is enabled). |
 
 Modern terminals render these as clickable hyperlinks. For details on what each link leads to, see [./test-manager-integration.md](./test-manager-integration.md).
+
+The run is also captured as a sealed [evidence pack](./evidence.md) — screenshots, per-step console/network logs, and failure records. In a terminal, kane-cli offers to open it in the browser viewer; in agent or non-interactive runs it prints a one-line `evidence: view locally with …` hint to stderr instead.
 
 ## Feedback prompt
 

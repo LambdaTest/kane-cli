@@ -52,6 +52,7 @@ Every field in `tui-config.json`:
 | `folder_id` | string \| null | `null` | TestmuAI TMS folder ID for upload | `kane-cli config folder [id]` |
 | `folder_name` | string \| null | `null` | Display name of the selected folder (set automatically by the picker) | set by `kane-cli config folder` |
 | `mode` | `"action"` \| `"testing"` | `"testing"` | Agent behaviour when the run hits an authentication wall, blocked page, or error page. See below. | `kane-cli config set-mode <action\|testing>` |
+| `bug_detection` | `"off"` \| `"stop"` \| `"continue"` | `"off"` | Whether the agent flags suspected product bugs while authoring. See [Bug detection](#bug-detection). | `kane-cli config set-bug-detection <mode>`, or per-run `--bug-detection` |
 | `code_export.enabled` | boolean | `false` | Whether to generate a code export after the upload pipeline completes (requires a TMS upload). | TUI menu, or per-run `--code-export` flag |
 | `code_export.language` | `"python"` | `"python"` | Output language for the generated code. Only `python` is supported today. | per-run `--code-language <lang>` |
 | `code_export.skip_validation` | boolean | `true` | Skip the post-codegen worker-side validation step. | TUI menu, or per-run `--skip-code-validation` / `--no-skip-code-validation` |
@@ -139,6 +140,22 @@ kane-cli config set-mode testing
 - **`action`** — the agent hard-stops on authentication, blocked, and error pages so you can intervene manually before the run proceeds.
 
 You can override the saved mode for a single run with `--mode <action|testing>` on `kane-cli run`.
+
+### Bug detection
+
+```bash
+kane-cli config set-bug-detection continue
+```
+
+`bug_detection` controls whether the agent watches for **product bugs** — not test failures — while it authors steps. When enabled, the agent can flag a suspicious behaviour mid-run (a broken flow, a wrong value, an error where none should be); the suspicion is investigated, and either rejected (the run continues, nothing fails) or confirmed as a product bug:
+
+- **`off`** (default) — no bug detection; behaviour is identical to previous releases.
+- **`stop`** — a confirmed product bug fails the step and ends the run.
+- **`continue`** — the confirmed bug is recorded (in the run result and the [evidence pack](./evidence.md)) and the run keeps going.
+
+This applies to **authoring** steps only. Replayed steps don't need it: a failed replay is always investigated automatically, regardless of this setting.
+
+Override the saved value for a single run with `--bug-detection <off|stop|continue>` on `kane-cli run`, `kane-cli testmd run`, or `kane-cli testrun run`. The setting appears in the TUI Config screen as **Bug Detection** and in `kane-cli config show` output.
 
 ### Code export
 

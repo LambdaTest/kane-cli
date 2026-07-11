@@ -14,6 +14,8 @@ This page lists common problems you may hit while using kane-cli, what causes th
 - [Upload failed or TMS error](#upload-failed-or-tms-error)
 - [CLI exits with code 2 and no output](#cli-exits-with-code-2-and-no-output)
 - [Update available notice](#update-available-notice)
+- [Debugging a failed run with its evidence pack](#debugging-a-failed-run-with-its-evidence-pack)
+- [testrun says "plan invalid" or skips members](#testrun-says-plan-invalid-or-skips-members)
 - [Reporting bugs](#reporting-bugs)
 
 ## "Chrome failed to launch"
@@ -185,6 +187,32 @@ In dev mode, setup and resolver failures print an explanatory line before the pr
 kane-cli checks the public npm registry for a newer release of `@testmuai/kane-cli` once every 24 hours. The result is cached locally so the check itself is non-blocking and silent on failure. When a newer version exists, kane-cli surfaces it as an "update available" notification with the current and latest versions and a severity label (`major`, `minor`, or `patch`).
 
 The notice is informational — your current version still works. To upgrade, follow the steps in [updates](./installation.md#updates).
+
+## Debugging a failed run with its evidence pack
+
+Every run seals an [evidence pack](./evidence.md) with everything needed to diagnose a failure in one place. The short version:
+
+1. Open the pack — accept the post-run "View evidence in browser?" offer, or run `kane-cli evidence serve <pack>` and open the printed `viewer` URL.
+2. Go to the failed step and read its **failure record** — the error and the page state at the moment of failure.
+3. Check the step's **console and network logs** — a 4xx/5xx response or a JS error there usually explains it.
+4. Compare the **annotated screenshot** (what the agent acted on) against what you expected.
+
+The full walkthrough is in [Evidence packs → Debugging a failed run from its pack](./evidence.md#debugging-a-failed-run-from-its-pack), and the pack's file layout is in [Inside the pack](./evidence.md#inside-the-pack). The pack is the only place run logs live — a `.evidence` file is a plain zip, so even without the viewer you can `unzip` it and read the logs directly. If a pack won't open in the viewer, run `kane-cli evidence validate <pack>` — a truncated or unsealed pack reports invalid; the session directory's `tui.log` still has the session narrative.
+
+One more debugging aid for batch runs: `testrun` members normally run silently — set `KANE_TESTRUN_MEMBER_DEBUG=1` to route their per-member output to stderr (prefixed `[member]`).
+
+## testrun says "plan invalid" or skips members
+
+`kane-cli testrun run` refuses to start unless every selected test passes preflight; the offenders are listed with a reason each:
+
+| Reason | Meaning | Fix |
+|---|---|---|
+| `missing_meta` | The test has no recorded output directory next to it. | Run it once: `kane-cli testmd run <path>`. |
+| `not_authored` | The test ran but never committed (no test id). | Run it to completion so it commits. |
+| `org_mismatch` | The test belongs to a different organisation than the other members. | Check identities with `kane-cli testmd status <path>`. |
+| `project_mismatch` | The test belongs to a different project than the other members. | Same check; run project-by-project, or re-home the test. |
+
+Use `kane-cli testrun run --dry-run …` to see the full plan and every offender without executing anything. See [Batch runs with testrun](./testrun.md#preflight).
 
 ## Reporting bugs
 

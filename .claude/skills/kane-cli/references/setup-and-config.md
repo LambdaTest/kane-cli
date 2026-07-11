@@ -89,6 +89,7 @@ Override per-run with `--global-context` / `--local-context` flags.
 kane-cli config show                          # Show all current settings (includes default_url)
 kane-cli config set-window <W>x<H>           # Browser window size (e.g. 1920x1080)
 kane-cli config set-url <url>                 # Default start URL (bare domains get https://; used when --url / test.md url: is absent)
+kane-cli config set-bug-detection <mode>      # off | stop | continue (default off) — flag product bugs while authoring; per-run --bug-detection overrides
 kane-cli config chrome-profile <path>         # Chrome profile path (or interactive picker in TTY)
 kane-cli config project <project-id>          # TMS project ID (or interactive picker in TTY)
 kane-cli config folder <folder-id>            # TMS folder ID (or interactive picker in TTY)
@@ -120,9 +121,8 @@ kane-cli feedback --test-id <id> --feedback-type <positive|negative> --details "
 │   └── {session-id}/
 │       ├── session.json         # Metadata, run list, upload status
 │       ├── tui.log              # Session event log
-│       ├── runs/{n}/
-│       │   └── run-test/
-│       │       └── actions.ndjson   # Step-by-step record of agent actions
+│       ├── evidence/            # Sealed evidence pack — the ONLY home of run logs,
+│       │                        #   actions, screenshots (see references/evidence.md)
 │       └── code-export/         # (when --code-export) generated code files
 └── variables/                   # Global variable files
     └── *.json
@@ -130,9 +130,13 @@ kane-cli feedback --test-id <id> --feedback-type <positive|negative> --details "
 # Project-local overrides (in cwd):
 .testmuai/
 ├── context.md                   # Project-specific agent context
+├── evidence/                    # Sealed evidence packs for saved runs — do NOT commit
+│   └── *.evidence
 └── variables/
     └── *.json                   # Project-specific variables
 ```
+
+Debugging env var: `KANE_TESTRUN_MEMBER_DEBUG=1` routes `testrun` members' otherwise-silent output to stderr (`[member]` prefix).
 
 ## Chrome management
 

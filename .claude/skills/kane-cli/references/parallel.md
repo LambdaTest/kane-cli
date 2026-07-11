@@ -4,6 +4,8 @@
 
 For multiple independent browser tasks, decompose and run in parallel using the Agent tool.
 
+> **Saved tests? Use testrun instead.** If the tasks are committed `_test.md` files, do NOT hand-roll parallelism — `kane-cli testrun run --parallel N` gives you isolated Chromes, a pooled scheduler, one rollup, and one evidence pack. Read `references/testrun.md`. This reference is for **ad-hoc `run` objectives** only.
+
 ## When to Split
 
 - **>15 steps** — long runs drift and get stuck
@@ -35,7 +37,7 @@ Run this kane-cli browser test and report results:
 After the command completes:
 1. Capture the exit code
 2. Parse the run_end NDJSON event from stdout
-3. If failed, read the failing step's screenshot from run_dir
+3. If failed, extract the failing step's screenshot from the run's evidence pack (see references/debug.md)
 4. Return: {status, steps, duration, summary, session_dir, failure_step, screenshot_path}
 ```
 

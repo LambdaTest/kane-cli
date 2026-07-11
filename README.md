@@ -16,6 +16,7 @@
 - [Install](#install)
 - [First run (under 60 seconds)](#first-run-under-60-seconds)
 - [Commit tests as Markdown (`testmd`)](#commit-tests-as-markdown-testmd)
+- [Every run produces evidence](#every-run-produces-evidence)
 - [Commands](#commands)
 - [Troubleshooting](#troubleshooting)
 - [Updating](#updating)
@@ -136,8 +137,25 @@ What you get:
 - **Composable** — `@import ./helpers/login.md` lets many tests share a login (or any other) flow. Edit one helper, every test that uses it picks up the change.
 - **Reviewable** — every run writes a human-readable `Result.md` next to the test. Commit `output-<name>/` alongside the test so teammates and CI replay the exact same recordings.
 - **Recordable from a live session** — `kane-cli run "<objective>" --name my-flow` writes `.testmuai/tests/my-flow_test.md` on exit, ready to move into your repo.
+- **Taggable and batchable** — a `tags: [smoke, checkout]` frontmatter key labels tests; `kane-cli testrun run --tags smoke --parallel 4` runs a whole suite as one execution. ([Batch runs →](docs/user-guide/testrun.md))
 
 > Full reference: [overview](docs/user-guide/testmd/overview.md) (file format) · [running](docs/user-guide/testmd/running.md) (run command, replay, CI) · [composition](docs/user-guide/testmd/composition.md) (`@import` and helpers).
+
+---
+
+## Every run produces evidence
+
+Each run seals an **evidence pack** — a single `.evidence` file with the test definition, results, per-step screenshots (plus annotated copies of what the agent acted on), browser console/network logs attributed to each step, and failure records. Named/saved runs land in `.testmuai/evidence/` in your project.
+
+After a run, kane-cli offers to open the pack in the hosted viewer; you can also serve any pack yourself:
+
+```bash
+kane-cli evidence serve .testmuai/evidence/<execution-id>.evidence
+```
+
+The server is local-only — the viewer page in your browser reads the pack from your machine; nothing is uploaded. Suites run with `testrun` produce one pack for the whole batch, which makes a great CI artifact.
+
+> Full reference: [docs/user-guide/evidence.md](docs/user-guide/evidence.md) — pack contents, the viewer, `validate` and `merge`.
 
 ---
 
@@ -179,6 +197,15 @@ kane-cli testmd list                   # List *_test.md files under the current 
 kane-cli testmd status <path>          # Show Test Manager identity + sync state for a recorded test.
 kane-cli testmd export <path>          # Regenerate code export from existing recordings.
 kane-cli testmd delete <path>          # Delete a test and its output-<stem>/ cache (local only).
+kane-cli testmd sync <path>            # Push the test bundle (test + imports + outputs) to the cloud.
+
+# Batch runs (many _test.md files, one execution, one evidence pack)
+kane-cli testrun run [paths...]        # Select by paths, --match regex, or --tags; --parallel N; --dry-run to preview.
+
+# Evidence packs
+kane-cli evidence validate <target>    # Validate a pack (execution id or path). Exit 0 valid / 1 invalid / 2 not found.
+kane-cli evidence serve <paths...>     # Serve sealed packs to the hosted viewer (local-only server).
+kane-cli evidence merge <targets...> --run-id <id>   # Merge several packs into one.
 
 # Authentication
 kane-cli login [--oauth] [--username <u> --access-key <k>] [--profile <name>]
@@ -196,6 +223,8 @@ kane-cli config set-window <W>x<H>     # Browser window size (e.g. 1920x1080).
 kane-cli config set-url <url>          # Default start URL for runs (used when --url / test.md url: is absent).
 kane-cli config set-mode <action|testing>
                                        # Agent behaviour on auth walls / blocked pages.
+kane-cli config set-bug-detection <off|stop|continue>
+                                       # Flag suspected product bugs while authoring (default off).
 kane-cli config project [<id>]         # Default project for uploads (interactive picker if no id).
 kane-cli config folder [<id>]          # Default folder for uploads (interactive picker if no id).
 kane-cli config chrome-profile [<path>]
@@ -219,6 +248,7 @@ TUI slash commands (`/run`, `/login`, `/logout`, `/whoami`, `/balance`, `/profil
 | `--url <url>`               | config `default_url`                  | Start URL for the run. Overrides the configured default; bare domains get `https://`. |
 | `--allow-missing-url`       | off                                   | Non-TTY only: proceed from the browser's current page instead of failing when no start URL resolves. |
 | `--mode <name>`             | config value, otherwise `testing`     | `action` (strict) or `testing` (lenient) on auth walls / blocked pages. |
+| `--bug-detection <mode>`    | config value, otherwise `off`         | Detect product bugs while authoring: `off`/`stop`/`continue` (`stop` halts on a confirmed bug; `continue` records it and keeps going). |
 | `--env <name>`              | active profile's env                  | Environment (e.g. `prod`).                                              |
 | `--cdp-endpoint <url>`      | none                                  | Connect to an existing Chrome via the Chrome DevTools Protocol.         |
 | `--ws-endpoint <url>`       | none                                  | Connect to a Playwright WebSocket endpoint (e.g. TestmuAI `wss://`).    |
@@ -300,8 +330,8 @@ These are **untyped** — they have no `type` field. Identify them by the presen
 | `credits`     | Credits consumed by the run (when reported)                           |
 | `final_state` | Map of every value extracted via `"store as"` objectives              |
 | `test_url`    | Deep link to the run in the KaneAI test manager (if upload succeeded) |
-| `session_dir` | Directory containing all session logs                                 |
-| `run_dir`     | Directory containing per-step JSON, screenshots, and the run summary  |
+| `session_dir` | Directory containing the session log and the sealed evidence pack    |
+| `run_dir`     | Legacy per-run path — step logs and screenshots now live inside the [evidence pack](docs/user-guide/evidence.md#inside-the-pack) |
 
 ### Parsing pattern
 
@@ -346,6 +376,7 @@ Use these in CI: `kane-cli run … --agent --headless` exits non-zero on any fai
 # Project-local overrides (in your repo's working directory):
 .testmuai/
 ├── context.md                   # Project-specific agent context
+├── evidence/*.evidence          # Sealed evidence packs (saved runs) — don't commit
 └── variables/*.json             # Project-specific variable files
 ```
 
@@ -444,6 +475,7 @@ curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh
   - [Installation](docs/user-guide/installation.md) · [Getting started](docs/user-guide/getting-started.md) · [Authentication](docs/user-guide/authentication.md)
   - [Running tests](docs/user-guide/running-tests.md) · [Configuration](docs/user-guide/configuration.md) · [Variables & context](docs/user-guide/variables-and-context.md)
   - test.md files: [overview](docs/user-guide/testmd/overview.md) · [running](docs/user-guide/testmd/running.md) · [composition](docs/user-guide/testmd/composition.md)
+  - [Evidence packs](docs/user-guide/evidence.md) · [Batch runs (testrun)](docs/user-guide/testrun.md)
   - [Test Manager integration](docs/user-guide/test-manager-integration.md) · [CI/CD recipes](docs/user-guide/cicd.md) · [Troubleshooting](docs/user-guide/troubleshooting.md)
 - **Agent setup guide** (deep reference for AI coding agents): [testmuai.com/kane-cli/agents.md](https://testmuai.com/kane-cli/agents.md)
 - **Community:** [Join us on Discord](https://discord.gg/kanQPEx9) — questions, discussion, and release announcements

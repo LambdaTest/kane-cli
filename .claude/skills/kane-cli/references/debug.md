@@ -1,27 +1,54 @@
-<!-- Read this when a kane-cli run failed and you need to diagnose. Owns log file locations (session_dir/run_dir/actions.ndjson/tui.log), the debugging flow, the common-failure-patterns table, and when to file a bug report vs not. -->
+<!-- Read this when a kane-cli run failed and you need to diagnose. Owns the evidence-pack layout (the only source of run logs), how to read a sealed pack, the debugging flow, the common-failure-patterns table, and when to file a bug report vs not. -->
 
 # Failure Handling & Log Inspection
 
 When a run fails, diagnose before suggesting fixes.
 
-## Log Locations
+## The evidence pack is the log source
 
-The `run_end` event provides `session_dir` and `run_dir` paths. Use those directly.
+Every run seals an **evidence pack**; all run artifacts — actions, console, network, screenshots, failure records — live inside it. **`run_end.run_dir` is legacy: that directory is not created anymore.** Do not try to read `{run_dir}/run-test/...`.
+
+**Find the pack**: `{session_dir}/evidence/<execution_id>.evidence`; testmd/testrun/named runs also land in `<cwd>/.testmuai/evidence/`. The post-run stderr hint names the exact path.
+
+**Read it directly** — a `.evidence` file is a plain zip:
+
+```bash
+unzip -l <pack>                                            # list entries
+unzip -p <pack> "tests/*/result.yaml"                      # verdict + per-step outcomes
+unzip -p <pack> "tests/*/steps/*/failure.yaml"             # failure records (failed steps only)
+unzip -p <pack> "tests/*/logs/0-console.ndjson"            # browser console, run 0
+unzip <pack> "tests/*/steps/*/screenshot.png" -d /tmp/ev   # extract screenshots to view
+```
+
+Pack layout (per test):
 
 ```text
-{session_dir}/
-├── session.json               # Session metadata, run list, upload status
-├── tui.log                    # Timeline: session start, run start/end, errors
-└── runs/{n}/
-    └── run-test/
-        └── actions.ndjson     # Step-by-step record of agent actions
+tests/<test-id>/
+├── test.md                    # the definition
+├── result.yaml                # verdict, steps[] (ordinal, status, kind, duration, action_id)
+├── logs/
+│   ├── meta.yaml              # declares the files below
+│   ├── tui.log                # session narrative
+│   ├── <n>-run.log            # runner log per run index n
+│   ├── <n>-actions.ndjson     # agent actions per run — the old runs/<n>/ actions log, now in-pack
+│   ├── <n>-console.ndjson     # browser console, per-step attributed
+│   └── <n>-network.har        # network traffic, per-step attributed
+├── steps/<ordinal>-<step-id>/ # screenshot.png, annotated.png, step.json,
+│                              #   failure.yaml (failed steps only)
+├── auteur/execution.json      # full execution trajectory
+└── v16-trajectory/            # per-run planning summaries
 ```
 
 ## Debugging Flow
 
-1. **Parse the `run_end` event** from stdout — it has `status`, `reason`, and `summary` plus the `session_dir` / `run_dir` paths.
-2. **Read `actions.ndjson`** in `{run_dir}/run-test/` — each line is one agent action with its intent and outcome.
-3. **Check `tui.log`** in `{session_dir}/` — for session-level issues (Chrome launch, auth, upload).
+1. **Parse the `run_end` event** from stdout — `status`, `reason`, `summary`, plus `session_dir`.
+2. **Open the pack**: the failed step's `failure.yaml` (error + page state), then that step's slice of `<n>-console.ndjson` / `<n>-network.har` — a 4xx/5xx or JS error usually explains the failure; cite it in plain language.
+3. **Look at the failing step's `annotated.png`** — it highlights the element the agent acted on; makes "clicked the wrong thing" / "element missing" obvious. Render it inline.
+4. **Check `tui.log`** (in the pack's `logs/`, or `{session_dir}/tui.log`) for session-level issues (Chrome launch, auth, upload).
+
+Offer the user the visual route too: `kane-cli evidence serve <pack>` opens it in the hosted viewer. If a pack won't open, `kane-cli evidence validate <pack>` tells you whether it's truncated/unsealed.
+
+**Debug escape hatch:** `KANE_TESTRUN_MEMBER_DEBUG=1` surfaces per-member output in `testrun` (stderr, `[member]` prefix).
 
 ## Common Failure Patterns
 
