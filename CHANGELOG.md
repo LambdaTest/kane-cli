@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-07-12
+
+### Automatic bug detection on every failure
+- **Failures are investigated, not just reported** — when a run fails, kane-cli automatically investigates whether it hit a product bug or a test issue and records a structured verdict in the pack's `failure.yaml`, alongside the page state and pointers into the console/network logs.
+- **Result code 740 means a confirmed product bug** — a confirmed bug is recorded as result code `740` in the run's result records and final event, so CI pipelines can distinguish genuine regressions from flaky tests.
+- **Proactive detection is configurable** — `--bug-detection off|stop|continue` on `run`, `testmd run`, and `testrun run` (default `off`): `stop` halts the run on a confirmed bug, `continue` records it and keeps going. Persist it with `config set-bug-detection` or the TUI settings panel.
+- **Investigation never stalls a run** — investigations run asynchronously, so other members in a multi-test run are never blocked waiting for a verdict.
+
+### Evidence packs: structured proof for every run
+- **Every run now produces an evidence pack** — screenshots, a HAR network log, console output, and a `result.yaml` summary are bundled and sealed into a single zip after each run. Saved runs land in `.testmuai/evidence/` in your project.
+- **Visual steps get an annotated screenshot** — each visual action produces an `annotated.png` with a crosshair and bounding box so you can see exactly what was targeted.
+- **Console and network traffic are captured per step** — each run's network log is saved as a real HAR file (readable in any HAR viewer) and console output as NDJSON, both attributed to the step that produced them.
+- **Packs publish automatically and can be merged** — replayed tests and testrun executions publish their sealed pack to your project's execution history; `kane-cli evidence merge` combines several packs into one. `kane-cli testmd sync <path>` pushes a test's replay bundle (test + imports + outputs) to the cloud.
+
+### Browse your evidence right after a run
+- **A browser viewer opens after every run** — on interactive runs, kane-cli prompts to open the sealed pack in a browser-based viewer; non-interactive runs print a hint line instead.
+- **`kane-cli evidence serve`** — serve any sealed pack to the viewer from a localhost-only server (nothing is uploaded — the viewer reads the pack from your machine); holds until **Ctrl-C**.
+- **`kane-cli evidence validate`** — check a pack's structure and completeness without running a test; exit codes make it easy to gate in CI.
+
+### Run multiple tests at once with `kane-cli testrun run`
+- **`kane-cli testrun run`** executes a set of `_test.md` files as one run — select members by path, tag (`tags:` frontmatter key, ANY-match), or auto-discovery, with a bounded worker pool (`--parallel`) and optional fail-fast (`--on-failure fail-fast`).
+- **Each parallel worker gets an isolated Chrome** — a fresh temporary profile per worker, so members never share cookies, logins, or tabs.
+- **`--dry-run` previews what would execute** — the exact members, per-member preflight results, and any org/project mismatches, before a single browser opens.
+- **One sealed pack for the whole suite** — every member's results, logs, and screenshots land in a single evidence pack; skipped and broken members are recorded with full detail, not silently dropped.
+- **Ctrl-C is graceful** — no new members start, in-flight members finish, the evidence pack still seals, and the run exits 3.
+
+### Replay is more accurate and complete
+- **Step geometry reflects the actual page at replay time** — element coordinates and bounding boxes in `step.json` come from the live page during the run, not from the original recording.
+- **Pure replay packs carry the original `execution.json`** — the authored execution tree is preserved exactly; unexecuted actions are recorded as skipped in `result.yaml`, and failed steps are kept in the tree.
+- **Variables resolve correctly on cloud runs** — cloud-provisioned variable bindings substitute correctly during replay.
+- **WebSocket and SSE assertions arm capture automatically** — exported and replayed tests that assert on WebSocket or SSE traffic enable the right capture without manual configuration.
+
+### Result records are richer and more trustworthy
+- **`result.yaml` now includes who ran the test** — executed-by carries the user name and email from the authenticated identity.
+- **Tags from `_test.md` frontmatter appear in `result.yaml`** — tags flow through the full pipeline, including skipped and broken entries.
+- **`action_id` links steps to the execution tree** — step events and `result.yaml` entries share a join key, so external tools can correlate them precisely.
+- **OS version and browser viewport are recorded automatically** — the result's environment block includes the host OS version and the actual browser resolution, for replays too.
+
+### Also in this release
+- **npm installs work on Linux ARM64** — the matching platform binary is selected automatically.
+
+---
+
 ## [0.4.10] - 2026-07-03
 
 ### Smarter visual checks
