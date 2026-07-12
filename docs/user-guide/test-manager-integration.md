@@ -13,6 +13,8 @@ When a session ends, kane-cli runs an upload pipeline that finalises the test ca
 
 You see a short progress indicator at exit covering these stages: `convert` (preparing the metadata), `zip` (packaging the run directories), `presign` (requesting upload URLs), `upload` (sending the zip and metadata), and `finalize` (committing the test case in Test Manager). If code export is enabled, a `code_export` stage runs after `finalize`. If it is disabled, that stage is reported as skipped.
 
+The run's sealed [evidence pack](./evidence.md) rides along with the upload, and the pack records who ran the test (user name/email) and the share link. **Replayed `testmd` runs publish evidence too**: a pure replay skips the authoring upload pipeline entirely, but its sealed pack is still published to the test's own project, so the dashboard shows execution history even for cache-replayed runs. The same applies to `testrun` executions.
+
 If the upload fails, kane-cli prints the error and exits. The local session directory is preserved either way — see [Session history on disk](#session-history-on-disk).
 
 ## Choosing where uploads land
@@ -157,13 +159,11 @@ Every session, regardless of upload outcome, leaves a directory on your machine 
 ~/.testmuai/kaneai/sessions/<session-id>/
 ├── session.json         # Metadata: started_at, ended_at, model, profile,
 │                        # test_id, testcase_id, upload_status, run summaries
-├── tui.log              # Append-only event log for the TUI session
-├── runs/<n>/            # One directory per run in the session
-│   └── run-test/
-│       └── actions.ndjson  # Step-by-step record of what the agent did
+├── tui.log              # Append-only event log for the session
+├── evidence/            # The session's sealed evidence pack: <execution-id>.evidence
 └── code-export/         # (when code export is enabled) Generated code files
 ```
 
-`<session-id>` is a UUID generated when the session starts. The runner writes its step logs and screenshots into `runs/<n>/`, where `n` increments per run within the session.
+`<session-id>` is a UUID generated when the session starts. Step logs, screenshots, and per-run console/network captures all live **inside the evidence pack** — see [Evidence packs](./evidence.md#inside-the-pack) for its structure.
 
-This directory is useful when you want to look back at a past run without going to Test Manager, debug a session that failed to upload, or hand a teammate the raw artefacts.
+This directory is useful when you want to look back at a past run without going to Test Manager, debug a session that failed to upload, or hand a teammate the pack.

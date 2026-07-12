@@ -34,6 +34,9 @@ These are **untyped** — they have no `type` field. Do **not** key on `event.ty
 | `child_agent_end` | `child_id`, `success`, `steps_taken`, `summary` | Child agent finished |
 | `ask_user` | `question`, `step_index`, `options?` | Agent needs user input |
 | `error` | `message` | Error occurred |
+| `test_md_evidence_ingest` | `status: "ok"\|"failed"`, `evidence_id`, `stage?` (failure only) | `testmd run` only: a replay's evidence pack published to the dashboard. Informational. |
+| `test_md_bundle_sync` | `status: "ok"\|"failed"`, `commit_id`, `bytes?` (success) / `stage?` (failure) | `testmd run` / `testmd sync`: test bundle pushed to the cloud after an authored commit. Informational. |
+| `testrun_*` family | see `references/testrun.md` | Emitted only by `kane-cli testrun run`; terminal event is `testrun_done`, not `run_end`. |
 
 **Note:** There is no `run_start` event — the first line is either a `bifurcation` or a progress object.
 
@@ -87,7 +90,11 @@ Key `run_end` fields:
 - `credits` — credits consumed by the run (when reported)
 - `final_state` — extracted values from "store as" objectives
 - `test_url` — link to KaneAI dashboard (if upload succeeded)
-- `session_dir` / `run_dir` — paths to log files
+- `session_dir` — session directory (session log + the sealed evidence pack under `evidence/`)
+- `run_dir` — **legacy**: this directory is no longer created; run logs and screenshots live inside the evidence pack (`references/debug.md` has the layout)
+- `result_code` (string, optional) — machine result classification. Under `--bug-detection`, a **confirmed product bug** arrives as `result_code: "740"` plus a `verdict` object (`confirmed`, `family`, `category`, `severity`, `one_liner`, `confidence`). Report it to the user as a product bug found, distinct from a test failure.
+
+**The evidence hint is not an event.** After a run, kane-cli prints `` evidence: view locally with `kane-cli evidence serve <path>` `` on **stderr**. Never look for it on stdout; see `references/evidence.md` for how to act on it. `run_end` itself carries no evidence-pack field.
 
 ## Responding to `ask_user` (if stdin is a TTY)
 

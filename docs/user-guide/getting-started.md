@@ -70,10 +70,11 @@ By default each run starts on the KaneAI playground site. The agent navigates fr
 
 ## What happens at the end of a run
 
-When the session ends, kane-cli uploads the run to TestmuAI Test Manager and prints a share link. For details on the upload, the share-link experience, and the run mode toggle, see [test-manager-integration](./test-manager-integration.md). To change settings like window size, Chrome profile, or the active project and folder, see [configuration](./configuration.md).
+When the session ends, kane-cli uploads the run to TestmuAI Test Manager and prints a share link. The run is also captured as a sealed [evidence pack](./evidence.md) — screenshots, logs, and results in one file you can open in the browser viewer when kane-cli offers it. For details on the upload, the share-link experience, and the run mode toggle, see [test-manager-integration](./test-manager-integration.md). To change settings like window size, Chrome profile, or the active project and folder, see [configuration](./configuration.md).
 
 ## Next steps
 
 - [Running tests](./running-tests.md)
+- [Evidence packs](./evidence.md)
 - [Configuration](./configuration.md)
 - [Authentication](./authentication.md)

@@ -28,7 +28,7 @@ When a dependency check fails, run the fix yourself. Only ask the user when the 
 - **Test cases or scenarios written** — because the user asked, or because the task needs them (no browser action) → **don't hand-draft them**; load the **`kane-cli-generate`** steering file and use `kane-cli generate`. Trigger phrases: "write tests for", "test cases for", "test suite for", "what edge cases", "generate tests for".
 - Browse / create a Test Manager project or folder, or interpret a `project_folder_auto_defaulted` event → use `kane-cli projects list|create` / `kane-cli folders list|create` (NDJSON under `--agent`). The run-startup gate auto-defaults a project/folder when nothing is configured and emits `project_folder_auto_defaulted` before the first progress event.
 - Multiple independent flows → decompose into N self-contained sub-objectives and run them in parallel.
-- Debug a failed run → inspect logs at `run_dir/run-test/actions.ndjson` and the failing-step screenshot.
+- Debug a failed run → read the run's evidence pack (failure records, per-step logs, screenshots) — see Failure handling below.
 
 After every run: parse NDJSON, present a plain-language results card with any extracted values, and on failure render the failing screenshot inline.
 
@@ -186,6 +186,7 @@ kane-cli run "<objective>" --agent [flags]
 | `--ws-endpoint <url>` | Remote browser via WebSocket (e.g. LambdaTest grid). | local Chrome |
 | `--cdp-endpoint <url>` | Connect to existing Chrome via CDP. | auto-launch Chrome |
 | `--code-export` | Generate a Playwright code export after upload. | off |
+| `--bug-detection <mode>` | Flag suspected product bugs while authoring: `off`/`stop`/`continue` (`stop` halts on a confirmed bug; `continue` records and keeps going). Overrides `config set-bug-detection`. | config value (`off`) |
 | `--name <slug>` | Persist this run as `<cwd>/.testmuai/tests/<slug>_test.md` on exit. Slug: `[a-zA-Z0-9_-]+`. | none — the run is ephemeral |
 
 ## Start URL (required)
@@ -266,8 +267,13 @@ Override either per-run with `--global-context` / `--local-context`.
 | `child_agent_end`   | `child_id`, `success`, `steps_taken`, `summary` | Child agent finished |
 | `ask_user`          | `question`, `step_index`, `options?`        | Agent needs input (auto-disabled when stdin is non-TTY) |
 | `error`             | `message`                                   | Error |
+| `test_md_evidence_ingest` | `status: "ok"\|"failed"`, `evidence_id`, `stage?` | `testmd run` only: a replay's evidence pack published to the dashboard. Informational. |
+| `test_md_bundle_sync` | `status: "ok"\|"failed"`, `commit_id`, `bytes?`/`stage?` | `testmd run`/`testmd sync`: test bundle pushed to cloud after an authored commit. Informational. |
+| `testrun_*` family  | see the **`kane-cli-testrun`** steering file | Only from `kane-cli testrun run`; its terminal event is `testrun_done`, not `run_end`. |
 
 There is no `run_start` event — the first line is either `project_folder_auto_defaulted`, a `bifurcation`, or a progress object.
+
+**The evidence hint is not an event.** After a run, Kane CLI prints `` evidence: view locally with `kane-cli evidence serve <path>` `` on **stderr**. Never look for it on stdout.
 
 `ask_user` is auto-disabled when stdin is not a TTY. Since Kiro runs Kane CLI as a subprocess, `ask_user` events will not be emitted — write objectives that don't require interactive input.
 
@@ -334,8 +340,9 @@ Read these fields:
 | `credits`      | Credits consumed (when reported) |
 | `final_state`  | Extracted values from "store as" objectives |
 | `test_url`     | KaneAI dashboard link (when upload succeeded) |
-| `session_dir`  | Path to the session directory |
-| `run_dir`      | Path to this run's directory |
+| `session_dir`  | Path to the session directory (session log + the sealed evidence pack under `evidence/`) |
+| `run_dir`      | **Legacy** — this directory is no longer created; run logs and screenshots live inside the evidence pack |
+| `result_code`  | Optional string classification. Under `--bug-detection`, a **confirmed product bug** arrives as `result_code: "740"` plus a `verdict` object (`confirmed`, `family`, `category`, `severity`, `one_liner`, `confidence`). Report it as a product bug found — distinct from a test failure. |
 
 ---
 
@@ -396,11 +403,11 @@ Explain what went wrong **in the user's terms** — don't paste log paths.
 >
 > **Suggested fix:** Add an explicit login step before checkout, or raise the timeout to 120s.
 
-Then read the failing-step screenshot from `{run_dir}/run-test/` and render it inline.
+Then extract the failing-step screenshot from the run's evidence pack (`unzip <pack> "tests/*/steps/*/screenshot.png" -d <tmpdir>`) and render it inline.
 
 ## Bug-report heuristic
 
-Offer to file a bug **only** when the failure looks like Kane CLI itself, not the website or a vague objective. File at **https://github.com/LambdaTest/kane-cli/issues** with: the objective, the full command, the exit code, the last few progress events, and `actions.ndjson` from `{run_dir}/run-test/`.
+Offer to file a bug **only** when the failure looks like Kane CLI itself, not the website or a vague objective. File at **https://github.com/LambdaTest/kane-cli/issues** with: the objective, the full command, the exit code, the last few progress events, and the `<n>-actions.ndjson` log from the run's evidence pack.
 
 Do **not** offer a bug report for: auth issues, low timeouts, vague objectives, website 5xx, or CAPTCHAs.
 
@@ -408,25 +415,45 @@ Do **not** offer a bug report for: auth issues, low timeouts, vague objectives, 
 
 # Failure handling & log inspection
 
-## Log layout
+## The evidence pack is the log source
 
-The `run_end` event tells you `session_dir` and `run_dir`. Use those paths directly:
+Every run seals an **evidence pack**; all run artifacts — actions, console, network, screenshots, failure records — live inside it. **`run_end.run_dir` is legacy: that directory is not created anymore.** Do not try to read `{run_dir}/run-test/...`.
+
+Find the pack: `{session_dir}/evidence/<execution_id>.evidence`; named/saved runs also land in `<cwd>/.testmuai/evidence/`. The post-run stderr hint names the exact path.
+
+A `.evidence` file is a plain zip:
+
+```bash
+unzip -l <pack>                                            # list entries
+unzip -p <pack> "tests/*/result.yaml"                      # verdict + per-step outcomes
+unzip -p <pack> "tests/*/steps/*/failure.yaml"             # failure records (failed steps only)
+unzip -p <pack> "tests/*/logs/0-console.ndjson"            # browser console, run 0
+unzip <pack> "tests/*/steps/*/screenshot.png" -d /tmp/ev   # extract screenshots to view
+```
+
+Pack layout (per test):
 
 ```
-{session_dir}/
-├── session.json               # session metadata, run list, upload status
-├── tui.log                    # session-level events (start, run start/end, errors)
-└── runs/{n}/
-    └── run-test/
-        └── actions.ndjson     # step-by-step record of agent actions
+tests/<test-id>/
+├── test.md                    # the definition
+├── result.yaml                # verdict, steps[] (ordinal, status, kind, duration, action_id)
+├── logs/                      # meta.yaml, tui.log, and per run index n:
+│                              #   <n>-run.log, <n>-actions.ndjson,
+│                              #   <n>-console.ndjson, <n>-network.har
+├── steps/<ordinal>-<step-id>/ # screenshot.png, annotated.png, step.json
+│                              #   (+ failure.yaml on failed steps)
+├── auteur/execution.json      # full execution trajectory
+└── v16-trajectory/            # per-run planning summaries
 ```
 
 ## Debugging flow
 
-1. Parse `run_end` from stdout — `status`, `reason`, `summary`, `session_dir`, `run_dir`.
-2. Read `actions.ndjson` in `{run_dir}/run-test/` — each line is one agent action with its intent and outcome.
-3. Read `tui.log` in `{session_dir}` for session-level issues (Chrome launch, auth, upload).
-4. For a failed step, pull its screenshot from `{run_dir}/run-test/` and render it inline.
+1. Parse `run_end` from stdout — `status`, `reason`, `summary`, `session_dir`.
+2. Open the pack: the failed step's `failure.yaml` (error + page state), then that step's slice of `<n>-console.ndjson` / `<n>-network.har` — a 4xx/5xx or JS error usually explains the failure; cite it in plain language.
+3. Look at the failing step's `annotated.png` — it highlights the element the agent acted on. Render it inline.
+4. Check `tui.log` (in the pack's `logs/`, or `{session_dir}/tui.log`) for session-level issues (Chrome launch, auth, upload).
+
+Offer the visual route: `kane-cli evidence serve <pack>` starts a local-only server and prints a hosted-viewer link. After agent-mode runs, Kane CLI prints a stderr hint line (`` evidence: view locally with `kane-cli evidence serve <path>` ``) — it is plain text on stderr, never a stdout event. If a pack won't open, `kane-cli evidence validate <pack>` reports whether it's truncated/unsealed. Full evidence + testrun surface: load **`kane-cli-testrun`** steering.
 
 ## Common failure patterns
 
@@ -446,6 +473,8 @@ The `run_end` event tells you `session_dir` and `run_dir`. Use those paths direc
 # Parallel execution
 
 For multiple independent browser tasks, decompose and run in parallel.
+
+> **Saved tests? Use testrun instead.** If the tasks are committed `_test.md` files, don't hand-roll parallelism — `kane-cli testrun run --parallel N` gives isolated Chromes, a pooled scheduler, one rollup, and one evidence pack. Load the **`kane-cli-testrun`** steering file. This section is for **ad-hoc `run` objectives** only.
 
 ## When to split
 
@@ -518,6 +547,7 @@ kane-cli whoami
 kane-cli config show
 kane-cli config set-window 1920x1080
 kane-cli config set-url <url>             # default start URL (used when --url is absent)
+kane-cli config set-bug-detection <mode>  # off | stop | continue (default off); per-run --bug-detection overrides
 kane-cli config chrome-profile <path>     # or the interactive picker in TTY
 kane-cli config project <project-id>      # or the interactive picker in TTY (OAuth + basic both work)
 kane-cli config folder  <folder-id>       # or the interactive picker in TTY

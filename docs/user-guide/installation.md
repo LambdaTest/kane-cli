@@ -22,6 +22,8 @@ Node.js 18 or later is required.
 npm install -g @testmuai/kane-cli
 ```
 
+npm installs work on every platform in the table above, including Linux arm64 (aarch64) — the matching platform binary is selected automatically.
+
 If your global `npm` prefix is not on `PATH`, add it before running `kane-cli`. You can find the prefix with `npm config get prefix`; the `kane-cli` binary lives in `<prefix>/bin` on macOS and Linux, and `<prefix>` on Windows.
 
 ## Install with pnpm or yarn
