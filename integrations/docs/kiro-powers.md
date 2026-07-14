@@ -64,6 +64,7 @@ The integration is not a verbatim copy of `SKILL.md`. It adds and preserves Kiro
 6. **The "wait for `run_end`" rule** is restated prominently in `kane-cli-run.md` because the most common Kiro failure mode is the agent acting on partial output. Don't soften it.
 7. **Internal field names are internal.** `run_end`, `final_state`, `session_dir`, `run_dir`, `NDJSON` — never expose these to the user. Translate them into plain language.
 8. **Hook template ships in `hooks/`**, but the user must copy it to `.kiro/hooks/kane-verify.kiro.hook` in their own workspace. Powers don't install hooks for the user; the hook file in this repo is a template.
+9. **The `# License and support` section in POWER.md.** Kiro's power review requires a body section whose heading contains "license", naming the underlying tool's license type (Apache-2.0) and carrying at least one support / contact link. It is **harness metadata — like the frontmatter — not a CLI fact**, so it has no `SKILL.md` source by design. Don't strip it during a mirroring pass, and don't backfill it into `SKILL.md`. Its links (LICENSE, GitHub Issues, Discord, `security@testmuai.com`, docs) are absolute URLs because the power is read outside a repo checkout; keep them in sync with the root `README.md` and `SECURITY.md`.
 
 ## Things to NOT put in the integration
 
@@ -116,6 +117,7 @@ Before committing changes to the integration:
 - [ ] Steering files are named `kane-cli-run.md` / `kane-cli-testmd.md` (Kiro convention `{tool}-{workflow}.md`).
 - [ ] Steering files do **not** have `inclusion:` frontmatter (that's for workspace `.kiro/steering/` files, not in-power steering).
 - [ ] POWER.md explicitly tells Kiro when to load each steering file.
+- [ ] POWER.md has a `# License and support` section naming Apache-2.0 and at least one support link (see Kiro-specific framing #9 — required by power review, has no `SKILL.md` source).
 - [ ] The "wait for `run_end`" rule still appears prominently in `kane-cli-run.md`.
 - [ ] No internal field names (`run_end`, `final_state`, `session_dir`, `run_dir`, `NDJSON`) appear in user-facing message templates.
 - [ ] No fabricated facts: no version-specific release notes, no stdin / `/exit` protocol, no made-up UI features, no unverified download URLs.

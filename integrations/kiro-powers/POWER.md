@@ -323,6 +323,20 @@ Global config lives in `~/.testmuai/kaneai/`:
 
 Do not configure Kane CLI via environment variables — env-var passthrough is not a guaranteed contract. Use `--username`, `--access-key`, `--profile`, `--variables`, `--variables-file`, and `kane-cli config …` so every run is reproducible from the command line.
 
+# License and support
+
+**License** — Kane CLI is open source under the [Apache-2.0 license](https://github.com/LambdaTest/kane-cli/blob/main/LICENSE). This power (`POWER.md`, its steering files, and the sample hook) ships under the same license. Kane CLI requires a TestMu AI account; use of the TestMu AI platform is governed by TestMu AI's own service terms, separate from the CLI's open-source license.
+
+**Support**
+
+| Need | Where to go |
+|---|---|
+| Bug reports / feature requests | [GitHub Issues](https://github.com/LambdaTest/kane-cli/issues/new/choose) |
+| Questions, discussion, releases | [Discord](https://discord.gg/kanQPEx9) |
+| Security vulnerabilities (never file publicly) | security@testmuai.com — see [SECURITY.md](https://github.com/LambdaTest/kane-cli/blob/main/SECURITY.md) |
+| User guide | [docs/user-guide](https://github.com/LambdaTest/kane-cli/tree/main/docs/user-guide) |
+| Agent reference | [testmuai.com/kane-cli/agents.md](https://testmuai.com/kane-cli/agents.md) |
+
 ---
 
 **Package:** `@testmuai/kane-cli` (npm) · **Source:** https://github.com/LambdaTest/kane-cli · **Connection:** local CLI invoked via shell — no MCP server required.
