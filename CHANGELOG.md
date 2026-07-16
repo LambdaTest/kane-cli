@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-07-15
+
+### From requirements to a designed suite
+Point kane-cli at what your product must do, and it designs a suite that proves it — every test tied to the criteria it verifies.
+- **Each test records the acceptance criteria it covers** — the link between a test and its requirements is captured at authoring time and stays permanent and auditable.
+- **Results are reported per criterion, not just per test** — a test that satisfies 3 of 5 tagged criteria shows exactly that, instead of a blanket pass.
+- **You're warned when a test claims more than it checks** — tagged criteria that no automated check covers are surfaced up front.
+- **Every test file links cleanly to its design entry**, so coverage lookups are exact.
+
+### See exactly what's covered
+Coverage stops being a guess — every run reports what it reached and what it missed.
+- **Coverage reflects the current run** — sealed evidence and reports cover only what this run touched; project-wide coverage stays separate and unaffected.
+- **`kane-cli cover` shows coverage and gaps side by side**, each gap anchored to its use-case so nothing is quietly dropped.
+- **Evidence is self-contained** — referenced sources travel inside the pack with a content fingerprint, verifiable offline.
+- **`usecases.yaml` is a coverage snapshot you can diff** — requirements, verdicts, run history, risk, and gaps in one file.
+
+### Keep the suite current
+Products change; tests shouldn't rot. The `kane-cli maintain` family keeps them aligned.
+- **Reconcile and evolve your suite as your product changes** — kane-cli surfaces what's drifted and helps bring tests back in step with new behavior, with updates reviewed before they're applied.
+- **`kane-cli maintain learn`** — a read-only view of the signals your maintenance decisions leave behind, which inform future runs.
+
+### Author richer checks
+Assertions and conditions gained real depth this release.
+- **DOM is the default assertion mode**, with final validation now a configurable setting.
+- **Boolean and arithmetic assertions** — combine checks with boolean logic and assert on computed values like totals and quantities.
+- **Containment checks** — a "shows X" assertion verifies X is present, rather than requiring an exact match.
+- **Replay-safe conditional steps** — conditions re-run deterministically, so conditional flows behave the same on every replay.
+- **Variables inside a condition** now export a test that genuinely asserts, instead of one that could never fail.
+
+### Solid underneath
+- **Changes are visible immediately** — later steps work against the current state, not a stale snapshot.
+- **A hung run is diagnosable** — `kill -USR1 <pid>` writes a full stack trace to the session log, captured live rather than only on clean exit.
+- **A test with no starting URL fails fast** instead of hanging for input.
+- Plus fixes: per-criterion status display, contained failures during generation and clean identifier truncation.
+- Windows: Tier 1 agent resolution is fixed — a path-resolution bug that prevented the agent from starting on Windows is resolved.
+
+---
+
 ## [0.5.0] - 2026-07-12
 
 ### Automatic bug detection on every failure
