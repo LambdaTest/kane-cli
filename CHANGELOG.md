@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-07-16
+
+### Auth that's honest about what it's doing
+- **OAuth tokens are now exchanged for long-lived credentials automatically** — when running tests, OAuth credentials are resolved into non-expiring basic credentials behind the scenes, so sessions don't break mid-run.
+- **Fallback during credential exchange now warns you** — if the auth exchange falls back to a secondary path, you'll see a clear warning instead of it happening silently.
+
+### Conditions and variables that compute correctly
+- **Condition blocks now evaluate logical and boolean expressions** — the condition leg previously missed logical/boolean expressions; those cases are now handled correctly.
+- **`SET` variable values are no longer pre-seeded** — variables declared with `SET` now get their value from the store instruction at runtime, rather than being initialized prematurely, which could cause stale or incorrect values.
+- **Empty expected values no longer cause false failures for non-`contains` checks** — the fail-loud guard for an empty expected value is now scoped only to `contains` assertions, so other check types aren't incorrectly flagged.
+- **Visual checkpoint conditions derive from the right base** — the `textual_visual` leg now correctly inherits from the checkpoint condition type.
+
+### Cleaner output
+- **Unrelated references no longer appear in terminal output** — user-facing messages are cleaned up; unrelated identifiers and phrasing that passed into output have been removed or reworded.
+
 ## [0.6.1] - 2026-07-16
 
 ### Fixed
