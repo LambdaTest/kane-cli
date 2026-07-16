@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-07-16
+
+### Fixed
+- **`context`, `design`, and `maintain` now work on a fresh install** — 0.6.0's published packages shipped without a component these commands require, so they failed immediately after `npm install` / `brew install`. 0.6.1 bundles it correctly across all supported platforms.
+- **A missing platform binary no longer fails the install itself** — the post-install step now degrades gracefully instead of aborting `npm install` when a binary is absent.
+
+For the full feature set 0.6.1 brings to life, see the [0.6.0 release notes](https://github.com/LambdaTest/kane-cli/releases/tag/0.6.0).
+
+---
+
 ## [0.6.0] - 2026-07-15
 
 ### From requirements to a designed suite
