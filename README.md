@@ -476,6 +476,7 @@ curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh
   - [Running tests](docs/user-guide/running-tests.md) · [Configuration](docs/user-guide/configuration.md) · [Variables & context](docs/user-guide/variables-and-context.md)
   - test.md files: [overview](docs/user-guide/testmd/overview.md) · [running](docs/user-guide/testmd/running.md) · [composition](docs/user-guide/testmd/composition.md)
   - [Evidence packs](docs/user-guide/evidence.md) · [Batch runs (testrun)](docs/user-guide/testrun.md)
+  - Test lifecycle: [overview](docs/user-guide/lifecycle/overview.md) · [context graph](docs/user-guide/lifecycle/context.md) · [test design](docs/user-guide/lifecycle/design.md) · [coverage](docs/user-guide/lifecycle/coverage.md) · [maintain](docs/user-guide/lifecycle/maintain.md) · [automation](docs/user-guide/lifecycle/automation.md)
   - [Test Manager integration](docs/user-guide/test-manager-integration.md) · [CI/CD recipes](docs/user-guide/cicd.md) · [Troubleshooting](docs/user-guide/troubleshooting.md)
 - **Agent setup guide** (deep reference for AI coding agents): [testmuai.com/kane-cli/agents.md](https://testmuai.com/kane-cli/agents.md)
 - **Community:** [Join us on Discord](https://discord.gg/kanQPEx9) — questions, discussion, and release announcements
