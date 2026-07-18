@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.3] - 2026-07-17
+
+### A rebuilt interactive session panel
+- **Keyboard-first navigation** — arrow keys, **Enter**, and digit shortcuts move through the panel; typing immediately opens a free-text editor row seeded with context so you never start from a blank prompt.
+- **Cleaner visual hierarchy** — work output indents by two columns, receipts are machine-only, and human-facing commit lines are kept to a single line. No more visual noise from internal IDs or CIDs leaking into readable output.
+- **Colored risk and recommended-row highlighting** — the question panel announces its header, marks risk level in color, and highlights the recommended answer so the right choice is obvious at a glance.
+- **Phase-aware labels throughout** — loader labels, exit copy, and decision labels all reflect the current phase in plain language; file paths use `~` shorthand instead of absolute paths.
+- **Narrative appears after the commit** — the summary message renders once a decision is finalized, not before, so the flow reads in the right order.
+
+### Auth that doesn't silently fail
+- **OAuth now doesn't expire mid session** — after an OAuth login, kane-cli doesn't let the subsequent runs hit token-expiry mid-session.
+- **Malformed payloads and slow exchanges are rejected cleanly** — the credential exchange now has a timeout and rejects malformed responses, with a visible warning if the exchange falls back to a secondary path.
+
+### Reliability fixes
+- **A bad cite no longer crashes a run** — a list-shaped add-operation cite is now treated as a recoverable error rather than a hard crash.
+- **No phantom blank lines in output** — trailing-newline prose no longer produces an extra empty row in the scrollback.
+- **Selector recorded for wrapped actions** — the resolved selector for `until`-wrapped actions is now saved correctly, so logs reflect what was actually matched.
+
+### Bug Fixes
+- https://github.com/LambdaTest/kane-cli/issues/136
+
 ## [0.6.2] - 2026-07-16
 
 ### Auth that's honest about what it's doing
