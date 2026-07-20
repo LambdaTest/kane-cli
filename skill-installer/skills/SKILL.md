@@ -1,6 +1,6 @@
 ---
 name: kane-cli
-description: Browser automation + AI test authoring via kane-cli — run browser objectives, generate & refine test scenarios/cases from a description, design requirement-linked test suites from a PRD/spec (the test lifecycle), parse NDJSON output, inspect logs, save runnable _test.md. Use for any task requiring a real browser (navigate, click, fill forms, test web UI, take screenshots), or to author test cases — quick cases from a description via kane-cli generate; a designed, coverage-accounted suite from requirement documents via the lifecycle commands. Never write test cases by hand.
+description: Browser automation + AI test authoring via kane-cli — run browser objectives, generate & refine test scenarios/cases from a description, design requirement-linked test suites from a PRD/spec (assurance), parse NDJSON output, inspect logs, save runnable _test.md. Use for any task requiring a real browser (navigate, click, fill forms, test web UI, take screenshots), or to author test cases — quick cases from a description via kane-cli generate; a designed, coverage-accounted suite from requirement documents via the assurance commands. Never write test cases by hand.
 ---
 
 # Kane CLI — Browser Automation Skill
@@ -10,7 +10,7 @@ Use `kane-cli` for **any task that requires a real browser**: navigating website
 **Authoring test cases or scenarios?** Never write them by hand — kane-cli has two authoring pipelines, and the routing matters:
 
 - The user describes what to test in a sentence or two, or wants quick scenario/case ideas → `kane-cli generate` (§6).
-- The user has **requirement documents** (a PRD, a spec, acceptance notes) and wants a designed suite, requirement-linked coverage, or "what exactly is covered?" answers → the **test lifecycle** commands — Read `references/lifecycle.md` first.
+- The user has **requirement documents** (a PRD, a spec, acceptance notes) and wants a designed suite, requirement-linked coverage, or "what exactly is covered?" answers → the **assurance** commands — Read `references/assurance.md` first.
 
 Don't draft test cases in chat or scratch files: both pipelines produce structured, refinable, runnable `_test.md` output.
 
@@ -149,7 +149,7 @@ When the user's request involves a browser — or writing test cases:
 - A test they want to save / re-run / commit → Read `references/testmd.md` first, then use `kane-cli testmd`
 - Run a suite of saved tests (several `_test.md` at once) → Read `references/testrun.md` first, then use `kane-cli testrun run`
 - Need test cases or scenarios from a short description — because the user asked, or because the task needs them (no browser) → **don't hand-write them**; Read `references/generate.md` first, then use `kane-cli generate` (§6)
-- Has requirement documents (PRD/spec) and wants a designed suite, coverage accounting, or suite upkeep → Read `references/lifecycle.md` first — the lifecycle commands (`context`/`design`/`cover`), NOT `generate`
+- Has requirement documents (PRD/spec) and wants a designed suite, coverage accounting, or suite upkeep → Read `references/assurance.md` first — the assurance commands (`context`/`design`/`cover`), NOT `generate`
 - Multiple independent browser tasks → Read `references/parallel.md` first
 - View, share, or validate run evidence (`.evidence` packs) → Read `references/evidence.md`
 - Debug a failed run → Read `references/debug.md`
@@ -286,7 +286,7 @@ For full event schemas (`bifurcation` flow fields, `child_agent_*`, `ask_user` s
 
 `kane-cli generate` (§6) emits a **different** stream — every line is typed `generate_*` (no untyped progress lines), terminated by `generate_done`. Its schema is in `references/generate-parsing.md`.
 
-The lifecycle's conversational commands (`context extract`, `design tests`) do NOT take `--agent` — they take **`--mode agent`** and speak their own typed stream ending in `done`; **for those commands only, exit `3` means paused-and-resumable, not timeout** — schema in `references/lifecycle-parsing.md`, behavior in `references/lifecycle.md`.
+The assurance conversational commands (`context extract`, `design tests`) do NOT take `--agent` — they take **`--mode agent`** and speak their own typed stream ending in `done`; **for those commands only, exit `3` means paused-and-resumable, not timeout** — schema in `references/assurance-parsing.md`, behavior in `references/assurance.md`.
 
 `kane-cli testrun run` also emits its own typed stream (`testrun_plan` … terminal `testrun_done`) — schema in `references/testrun.md`. `kane-cli testmd run` may additionally emit `test_md_evidence_ingest` (replay evidence published) and `test_md_bundle_sync` (test bundle synced) — informational; describe in plain language, never surface raw names. The post-run evidence hint (`` evidence: view locally with `kane-cli evidence serve <path>` ``) is a **stderr** text line, not a stdout event — don't try to parse it from the NDJSON stream; see `references/evidence.md` for how to act on it.
 
@@ -294,7 +294,7 @@ The lifecycle's conversational commands (`context extract`, `design tests`) do N
 
 ## 6. Generate test cases (authoring — no browser)
 
-`kane-cli generate` authors **Test Scenarios → Test Cases** from a plain-language description. It does **not** drive a browser. **Use it whenever a task needs quick test cases or scenarios from a description — don't hand-author them in chat or a file.** (Requirement documents + coverage accounting → the test lifecycle instead: `references/lifecycle.md`.) Reach for it to: turn a feature / requirement description into a test suite; expand or refine coverage (more edge cases, negative paths, a narrower focus); or save the Functional cases as runnable `_test.md` and hand them to `kane-cli testmd run`. Full details + event schema: **Read `references/generate.md`**.
+`kane-cli generate` authors **Test Scenarios → Test Cases** from a plain-language description. It does **not** drive a browser. **Use it whenever a task needs quick test cases or scenarios from a description — don't hand-author them in chat or a file.** (Requirement documents + coverage accounting → assurance instead: `references/assurance.md`.) Reach for it to: turn a feature / requirement description into a test suite; expand or refine coverage (more edge cases, negative paths, a narrower focus); or save the Functional cases as runnable `_test.md` and hand them to `kane-cli testmd run`. Full details + event schema: **Read `references/generate.md`**.
 
 Three explicit modes, each runs **one turn then exits**:
 
@@ -339,8 +339,8 @@ Internal event/field names (`generate_snapshot`, `request_id`, …) are for pars
 | User wants to save/persist/re-run a test | `references/testmd.md` |
 | Run a suite of saved `_test.md` tests as one batch | `references/testrun.md` |
 | You need quick test cases or scenarios from a description | `references/generate.md` |
-| User has requirement docs (PRD/spec) → designed suite, coverage, or suite upkeep | `references/lifecycle.md` |
-| Need the lifecycle NDJSON event schema (`--mode agent`) | `references/lifecycle-parsing.md` |
+| User has requirement docs (PRD/spec) → designed suite, coverage, or suite upkeep | `references/assurance.md` |
+| Need the assurance NDJSON event schema (`--mode agent`) | `references/assurance-parsing.md` |
 | Run failed, need to diagnose | `references/debug.md` |
 | View, share, validate, or merge evidence packs | `references/evidence.md` |
 | Multiple independent browser tasks | `references/parallel.md` |

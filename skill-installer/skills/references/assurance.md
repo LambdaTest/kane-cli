@@ -1,11 +1,11 @@
-<!-- kane-cli skill reference: the test lifecycle (requirements → designed suite → coverage). Read when the user has a requirements document and wants tests designed from it, coverage accounting, or suite upkeep. Requires kane-cli 0.6.1+. -->
+<!-- kane-cli skill reference: assurance (requirements → designed suite → coverage). Read when the user has a requirements document and wants tests designed from it, coverage accounting, or suite upkeep. Requires kane-cli 0.6.1+. -->
 
-# The Test Lifecycle — Agent Surface
+# Assurance — Agent Surface
 
-When the user has **requirements** — a PRD, a spec, acceptance notes — and wants tests designed from them, wants to know what's covered, or wants the suite kept current, use the **lifecycle commands** (`kane-cli context`, `design`, `cover`). Do not hand-write the tests, and do not reach for `generate`:
+When the user has **requirements** — a PRD, a spec, acceptance notes — and wants tests designed from them, wants to know what's covered, or wants the suite kept current, use the **assurance commands** (`kane-cli context`, `design`, `cover`). Do not hand-write the tests, and do not reach for `generate`:
 
 - `kane-cli generate` = quick scenarios/cases from a one-line description. No requirement linkage.
-- **The lifecycle** = tests derived from the actual documents, every claim cited, every test permanently tagged with the acceptance criteria it verifies, coverage measured against requirements. Use it whenever the user cares about "what exactly is covered, and how do we know?"
+- **Assurance** = tests derived from the actual documents, every claim cited, every test permanently tagged with the acceptance criteria it verifies, coverage measured against requirements. Use it whenever the user cares about "what exactly is covered, and how do we know?"
 
 Everything here works over a local store (`.context/` in the project directory) that the commands create and manage themselves.
 
@@ -46,7 +46,7 @@ kane-cli context extract --resume <sid> --mode agent --message "Account required
 - If the answer leaves a high-risk ambiguity standing, the run pauses again with refreshed questions — repeat.
 - Sessions live 24 hours. Inspect without contending a live run: `kane-cli context sessions --json` (all resumable sessions + their resume commands) and `kane-cli context sessions show <sid> --json` (the pending questions in wire shape). If you abandon a session deliberately, remove it with `kane-cli context sessions clean <sid>` — bare `clean` only collects *expired* sessions, and `--all` is a purge that needs explicit user authorization.
 
-Full event schema: `references/lifecycle-parsing.md`.
+Full event schema: `references/assurance-parsing.md`.
 
 ## 3. Extract — propose use-cases
 
@@ -112,7 +112,7 @@ Use `cover gaps` output to drive the next action instead of guessing. On 0.6.x u
 | `SOURCE_MISSING` / `BLOB_MISSING` | store references a missing source | re-ingest the source file |
 | `STALE_BASIS` | the graph moved under the session | re-run the extract — it re-grounds |
 | `HIGH_RISK_CI` | a `--mode ci` run hit a judgement call | re-run with `--mode agent` and handle the pause |
-| lock held | another lifecycle run is live | wait for it; never break locks |
+| lock held | another assurance run is live | wait for it; never break locks |
 | `error` + `done` with exit `1` | runtime failure | report the message; **do not blindly re-run a paid command** |
 | auth/credit failure mid-run | token or balance problem | keep the `sid`, have the user fix auth/balance (`kane-cli whoami`, `kane-cli balance`), then resume |
 | stream ends with no `done` event | the process crashed — outcome unknown | check `context sessions --json` and `context list` before any retry, to avoid duplicate paid work |

@@ -1,6 +1,6 @@
-<!-- kane-cli skill reference: NDJSON wire contract for the lifecycle's conversational commands (context extract / design tests with --mode agent). Internal parsing reference — never show these names to the user. -->
+<!-- kane-cli skill reference: NDJSON wire contract for the assurance conversational commands (context extract / design tests with --mode agent). Internal parsing reference — never show these names to the user. -->
 
-# Lifecycle NDJSON — Wire Contract
+# Assurance NDJSON — Wire Contract
 
 `kane-cli context extract --mode agent` and `kane-cli design tests --mode agent` speak a versioned NDJSON vocabulary on stdout — one JSON object per line, envelope `{"type": "<name>", "v": 1, "verb": "extract"|"design", ...}`. Prose diagnostics go to stderr; stdout stays pure events.
 
@@ -37,7 +37,7 @@ A stream that ends **without** `done` means the process crashed — outcome unkn
 | `session_paused` | `sid`, verbatim `resume` command, `expires_at` (24 h), **`pending_questions[]`** | THE pause deliverable — see below |
 | `session_complete` | `sid` | the session finished cleanly |
 | `gate_refused` | a design gate refused the run (may be the first event) | surface the reason |
-| `error` | `message` + stable `code` when one exists (`NO_STORE`, `PREFLIGHT`, `SOURCE_MISSING`, `BLOB_MISSING`, `HIGH_RISK_CI`, `STALE_BASIS`) | map per `references/lifecycle.md` §9 |
+| `error` | `message` + stable `code` when one exists (`NO_STORE`, `PREFLIGHT`, `SOURCE_MISSING`, `BLOB_MISSING`, `HIGH_RISK_CI`, `STALE_BASIS`) | map per `references/assurance.md` §9 |
 | `done` | **always last**: `status` + `exit_code` | terminal |
 
 ## `session_paused` — the shape the pause loop parses
@@ -65,4 +65,4 @@ Use `text` + `options[].label` + `recommended_index` + `rationale` to decide or 
 | `3` | **paused and resumable** — not a failure; run the pause loop |
 | `130` | force-interrupted — resumable only if a `session_paused` event arrived |
 
-Reminder: this exit-3 meaning is **specific to these lifecycle commands**. `run` / `testmd` / `testrun` / `generate` keep their own meanings (3 = timeout/cancelled).
+Reminder: this exit-3 meaning is **specific to these assurance commands**. `run` / `testmd` / `testrun` / `generate` keep their own meanings (3 = timeout/cancelled).

@@ -1,4 +1,4 @@
-# Kane CLI — test lifecycle steering (requirements → designed suite → coverage)
+# Kane CLI — assurance steering (requirements → designed suite → coverage)
 
 Load this file when the user has **requirement documents** (a PRD, a spec, acceptance notes) and wants tests designed from them, coverage accounting ("what exactly is covered?"), or the suite kept current. For quick test cases from a one-line description, use `kane-cli generate` instead (load `kane-cli-generate.md`). Never write test cases by hand.
 
@@ -19,7 +19,7 @@ kane-cli cover                                               # 8. what's proven 
 
 - The two checkpoints are the **user's** decisions: everything the agents emit is unreviewed (`derived`) until a human promotes it. Do not auto-approve unless the user explicitly said to — and then enumerate what you promoted.
 - Steps 2 and 4 consume credits (reported per turn on the stream — surface the total). `--max` caps deliverable size (scenario+test pairs), **not** spend.
-- Never run two store-mutating lifecycle commands at once — the `.context/` store is single-writer. Never hand-edit it.
+- Never run two store-mutating assurance commands at once — the `.context/` store is single-writer. Never hand-edit it.
 
 # The pause loop — exit 3 is a pause, NOT a failure
 
@@ -29,7 +29,7 @@ kane-cli cover                                               # 8. what's proven 
 2. Resume in **plain words** — no ids, no indexes: `kane-cli context extract --resume <sid> --mode agent --message "<the answer>"`.
 3. Sessions expire in 24 h — `kane-cli context sessions --json` lists them; `sessions clean <sid>` removes one you abandoned.
 
-This exit-3 meaning applies to these lifecycle commands only — `run`/`testmd`/`testrun`/`generate` keep 3 = timeout/cancelled.
+This exit-3 meaning applies to these assurance commands only — `run`/`testmd`/`testrun`/`generate` keep 3 = timeout/cancelled.
 
 # The authoring bridge
 
