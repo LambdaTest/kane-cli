@@ -1,6 +1,6 @@
 # Building the context graph
 
-`kane-cli context` builds a local, content-addressed knowledge store (`.context/` in your project directory) from your requirement documents, and extracts **use-cases** from them with an AI agent. It is the first stage of the [test lifecycle](./overview.md): Source → Use-case → Scenario → AC → Test.
+`kane-cli context` builds a local, content-addressed knowledge store (`.context/` in your project directory) from your requirement documents, and extracts **use-cases** from them with an AI agent. It is the first stage of the [assurance lifecycle](./overview.md): Source → Use-case → Scenario → AC → Test.
 
 ```bash
 kane-cli context ingest ./prd-online-store.md   # snapshot a source

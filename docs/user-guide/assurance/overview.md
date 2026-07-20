@@ -1,6 +1,6 @@
-# The test lifecycle
+# The assurance lifecycle
 
-kane-cli began as a way to author and replay browser tests. The **lifecycle** commands take on the step before and after: describe what your product must do, and kane-cli designs the tests that prove it — each one permanently linked to the requirement it verifies. Run them, and coverage stops being a guess: every run reports exactly what it proved and what it still owes. And as your product changes, the suite is reconciled instead of quietly rotting.
+kane-cli began as a way to author and replay browser tests. The **assurance** commands take on the step before and after: describe what your product must do, and kane-cli designs the tests that prove it — each one permanently linked to the requirement it verifies. Run them, and coverage stops being a guess: every run reports exactly what it proved and what it still owes. And as your product changes, the suite is reconciled instead of quietly rotting.
 
 > Requires kane-cli **0.6.1 or later** (`kane-cli --version`). On 0.6.0 these commands fail after a fresh install — upgrade.
 
@@ -50,18 +50,18 @@ Every stage is a separate command, so you can stop, review, and resume at any po
 | **Gap** | A recorded, ranked piece of missing coverage — a criterion no test verifies, a question nobody answered, a scenario cut by budget. Gaps are first-class output, not silence. |
 | **Evidence pack** | The sealed `.evidence` file every run produces — the proof coverage is measured from. |
 
-## The lifecycle vs `generate`
+## Assurance vs `generate`
 
 kane-cli has two ways to author tests, for two different jobs:
 
 - **[`kane-cli generate`](../generate-test-cases/overview.md)** — quick test cases from a plain-language description. One prompt in, scenarios and cases out. Great for exploring coverage of a feature you can describe in a sentence.
-- **The test lifecycle** — tests derived from your actual requirement documents, with every claim cited, every proposal reviewed, and a permanent, auditable link from each test back to the criteria it verifies. Use it when you need to answer "what exactly is covered, and how do we know?"
+- **The assurance lifecycle** — tests derived from your actual requirement documents, with every claim cited, every proposal reviewed, and a permanent, auditable link from each test back to the criteria it verifies. Use it when you need to answer "what exactly is covered, and how do we know?"
 
-If you have a PRD and care about coverage accounting, start with the lifecycle. If you want ten good test ideas in a minute, start with `generate`.
+If you have a PRD and care about coverage accounting, start with assurance. If you want ten good test ideas in a minute, start with `generate`.
 
 ## The store: `.context/`
 
-The lifecycle commands work over a local store in your project directory, created on first `ingest`:
+The assurance commands work over a local store in your project directory, created on first `ingest`:
 
 - It is **append-only**: nothing is ever deleted or rewritten. Edits create new versions; mistakes are reverted with compensation records. `kane-cli context explain` can replay the full history of any node.
 - It is **yours and local**: sources, use-cases, designs, and review verdicts live in your project, not on a server. The extract and design agents run against the KaneAI service using your login, but the store they commit to is on your disk.

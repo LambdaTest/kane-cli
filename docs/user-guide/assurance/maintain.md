@@ -1,6 +1,6 @@
 # Maintaining the suite as sources change
 
-Products change; tests shouldn't rot. `kane-cli maintain` closes the [lifecycle loop](./overview.md): when a requirement document changes, `maintain reconcile` turns that one changed source into an honest, row-by-row update plan for your suite, and `maintain evolve` re-designs a use-case whose design went stale. Everything works over the same `.context/` store — maintain adds no new knowledge kinds, it moves the existing ones.
+Products change; tests shouldn't rot. `kane-cli maintain` closes the [assurance loop](./overview.md): when a requirement document changes, `maintain reconcile` turns that one changed source into an honest, row-by-row update plan for your suite, and `maintain evolve` re-designs a use-case whose design went stale. Everything works over the same `.context/` store — maintain adds no new knowledge kinds, it moves the existing ones.
 
 ```bash
 kane-cli maintain reconcile --from <file> --source-id <id>          # the interactive session (TTY default)

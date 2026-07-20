@@ -1,6 +1,6 @@
-# The lifecycle without a terminal: agents and CI
+# Assurance without a terminal: agents and CI
 
-The conversational lifecycle commands — `context extract`, `design tests`, and `maintain reconcile` — are interactive by default. This page is the contract for running them **headless**: from CI, from a script, or from an AI agent driving kane-cli.
+The conversational assurance commands — `context extract`, `design tests`, and `maintain reconcile` — are interactive by default. This page is the contract for running them **headless**: from CI, from a script, or from an AI agent driving kane-cli.
 
 ## The ask policy: `--mode`
 
@@ -76,7 +76,7 @@ Validation failures (bad inputs, unknown source, the fork guard) ride the stream
 
 ## The pause → answer → resume loop
 
-This is the heart of driving the lifecycle from an agent. A real exchange (events abridged, payloads shortened):
+This is the heart of driving assurance from an agent. A real exchange (events abridged, payloads shortened):
 
 ```bash
 $ kane-cli context extract --mode agent
@@ -168,5 +168,5 @@ Author and batch the resulting tests with the same CI patterns as any other test
 
 ## Next steps
 
-- [The lifecycle overview](./overview.md) — where each command sits.
+- [The assurance overview](./overview.md) — where each command sits.
 - [Building the context graph](./context.md) · [Designing tests](./design.md) · [Maintaining the suite](./maintain.md).

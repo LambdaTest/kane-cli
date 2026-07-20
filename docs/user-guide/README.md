@@ -24,14 +24,14 @@ Every page below is standalone — start wherever your job starts.
 - [Generate test cases](./generate-test-cases/overview.md) — scenarios and cases from a plain-language description ([workflow](./generate-test-cases/workflow.md)).
 - [Evidence packs](./evidence.md) — the sealed proof every run produces: screenshots, logs, results, the viewer.
 
-## Design from requirements — the test lifecycle
+## Design from requirements — assurance
 
-- **[The test lifecycle](./lifecycle/overview.md) — start here**: the journey, the vocabulary, and when to use it instead of `generate`.
-- [Building the context graph](./lifecycle/context.md) — ingest sources, extract use-cases, review what's trusted.
-- [Designing tests](./lifecycle/design.md) — acceptance criteria, scenarios, and one runnable test per scenario.
-- [Coverage](./lifecycle/coverage.md) — what execution proved vs what the design still owes.
-- [Maintaining the suite](./lifecycle/maintain.md) — reconcile the suite when a requirement document changes.
-- [Automation](./lifecycle/automation.md) — the headless contract: modes, NDJSON streams, exit codes, CI shapes.
+- **[The assurance lifecycle](./assurance/overview.md) — start here**: the journey, the vocabulary, and when to use it instead of `generate`.
+- [Building the context graph](./assurance/context.md) — ingest sources, extract use-cases, review what's trusted.
+- [Designing tests](./assurance/design.md) — acceptance criteria, scenarios, and one runnable test per scenario.
+- [Coverage](./assurance/coverage.md) — what execution proved vs what the design still owes.
+- [Maintaining the suite](./assurance/maintain.md) — reconcile the suite when a requirement document changes.
+- [Automation](./assurance/automation.md) — the headless contract: modes, NDJSON streams, exit codes, CI shapes.
 
 ## Checks and assertions
 

@@ -1,6 +1,6 @@
 # Kane CLI - TestMu AI (Formerly LambdaTest)
 
-**The validation layer for AI coding agents — natural-language browser automation and a requirements-to-coverage test lifecycle, called from your CLI or IDE.**
+**The validation layer for AI coding agents — natural-language browser automation and requirements-to-coverage assurance, called from your CLI or IDE.**
 
 [![npm version](https://img.shields.io/npm/v/@testmuai/kane-cli)](https://www.npmjs.com/package/@testmuai/kane-cli)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
@@ -48,7 +48,7 @@ This is what `kane-cli` is for: any time you (or your coding agent) need a real 
 
 **As the validation layer for AI coding agents.** Cursor, Claude Code, GitHub Copilot, Codex, Gemini, and Antigravity all need a way to verify the code they just wrote actually works in a real browser. Install the kane-cli skill once; the agent calls `kane-cli run` to check its own work before committing. ([Skill setup →](https://testmuai.com/kane-cli/agents.md))
 
-**As a test design and coverage system.** Point it at your requirements: `kane-cli context extract` derives use-cases with cited evidence, `kane-cli design tests` turns them into requirement-linked tests, and `kane-cli cover` reports what's proven versus what's still owed. ([The test lifecycle →](docs/user-guide/lifecycle/overview.md))
+**As an assurance system.** Point it at your requirements: `kane-cli context extract` derives use-cases with cited evidence, `kane-cli design tests` turns them into requirement-linked tests, and `kane-cli cover` reports what's proven versus what's still owed. ([Assurance →](docs/user-guide/assurance/overview.md))
 
 ---
 
@@ -164,7 +164,7 @@ The server is local-only — the viewer page in your browser reads the pack from
 
 ## From requirements to a designed suite
 
-Running tests is half the job; knowing **what to test and what's actually covered** is the other half. The test-lifecycle commands take a requirements document and turn it into a designed, requirement-linked suite:
+Running tests is half the job; knowing **what to test and what's actually covered** is the other half. The assurance commands take a requirements document and turn it into a designed, requirement-linked suite:
 
 ```bash
 kane-cli context ingest ./prd.md               # snapshot the requirements into a local store
@@ -176,7 +176,7 @@ kane-cli cover                                 # what execution proved vs what t
 
 Every designed test records the acceptance criteria it verifies, so coverage is measured against requirements, not test counts — and each design decision is replayable later (`kane-cli design explain`). When the requirements change, `kane-cli maintain reconcile` walks you through exactly what the change means for the suite.
 
-> Start here: [the test lifecycle](docs/user-guide/lifecycle/overview.md) — the journey, the vocabulary, and each stage's guide.
+> Start here: [the assurance overview](docs/user-guide/assurance/overview.md) — the journey, the vocabulary, and each stage's guide.
 
 ---
 
@@ -228,7 +228,7 @@ kane-cli evidence validate <target>    # Validate a pack (execution id or path).
 kane-cli evidence serve <paths...>     # Serve sealed packs to the hosted viewer (local-only server).
 kane-cli evidence merge <targets...> --run-id <id>   # Merge several packs into one.
 
-# Test lifecycle (requirements → designed suite → coverage)
+# Assurance (requirements → designed suite → coverage)
 kane-cli context ingest <files...>     # Snapshot requirement docs into the local .context/ store.
 kane-cli context extract               # Extract use-cases from ingested sources (interactive; --mode for headless).
 kane-cli context review                # Review proposals: approve / edit / reject (--verdicts file for headless).
@@ -509,7 +509,7 @@ curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh
   - [Running tests](docs/user-guide/running-tests.md) · [Configuration](docs/user-guide/configuration.md) · [Variables & context](docs/user-guide/variables-and-context.md)
   - test.md files: [overview](docs/user-guide/testmd/overview.md) · [running](docs/user-guide/testmd/running.md) · [composition](docs/user-guide/testmd/composition.md)
   - [Evidence packs](docs/user-guide/evidence.md) · [Batch runs (testrun)](docs/user-guide/testrun.md)
-  - Test lifecycle: [overview](docs/user-guide/lifecycle/overview.md) · [context graph](docs/user-guide/lifecycle/context.md) · [test design](docs/user-guide/lifecycle/design.md) · [coverage](docs/user-guide/lifecycle/coverage.md) · [maintain](docs/user-guide/lifecycle/maintain.md) · [automation](docs/user-guide/lifecycle/automation.md)
+  - Assurance: [overview](docs/user-guide/assurance/overview.md) · [context graph](docs/user-guide/assurance/context.md) · [test design](docs/user-guide/assurance/design.md) · [coverage](docs/user-guide/assurance/coverage.md) · [maintain](docs/user-guide/assurance/maintain.md) · [automation](docs/user-guide/assurance/automation.md)
   - [Test Manager integration](docs/user-guide/test-manager-integration.md) · [CI/CD recipes](docs/user-guide/cicd.md) · [Troubleshooting](docs/user-guide/troubleshooting.md)
 - **Agent setup guide** (deep reference for AI coding agents): [testmuai.com/kane-cli/agents.md](https://testmuai.com/kane-cli/agents.md)
 - **Community:** [Join us on Discord](https://discord.gg/kanQPEx9) — questions, discussion, and release announcements
