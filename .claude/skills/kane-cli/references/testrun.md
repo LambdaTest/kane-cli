@@ -13,7 +13,7 @@
 ## Command
 
 ```bash
-kane-cli testrun run [paths...] --agent [flags]
+kane-cli testrun run [paths...] [flags]     # NDJSON is automatic when stdout is piped — there is NO --agent flag on testrun
 ```
 
 `[paths...]` is optional — omit it to auto-discover every `*_test.md` under the cwd. Explicit paths must end in `_test.md`.
