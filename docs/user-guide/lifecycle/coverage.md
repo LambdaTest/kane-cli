@@ -49,7 +49,7 @@ gaps — stage design (5)
 
 ## The join: how a pack knows your graph
 
-Every per-test result in an evidence pack carries a `definition_id` — a hash of the resolved test definition, identical to the one design stamps on each test it emits. The pack↔graph join is this hash equality and nothing else: no ids to sync, no registry to maintain. A hand-edited test hashes differently and simply stops joining — honest, not broken (a redesign — [`design tests --force`](./design.md#re-runs-and---force) — re-stamps the link).
+Every per-test result in an evidence pack carries a `definition_id` — a hash of the resolved test definition, identical to the one design stamps on each test it emits. The pack↔graph join is this hash equality and nothing else: no ids to sync, no registry to maintain. A hand-edited test hashes differently and simply stops joining — honest, not broken (a redesign — [`design tests --force`](./design.md#re-runs-and---force) or [`maintain evolve`](./maintain.md#evolve) — re-stamps the link).
 
 Coverage records land in packs automatically whenever the project has a `.context/` store — the inline `run`/`testmd` path and `testrun` both write them before sealing. A project without a store gets byte-identical packs to before; a coverage-write failure never costs the seal.
 

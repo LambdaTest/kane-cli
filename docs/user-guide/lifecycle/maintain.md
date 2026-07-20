@@ -1,12 +1,14 @@
 # Maintaining the suite as sources change
 
-Products change; tests shouldn't rot. `kane-cli maintain` closes the [lifecycle loop](./overview.md): when a requirement document changes, `maintain reconcile` turns that one changed source into an honest, row-by-row update plan for your suite. Everything works over the same `.context/` store — maintain adds no new knowledge kinds, it moves the existing ones.
+Products change; tests shouldn't rot. `kane-cli maintain` closes the [lifecycle loop](./overview.md): when a requirement document changes, `maintain reconcile` turns that one changed source into an honest, row-by-row update plan for your suite, and `maintain evolve` re-designs a use-case whose design went stale. Everything works over the same `.context/` store — maintain adds no new knowledge kinds, it moves the existing ones.
 
 ```bash
 kane-cli maintain reconcile --from <file> --source-id <id>          # the interactive session (TTY default)
 kane-cli maintain reconcile --from <file> --source-id <id> --plan   # preview: stage + store the plan
 kane-cli maintain reconcile --apply [path]                          # continue a stored plan
 kane-cli maintain reconcile --from <file> --source-id <id> --mode agent   # headless — see Automation
+kane-cli maintain evolve <ref> [--because "<reason>"]               # re-design one stale use-case (interactive)
+kane-cli maintain evolve --from-stale                               # …or every use-case with stale designs
 ```
 
 <a name="reconcile"></a>
@@ -53,20 +55,23 @@ changeset: 3 item(s)
 
 ### The session (the default in a terminal)
 
-Interactive reconcile is a chat session on the same shell [extract](./context.md#the-interactive-chat) and [design](./design.md) use. Each ADD / MODIFY / ARCHIVE card comes with its why — ARCHIVE cards carry the full evidence-decay reasoning — and for every card you can:
+Interactive reconcile is a **card walk**: one ADD / MODIFY / ARCHIVE card at a time, each with its why — ARCHIVE cards carry the full evidence-decay reasoning, and MODIFY and ARCHIVE cards state their honest downstream cost up front (`impact: approving marks 14 item(s) stale`). While a card is up, every keystroke belongs to the card:
 
-- **approve** — an ADD runs a design session for the new use-case right there in the session; a MODIFY commits the update, or re-designs the affected use-case when the break is structural (blast radius stated first).
-- **steer** — say what you want changed in plain words; your words become the change context the re-design sees, on the record.
-- **edit** — adjust the proposed fields before approving.
-- **skip** — dismiss the row, on the record.
-- **defer** — park the row; the stored plan keeps it and a later run re-offers it.
-- **archive** (ARCHIVE cards only) — behind an explicit confirm. Restore is always possible with [`kane-cli context revert`](./context.md#housekeeping); nothing is ever deleted.
+- **Arrow keys** move through the options, **Enter** takes the highlighted one, and **digits** jump straight to an option.
+- **Typing anything else opens an inline editor** seeded with your words — they become the steering the re-design sees, and approving applies both in one gesture.
 
-**Nothing lands unapproved.** Beyond recording the source change itself, everything a reconcile proposes is staged until you decide. Ctrl+C pauses cleanly — pending work lives in the stored plan, and the same reconcile command picks it back up. The session ends with an honest summary of what was applied, skipped, deferred, and archived.
+The verdicts per card:
 
-### `--plan` — a preview that doesn't edit anything
+- **ADD / MODIFY** — **approve** (an ADD runs a design session for the new use-case right there; a MODIFY commits the update, or re-designs via [`maintain evolve`](#evolve) when the break is structural, blast radius stated first) · **reject** (drop the staged proposal) · **defer** (park it — the stored plan keeps it and a later run re-offers it) · or type to **steer** the re-design in your own words.
+- **ARCHIVE** — **retire** (the explicit verdict; reversible any time with [`kane-cli context revert`](./context.md#housekeeping) — nothing is ever deleted) · **skip** · **defer**.
 
-`--plan` records the source change (the head move — that fact is true regardless of what you decide) and **stages everything else**: the proposed rows are held in a stored plan (`plan stored: <path>`, under `.context/reconcile/plans/`), no use-case updates land, no tests are touched. Walk it later with `--apply <path>`, or just re-run reconcile — a repeated `--plan` re-renders the stored plan. An unchanged source is a truthful no-op (`nothing to reconcile`).
+After the last card the composer wakes: type `<uc-ref> <what to change>` to route one more re-design through the same session. **Nothing lands unapproved** — beyond recording the source change itself, everything a reconcile proposes is staged until you decide. Ctrl+C pauses cleanly (pending work lives in the stored plan, and the same reconcile command picks it back up), and the session ends with an honest summary of what was applied, rejected, deferred, and retired.
+
+### `--plan` — a preview that doesn't touch the suite
+
+`--plan` records the source change and **stages everything downstream**: the proposed rows are held in a stored plan (`plan stored: <path>`, under `.context/reconcile/plans/`), and no tests or designs are touched. Two things do land, disclosed in the output: the head move (the change fact is true regardless of what you decide), and a matched use-case whose source content moved is updated as part of the re-extract itself. Every MODIFY and ARCHIVE row in the plan carries its impact line (`impact: approving marks N item(s) stale`), and a `skipped arms` line names every analysis this release does not run.
+
+Walk the plan later with `--apply <path>` — or bare `--apply`, which picks the latest plan behind an approval prompt (headless modes accept it silently). `--apply --from <file> --source-id <id>` recomputes live instead. `--plan` and `--apply` together is a usage error (exit `2`). A repeated `--plan` re-renders the stored plan; an unchanged source is a truthful no-op (`nothing to reconcile`).
 
 <a name="running-again"></a>
 ### Running again — reconcile converges
@@ -79,7 +84,7 @@ The same command is safe to repeat; it picks up where things stand:
 | unchanged, and the stored plan has pending rows | the plan is **resumed** in your chosen mode |
 | unchanged, and the plan was fully applied | `already reconciled` — clean exit |
 | unchanged, no stored plan | `nothing to reconcile` |
-| the graph moved since the plan was stored | `plan superseded — recomputing` (pending work is re-staged, not re-billed) |
+| the graph moved since the plan was stored | `graph moved since this plan — recomputing` (pending work is re-staged, not re-billed) |
 
 A plan stored by an earlier kane-cli version is refused with a hint to recompute — plans don't survive format changes silently.
 
@@ -96,20 +101,31 @@ A bare non-TTY run refuses (exit `2`) and asks for an explicit `--mode` — or `
 
 | Kind | Fact behind it | Action on approve |
 |---|---|---|
-| `ADD` | a use-case newly extracted from the changed source, or an uncovered criterion of a touched use-case | a design run for that use-case |
-| `MODIFY` | matched-but-changed content, or an entity whose pins this change broke | commit the update / re-design the affected use-case |
+| `ADD` | a use-case newly extracted from the changed source, or an uncovered criterion of a touched use-case | a design run for that use-case (`kane-cli design tests --use-case <id>`) |
+| `MODIFY` | matched-but-changed content, or an entity whose pins this change broke | commit the update, or re-design via `kane-cli maintain evolve <id>` when the break is structural |
 | `REMOVE` | a use-case now orphaned — no live source evidences it | plan-only — never executed in this release |
 
-## Staleness outside a reconcile
+<a name="evolve"></a>
+## `maintain evolve` — re-design a stale use-case
 
-A design can also go stale without a fresh reconcile — an older change, a retired source. `kane-cli design tests` is staleness-aware: a re-run against a moved use-case tells you (`was designed @ v1 — the use-case is now @ v2 (STALE)`), and [`--force`](./design.md#re-runs-and---force) re-designs it. [`kane-cli cover gaps`](./coverage.md) lists stale designed entities in its ranked worklist.
+```bash
+kane-cli maintain evolve <ref> [--because "<reason>"]   # any designed entity → its parent use-case
+kane-cli maintain evolve --from-stale                   # every use-case with stale designed entities
+```
+
+Evolve re-designs the **parent use-case** of whatever you point it at — a test, scenario, criterion, or the use-case itself. It is interactive-only, and the blast radius is always stated before anything runs; declining is a clean exit.
+
+- **Staleness-gated:** a fresh target refuses. `--because "<reason>"` is the sanctioned override — your reason becomes the change context the re-design sees, on the record.
+- `--from-stale` collects every use-case with stale designed entities and walks them one confirm at a time.
+- After a clean run, evolve reports the diff between the two design generations — what was superseded, what was minted, what was **retained** unchanged, and which criteria's verifying tests moved. A re-design doesn't break what it didn't change.
+- Reconcile's MODIFY rows route here automatically — reach for evolve directly when staleness arrived outside a reconcile (an older change, a retired source). [`kane-cli cover gaps`](./coverage.md) lists stale designed entities in its ranked worklist.
 
 ## Exit codes
 
 | Code | Meaning |
 |---|---|
 | `0` | Session, plan, or resume complete — or a friendly no-op (unchanged source). |
-| `1` | The reconcile chain failed, or another reconcile holds the lock. |
+| `1` | The reconcile chain failed, or another live reconcile holds the lock (a dead run's lock clears itself — never delete it by hand). |
 | `2` | Usage or validation failure — nothing was mutated. |
 | `3` | Paused — pending work is in the stored plan; the same command (or `--apply`) continues it. |
 

@@ -89,7 +89,7 @@ A use-case with a live design refuses a re-run, staleness-aware:
 'uc-manage-the-cart' was designed @ v1 — the use-case is now @ v2 (STALE); use --force to redesign
 ```
 
-`--force` regenerates the scenario+test pairs (superseding the old ones); ACs are dedup-first — an equivalent AC re-emitted by the engine reuses the existing node instead of piling up copies. When the staleness comes from a source document you just changed, [`kane-cli maintain reconcile`](./maintain.md) surfaces the same re-design as part of its changed-source triage.
+`--force` regenerates the scenario+test pairs (superseding the old ones); ACs are dedup-first — an equivalent AC re-emitted by the engine reuses the existing node instead of piling up copies. When the staleness comes from a source document you just changed, [`kane-cli maintain reconcile`](./maintain.md) surfaces the same re-design as part of its changed-source triage; for staleness from older changes, [`kane-cli maintain evolve`](./maintain.md#evolve) re-designs the use-case with the blast radius stated first.
 
 ## `design explain` — replay the why
 

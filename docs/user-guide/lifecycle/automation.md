@@ -21,7 +21,7 @@ extract: no TTY — pass an explicit --mode agent|ci|override to run headless
 
 Rule of thumb: `agent` when something can read the pause and answer (an AI agent, a human on the next shift); `ci` when a pipeline must never guess; `override` when you accept the recommended defaults wholesale and want one unattended pass.
 
-The same matrix drives `maintain reconcile`, with one extra rule: no headless mode ever archives anything — ARCHIVE decisions wait for an interactive session.
+The same matrix drives `maintain reconcile`, with two reconcile-specific rules: no headless mode ever archives anything — ARCHIVE decisions wait for an interactive session — and a `ci`-mode run that hits a decision needing a human **stores the plan and exits `2`** (the work isn't lost; walk the stored plan interactively or apply it in `agent` mode).
 
 ## Exit codes
 
@@ -30,7 +30,7 @@ Consistent across extract, design, and the maintain commands that embed them:
 | Code | Meaning |
 |---|---|
 | `0` | Complete. |
-| `1` | Runtime failure (including `ci`-mode fail-closed). |
+| `1` | Runtime failure. For extract and design, a `ci`-mode fail-close on a high-risk question also exits `1`; reconcile's `ci` fail-close stores the plan and exits `2` instead. |
 | `2` | Usage / auth / refusal — bad flags, failed input validation, no store, bare non-TTY without `--mode`, missing `--yes` on a destructive command. Nothing was mutated. |
 | `3` | **Paused and resumable** — the only meaning of 3. A session is saved; resume it within 24 hours. |
 
@@ -65,10 +65,11 @@ With `--mode agent`, stdout speaks a versioned NDJSON vocabulary — envelope `{
 
 | type | payload highlights |
 |---|---|
-| `reconcile_plan` | the triage ahead: `plan_path`, `rows[]` (`kind`, `ref`, `why`), `archive[]` (proposed archivals with their evidence-decay reasons) |
-| `reconcile_row_start` / `reconcile_row_end` | per row: `kind` + `ref`, then the `outcome` and `exit_code` — a row's embedded design run is folded into its `reconcile_row_end`, so the stream stays single-writer with exactly one `done` |
-| `reconcile_paused` | pending rows at a pause — resume with the same reconcile command (or `--apply`) |
-| `reconcile_summary` | the honest totals |
+| `reconcile_plan` | the triage ahead: `source_id`, `plan_path`, `rows[]` (`kind`, `ref`, `why`), `archive[]` (proposed archivals with their evidence-decay reasons) |
+| `reconcile_row_start` | per row: `kind`, `ref`, plus the impact counts where they apply (`stale`, `direct`) |
+| `reconcile_row_end` | the row's `outcome` (`applied` \| `failed` \| `skipped` \| `plan-only` \| `paused`) + `exit_code`, and an additive `detail` carrying a failure's reason and hint. A row's embedded design run is folded in here, so the stream stays single-writer with exactly one `done` |
+| `reconcile_paused` | `plan_path` + `pending[]` (`ref`, `why`) — resume with the same reconcile command (or `--apply`) |
+| `reconcile_summary` | the honest totals, always the same field set: `applied`, `skipped`, `deferred`, `plan_only`, `failed`, `paused`, `stale_created` |
 | `done` | always last — same guarantee as above |
 
 Validation failures (bad inputs, unknown source, the fork guard) ride the stream as `error` + `done` with exit `2` — never stderr alone.
@@ -140,7 +141,7 @@ These read commands have structured forms: `context list --json` and `context se
 ## Headless maintain
 
 - `maintain reconcile --from <file> --source-id <id> --plan` — safe preview: records the source change, stages every proposed row into a stored plan, touches nothing else. Exit `0`; when the source actually changed, the plan path is the last stdout line (an unchanged source is a no-op that stores nothing).
-- `maintain reconcile … --mode override` (or `--mode ci`) — unattended application: ADD and MODIFY rows apply, archiving never happens headless, and `ci` fail-closes the moment human judgement is needed.
+- `maintain reconcile … --mode override` (or `--mode ci`) — unattended application: ADD and MODIFY rows apply, archiving never happens headless, and `ci` fail-closes the moment human judgement is needed (the plan is stored; exit `2`).
 - Re-running the same reconcile command is idempotent — it resumes a pending plan, reports an applied one, and recomputes a superseded one ([details](./maintain.md#running-again)).
 - Bare headless runs without an explicit `--mode` refuse with exit `2` — by design.
 
