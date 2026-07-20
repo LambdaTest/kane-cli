@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.4] - 2026-07-20
+
+### A reconcile workflow that actually converges
+- **`--plan` previews without editing** — running with `--plan` records the change and stages the work; nothing in the suite is touched until you explicitly apply it.
+- **Resuming a pending plan works** — the same `reconcile` command picks up where it left off, supersedes plans that have since moved, and never silently does nothing.
+- **Pass in your own file** — `reconcile --from <file> --source-id <id>` accepts an explicit source instead of guessing slugs, with fail-fast validation before any work begins.
+- **One vocabulary everywhere** — ADD / MODIFY / ARCHIVE mean the same thing across rows, changesets, wire output, and artifacts, so there's no ambiguity about what reconcile intends to do.
+
+### Honest change detection and impact preview
+- **Change detection runs against live edit pairs** — the evaluation covers 12 real edit-pair cases so staleness decisions are grounded in observed diffs, not heuristics.
+- **Impact walk surfaces the real cost upfront** — before committing anything, the preview shows which tests are affected and what debt would be introduced.
+- **Evolve explains itself** — when a test is marked stale, the reason is recorded; `evolve` now returns control to the CLI after finishing so the loop is scriptable.
+
+### Agent and CI modes
+- **`reconcile --mode agent` streams NDJSON** — the W3 stream lets CI and tooling consume reconcile output line by line; pause state is stored in the plan artifact across restarts.
+- **CI mode fail-closes on high-risk rows** — when running non-interactively, rows flagged as high-risk cause an immediate failure rather than a silent skip.
+- **`ingest --as lineage` guards multi-file input** — passing multiple files shows a TTY-friendly suggestion to prevent accidental bulk ingestion.
+
+### Fixes that matter in the field
+- **Held citations are re-verified before commit** — `commitHeldRows` checks cited locations against the current head, not the snapshot from when the plan was created.
+- **`--apply --from` persists the recomputed plan** — the plan is saved and marked back after recompute so a subsequent run sees the correct state.
+- **URL extraction keeps the full URL** — a bug that was truncating URLs during extraction is fixed; slicing now happens only in `code_js`.
+- **`--skip-code-validation` is honored on the CLI run path** — the flag was previously ignored when running via the CLI; it now suppresses validation as documented.
+- **Step-produced variables cross `testmd` step boundaries** — variables set in one step are available to later steps in the same run.
+- **Citation relocation handles benign line shifts** — shifting a source file by a few lines no longer incorrectly flags citations as stale.
+
 ## [0.6.3] - 2026-07-17
 
 ### A rebuilt interactive session panel
