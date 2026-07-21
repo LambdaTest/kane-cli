@@ -2,7 +2,7 @@
 
 Load this file when the user has **requirement documents** (a PRD, a spec, acceptance notes) and wants tests designed from them, coverage accounting ("what exactly is covered?"), or the suite kept current. For quick test cases from a one-line description, use `kane-cli generate` instead (load `kane-cli-generate.md`). Never write test cases by hand.
 
-Requires kane-cli 0.6.1+.
+Requires kane-cli 0.6.1+ — on an older CLI, `kane-cli context …` fails as an *unknown command* (exit 2). That means the CLI is too old, not a typo: confirm with `kane-cli --version`, have the user update, and stop rather than improvising the workflow with other commands.
 
 # The journey — follow in order, stop at the checkpoints
 

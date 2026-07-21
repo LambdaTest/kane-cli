@@ -9,6 +9,8 @@ When the user has **requirements** — a PRD, a spec, acceptance notes — and w
 
 Everything here works over a local store (`.context/` in the project directory) that the commands create and manage themselves.
 
+**Version gate — check before improvising.** The assurance commands exist on kane-cli **0.6.1 and later**. On an older CLI, `kane-cli context …` fails as an *unknown command* (exit 2 with a "did you mean" suggestion) — that error means the CLI is too old, not that you typed it wrong. Confirm with `kane-cli --version`, tell the user to update (`npm install -g @testmuai/kane-cli`, or `brew upgrade kane-cli`), and stop — do not try to reproduce the workflow with other commands.
+
 ## 1. The journey — follow in order, stop at the checkpoints
 
 ```bash
@@ -108,6 +110,7 @@ Use `cover gaps` output to drive the next action instead of guessing. On 0.6.x u
 
 | Signal | Meaning | Do |
 |---|---|---|
+| `context`/`design`/`cover` is an *unknown command* (exit 2) | the CLI predates 0.6.1 | `kane-cli --version` to confirm; have the user update; stop |
 | `error` code `NO_STORE` | no `.context/` here | `context ingest` the sources first (confirm the cwd is the project root) |
 | `SOURCE_MISSING` / `BLOB_MISSING` | store references a missing source | re-ingest the source file |
 | `STALE_BASIS` | the graph moved under the session | re-run the extract — it re-grounds |
