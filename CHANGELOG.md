@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.6] - 2026-07-24
+
+### Local files travel with your test
+- **Upload local media, replay anywhere** — local files are uploaded to the cloud media store so that replays work on any machine without manual file provisioning.
+- **Media config flows through the full run** — media configuration is now passed into the runner and threaded through the session manifest, so replay picks up the right assets automatically.
+
+### Bundled Node runtime
+- **kane-cli now ships its own Node runtime** — the runtime is bundled per platform (`kane-cli-node-<platform>`) so kane-cli works without requiring a separately installed Node version.
+- **Automatic runtime resolution** — kane-cli resolves the bundled runtime first; if the platform package isn't present it falls back to the system Node, with a clear warning.
+- **Windows extraction fixed** — Node tarballs and zip files are now correctly extracted on Windows (Git Bash / GNU tar edge cases resolved).
+
+### Replays more reliable
+- **Scroll actions recorded and replayed correctly** — scroll-into-view is now a first-class recorded step with generated code, tracer output, and correct replay behavior.
+- **Failed DOM locator attempts skipped on replay** — previously recorded failed locator attempts are now skipped rather than re-attempted, avoiding spurious replay failures.
+
+### Evidence trace back
+- **Pure-replay result carries the original commit ID** — replays no longer generate a fresh session ID, so results trace back to the authored commit correctly.
+
+---
+
 ## [0.6.4] - 2026-07-20
 
 ### A reconcile workflow that actually converges
