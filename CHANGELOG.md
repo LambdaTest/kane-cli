@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.7] - 2026-07-27
+
+### PDFs as test sources
+- **PDFs can now drive test runs** — a PDF supplied as `run_config.source` is ingested, converted to a structured projection, and delivered with a complete content inventory so the AI knows exactly what it received.
+- **Embedded images inside PDFs are fingerprint-verified** — each image extracted from a PDF is hashed at ingest, its fingerprint is checked through staging and delivery, and its origin page is tracked; the AI can cite specific images by reference (e.g. `img#1`).
+- **Payload size is enforced at the gate** — if a PDF's serialized payload exceeds the size contract, it is blocked before reaching the runner rather than failing mid-run.
+- **PDF dependency moved out of core** — the PDF converter is now a separate module; projects that don't use PDFs are unaffected.
+
+### Accurate cross-frame browser capture
+- **The agent now sees content inside iframes correctly** — each frame is captured independently with its own tree and the content is no longer misattributed across frames.
+- **Frame identity uses DOM ownership, not position** — frames are matched by their actual DOM owner relationship rather than by positional index.
+- **API steps work inside frames** — `execute_api` actions are now routed correctly through frame-qualified grounding, enabling API-type test steps.
+
+### More reliable chat edits and session handling
+- **A chat edit that fails to commit now reaches the agent as a held receipt** — previously a failed commit could be silently dropped; the agent now sees it and can respond.
+- **Edit-op payloads are validated against the topology descriptor** — malformed chat edit operations are caught early, before they can corrupt session state.
+- **Edit hints now cover all field labels** — guidance is only shown for genuinely unknown fields, and non-dict payloads are repaired rather than rejected outright.
+- **Session-end distill now applies its own record** — the distill step that runs at session close correctly writes its own record; the file-system check no longer flags the brief lag between write and check as an error.
+
+### Cleaner migration output
+- **Migrated runs emit `UPLOAD_FILE` in the correct format** — the migrator now correctly outputs the `UPLOAD_FILE` step instead of a misnamed variant.
+
+---
+
 ## [0.6.6] - 2026-07-24
 
 ### Local files travel with your test
