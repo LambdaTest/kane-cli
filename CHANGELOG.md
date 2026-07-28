@@ -7,6 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.8] - 2026-07-28
+
+### A new options-first design surface for assurance
+- **Composer and slash palette are gone** — the new options-first surface replaces them with a shared panel family; answers, recommendations, and multi-select actions are all reachable from one place without typing slash commands.
+- **Question panel shows your picks and lets you act on them in bulk** — visible selections, real multi-select, and a `» Go with recommendations` batch action (reachable via **Tab**) make answering faster on long option lists.
+- **Design check-in is phase-aware** — the headline updates per phase, labels switch between "Design view" and "✎ Edit", and a "Continue to next" prompt appears at the right moment instead of leaving you to guess what comes next.
+- **Typed answer API with go-with-recommendations** — answers are now strongly typed end-to-end; accepting the recommended set is a single action rather than manual selection.
+
+### Chained design runs that actually work
+- **A chained design can ask questions and be steered mid-run** — the nested run channel carries the conversation forward; the child run no longer parks silently on IDLE.
+- **Re-design is now an explicit act** — a chained child narrates its progress and asks as expected; re-entering design mode requires a deliberate step, not an accidental state.
+- **Extract-design chaining has a full picker and ask-again loop** — the picker, bridge, and ask-again flow are wired together so you can keep refining without restarting.
+- **Bar returns to the session after a chained run** — the status bar correctly resumes on the parent session once the child finishes; the ask-again path can also open the view.
+
+### Gaps becomes a dual-axis tree
+- **Gaps now shows designed vs. proven as separate axes** — the nested tree splits coverage into what's been designed and what's been execution-proven, so gaps are visible on both dimensions at once.
+- **`--json` and `--from` flags now reach the subcommand** — a parent-level flag-stealing bug is fixed; both flags work correctly when passed to `gaps`.
+- **Risk-first ordering throughout** — tables and item lists sort by risk weight, so the most consequential gaps surface first.
+
+### Stable IDs and richer test identification
+- **Every node gets a sequential ID, visible everywhere** — sequential per-kind logical IDs are minted at all four creation points, so rows, items, and test files all carry consistent, human-readable identifiers instead of fabricated labels.
+- **Failing rows name the sealed test by ID and basename** — when a row fails, the display shows the real test ID and file stem; names are never fabricated.
+- **Descriptive test-file stems** — generated test files are named from the test's logical identity, making them easier to find in your file system.
+- **Sticky display names with reserved namespace and case tolerance** — display names persist correctly across state transitions and handle mixed-case input without collision.
+
+### Dossier and graph views
+- **Full dossier view across the graph seam** — an all-info dossier surfaces every relevant fact for a node, including chain-union evidence and live-successor status.
+- **Scoped explorer opens on the state's minted items** — when you open the explorer from a given state, it starts on that state's items rather than the full list.
+- **Dossier actually loads under ESM** — a `require` call under an ESM module was silently breaking the dossier; fixed.
+
+### Accuracy and display fixes
+- **Unchecked checkboxes no longer render as `[checked]`** — CDP tri-state normalization now correctly distinguishes unchecked from checked.
+- **Receipts stay in the chat gutter** — wrapped receipt lines no longer snap to column 0; they hang correctly in the gutter margin.
+- **Agent prose-stop mid-design is not treated as completion** — if the agent stops writing mid-design, the reply-first panel appears instead of the run being silently marked done.
+- **OR checkpoints wait for every required store key** — previously only the first key in an OR checkpoint was awaited; all keys are now required before the checkpoint clears.
+- **Formula pipeline is consistent** — window cuts apply before failure attribution; nameless nodes never render a cell ID; the latest-only cut is honored in strict-mode failure checks.
+
+---
+
 ## [0.6.7] - 2026-07-27
 
 ### PDFs as test sources
