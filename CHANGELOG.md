@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.9] - 2026-07-29
+
+### More ways to feed context into test generation
+- **Markdown files work as attachments in `generate`** — pass `.md` files (docs, specs, notes) directly when generating tests, instead of converting them to another format first.
+
 ## [0.6.8] - 2026-07-28
 
 ### A new options-first design surface for assurance
