@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.10] - 2026-07-31
+
+### Automated plan execution
+- **Sub-flows now run back-to-back automatically** — every recorded sub-flow executes in a single spawn, so a multi-step plan runs end-to-end without manual re-triggering.
+- **Negative-verdict verification** — failing checkpoints are now verified against stored memory before surfacing, reducing false failures.
+
+### .docx files are now supported
+- **Upload and analyze Word documents end-to-end** — .docx files are unpacked, their text projected deterministically, and images inventoried and delivered alongside PDFs and other formats.
+- **Image references inside .docx work in prompts** — images extracted from Word documents carry their citation references into the model, so `probe` and visual checks work the same as with other file types.
+
+### Run UI polish
+- **Question panel shows one question at a time** — the question panel (WP5) now uses ruled lines, keyboard-navigable chips, and free nav, so the prompt is never buried in noise.
+- **Panels have cleaner visual structure** — bordered boxes are removed everywhere; column-0 rules and a single content edge replace the previous multi-border layout (WP5b).
+- **Blank-line rhythm is consistent** — stanza openers, panels, and tool-burst labels all follow a defined spacing contract; the context bar now has one blank line of breathing room above it.
+- **Table content is always readable** — table headers are bold in the foreground; row content is foreground color and never dimmed.
+
+### Observability and telemetry
+- **Run events are traced end-to-end** — session IDs, turn captures, tool calls, and timings are correlated across the run
+- **Crashes leave a dead-letter record** — unhandled exits spool a dead-letter entry so failures don't disappear silently.
+- **Telemetry is zero-cost when disabled** — context binding for store-creating verbs is deferred until needed, and no disk writes happen when telemetry is turned off.
+
+---
+
 ## [0.6.9] - 2026-07-29
 
 ### More ways to feed context into test generation
