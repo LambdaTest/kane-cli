@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.11] - 2026-08-04
+
+### Ingest from Jira
+- **Paste a Jira URL to pull in an issue** — `kane-cli ingest <jira-url>` fetches the issue and its attachments (including images) directly from Jira as a remote source, no local file download required.
+- **Project access is enforced before fetching** — only issues in projects your account is permitted to use are accepted; unauthorized requests are rejected up front with a clear message.
+
+### More Reliable Tab Switching
+- **Click-then-switch-tab sequences no longer race** — when a click opens a new tab, replay now waits for the tab-open popup to resolve before executing the `switch_tab` step, preventing the tab from being missed in multi-tab flows.
+
+### Code Export and Codegen Fixes
+- **Frame context uploads correctly under the v4 code-export contract** — frame info is now sent as a bare list, matching what the export service expects.
+- **`frame_info` is correctly scoped to `wait_until` click and scroll steps** — codegen no longer applies frame context where it doesn't belong.
+
+---
+
 ## [0.6.10] - 2026-07-31
 
 ### Automated plan execution
