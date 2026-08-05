@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-08-05
+
+### A rebuilt Autopilot — faster, and on by default
+The engine that drives the browser toward your objective has been rebuilt from the ground up, and it's now the default for every run.
+- **Runs are faster and more efficient, at the same success rate** — Autopilot now works over a single ongoing conversation and pulls only the page details it needs at each step, instead of re-uploading the full page and a fresh screenshot every time. Runs finish quicker and typically consume fewer credits.
+- **Whole forms fill in one planning pass** — when several fields sit on the same page, Autopilot plans the entire fill from a single look and executes the steps without stopping to reason between each field. A long checkout or signup that used to spend a full reasoning cycle per field now completes in a handful.
+- **Clicks land more accurately** — click actions are now aimed at the element's real on-screen position, reducing misclicks on overlapping or offset targets.
+- **Native date, time, color, and range inputs just work** — Autopilot understands how browser-native input controls behave, so it sets them directly instead of thrashing segment-by-segment and burning steps.
+- **Exported tests self-heal when the UI drifts** — tests authored in this mode carry stronger auto-healing: when a saved selector no longer matches on replay, Autopilot re-locates the element the same way it originally found it, so replays survive layout and markup changes more often.
+
+### Assertions and value checks that read the real page
+The step that verifies an expectation or extracts a value — "cart total is under $50", "save the order id" — no longer commits to a strategy before the page loads.
+- **Checks are decided on the live page, not planned blind** — kane-cli inspects the actual page at verification time to work out how to confirm your expectation, so fewer checks fail for the wrong reason.
+- **Every check self-verifies before it's recorded** — the analyzer runs its own extraction, sees the real value and a pass/fail preview, and revises — a different element, a JavaScript probe, or a visual fallback — if the result looks off. A check only commits when the value is actually plausible, which cuts down on confident-but-wrong verdicts.
+- **You describe the expectation in plain language; kane-cli works out the rest** — thresholds, "under/over," presence vs. state, and unit conversions are derived from your wording against the real value, instead of brittle exact-match comparisons or mis-picked units.
+- **Multiple checks on one page run in a single pass** — assertions that can be answered from the same page state are batched together, making multi-assertion steps faster and more consistent.
+- **Value checks heal on replay** — when a recorded extraction drifts, it's re-anchored from the last known-good version against the fresh page instead of regenerated from scratch, so checks keep working after UI changes.
+- **`if`/`else` branches follow the check result correctly** — a conditional step now takes the branch the check actually resolves to, fixing a case where the wrong path could be taken.
+
+### One warm browser for your whole run
+The execution engine now runs on a single persistent runner process and one long-lived browser per session, instead of relaunching and reconnecting for every objective.
+- **Multi-run and multi-step sessions start faster** — the runner and browser are launched and connected once per session, not once per run, so cold-start and reconnect overhead between runs is gone.
+- **Multi-tab and popup flows stay intact between steps** — because the browser is never disconnected mid-run, tab order, newly opened tabs, and popups created in one step are still there in the next. Flows that open a tab, switch, and come back now behave reliably instead of acting on the wrong tab.
+- **Session state carries across steps** — cookies, localStorage, clipboard, and captured variables set earlier in a run persist into later steps, matching how the test behaved when it was authored, so replays are more faithful.
+- **Each run still gets its own scoped context** — inputs, config variables, and secrets are applied per run, so runs sharing the process never bleed into each other.
+- **Evidence is unchanged** — each run still writes its own screenshots, console, and network logs into the same sealed evidence pack you already rely on.
+
+### Fixes that ride along
+- **Per-run config variables merge correctly** — each run's own captured variables take precedence as expected; a stale field that could drop merges has been removed.
+- **Secrets reach the runner every run** — secret-typed values are exported into the runner's environment per run, so secret fields fill in correctly instead of coming through empty.
+- **`ask_user` prompts are isolated per run** — the prompt response queue is drained per run and reads are bounded, so a prompt from one run can no longer block or corrupt a later one.
+- **Cleaner shutdown** — the runner exits gracefully before the browser is closed, preventing crashes or orphaned processes at the end of a session.
+
 ## [0.6.11] - 2026-08-04
 
 ### Ingest from Jira
