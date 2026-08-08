@@ -7,6 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-08-08
+
+### Multi-source extraction and queued drain
+- **Extract from multiple sources in one run** — each tracked with its own `source_id` and completeness record. Op-union (`keep`/`set`/`remove`) lets the same criterion be built from contributions across sources.
+- **Queued drain: `extract --queued`** — pre-drawn work items are claimed from a durable queue and processed in budget-aware batches (`--budget n`; default 10 per composite root). Mirrored items complete without spending budget; a budget stop names the remaining queue and prints the exact command to continue.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
+- **Agent failures inside a queued batch no longer abort the whole batch** — a failed claim is recorded as `AGENT_ERROR` and the batch continues. Early exits (including pause) release claims cleanly.
+- **`--queued` is incompatible with `--source`, `--resume`, and `--plan`** — kane-cli exits 2 immediately if these are combined, rather than producing a silent bad run.
+
+### Trust gate and review surface
+- **Unreviewed design targets now block extraction** — attempting to extract onto an unreviewed-derived design causes an explicit disclosure prompt (interactive: yes/no confirm; agent: exit 2 with a runnable review command in `next`; CI: exit 2). Pass `--allow-unreviewed` to bypass.
+- **Duplicate hits go to a review queue instead of silently promoting** — an explicit match onto an unreviewed-derived target mints a new derived entry and records a durable `PAIR` card for review, rather than laundering a promotion.
+- **One review walk covers REVIEW, PAIR, MODIFY\_HELD, and QFAIL cards** — all verdict types surface through the same interactive walk grammar. A feeder fault never blocks the reconcile walk.
+- **Held archives require explicit consent** — `--verdicts` default holds rejected entries as non-destructive `pending_archive` facts (exit 0, loud summary). Destruction requires `--allow-archive --because <reason>`; CI refuses archives under any flag (exit 2, atomic). Structured flags `--approve`/`--skip`/`--defer` are the agent-mode surface.
+
+### Durable sessions: pause, crash, and resume
+- **Paused runs are fully resumable** — the session is written to disk from turn 0, before the agent spawns. A pause persists the checkpoint and releases locks cleanly; the printed resume command is always runnable.
+- **Crashed runs exit 3 and name the resume command** — a crash no longer exits silently or leaves the session in an ambiguous state. Persist failures exit 1 and name the `sid` and sequence number.
+- **Resume now reconciles store truth against checkpoint truth** — on `--resume`, committed work is read from the durable record (not recomputed), externally-verdicted rows are pruned and never re-presented, and foreign watermark conflicts are surfaced loudly with a typed error.
+- **Wrong-verb resume is refused honestly** — `extract` no longer silently picks up a design session, and vice versa. Unknown-verb sessions (written by a newer kane-cli) get an honest no-command line rather than a fabricated hint.
+- **`sessions list` and `sessions show` are verb-honest** — sessions written by a newer kane-cli version are shown with an honest unknown label rather than a guaranteed-refusal extract resume hint.
+
+### Design phases and cite verification
+- **Design now tracks phases durably** — each finalized design record carries `{phase, generation, completeness}`. `--phase <name>` on design tests lets a run enter at any phase; missing predecessors prompt interactively or exit 2 with a parseable `next` in agent mode.
+- **Already-designed and stale-design gates convert to actionable asks** — interactive mode offers view/redesign/pick-another with impact pairs shown; agent mode exits 2 with structured `next` including `--force` and `evolve` rows; CI stays fail-closed. `--because` is required for redesign.
+- **Cite verification runs before every design commit** — `validateCite` checks the pinned source version's citable text before appending a `DERIVES` edge. Failure routes through the existing repair channel as `CITE_UNVERIFIED`; sessions on older templates are byte-identical.
+
+### New `coverage` / `gaps` surface
+- **`--mode agent|ci` on coverage tests** — both modes ride the same NDJSON envelope as a decorator over one implementation. `--json` output is captured as a single `coverage/gaps` event; refusals emit an error event and exit 2. `next` contains the gap engine's ready commands, grammar-filtered, deduped, and capped.
+
+### Headless and `--source` / `--resume` parity
+- **`--resume --with-source` now works in headless mode** — headless runs have full parity with interactive runs for source-attached resume.
+- **The `@` affordance in free-text options** — an option carries its associated text through the agent, so prefill and coverage work correctly end to end.
+- **`--trust auto|hold` registered** — `auto` is today's derived auto-commit behavior (pinned); `hold` forces all new BUs into the review queue. Under CI, `--trust hold` exits 2 with nothing executed.
+
+### Fixes
+- **Dedup probe now uses the run's live auth** — a stale bearer token was causing commit-moment 401s off-CI, holding every new BU across sessions. The probe now resolves credentials the same way the driver does.
+- **`prefill` holds by question identity and never auto-submits** — a question that was already answered is not re-asked; a prefilled answer is not submitted without user confirmation.
+- **No-proposal terminal under `--queued` no longer re-queues forever** — a clean done with no proposal now records `NO_PROPOSAL` and continues the batch rather than re-queuing the item with attempts unchanged.
+- **Answered-question filter covers both the annex and session ledgers on resume** — a crash at an ask no longer re-asks the same question after resume.
+- **`MODIFY_HELD` approve no longer fabricates provenance** — cites are verified against the pinned source before any held-update verdict is applied.
+- **Verb/template mismatch is now detected at bind time** — a design conversation that echoes a valid `extract@5` binding no longer renders the extract prompt and tools under clean digests. Kane-cli exits 2 with `CONTRACT_DIGEST` mismatch.
+- **`--resume` never re-fires the design-entry trust gate** — a session that passed the gate at entry is not re-prompted mid-journey.
+- **`sessions list` review walk no longer crashes on review cards** — `WalkCard.impact` is now a legal union; all three readers guard by shape and render the review preview correctly.
+
+---
+
 ## [0.7.0] - 2026-08-05
 
 ### A rebuilt Autopilot — faster, and on by default
