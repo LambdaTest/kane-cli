@@ -1,6 +1,6 @@
 # Assurance without a terminal: agents and CI
 
-The conversational assurance commands — `context extract`, `design tests`, and `maintain reconcile` — are interactive by default. This page is the contract for running them **headless**: from CI, from a script, or from an AI agent driving kane-cli.
+The conversational assurance commands — `context ingest`/`context extract`, `design tests`, and `maintain reconcile` — are interactive by default. This page is the contract for running them **headless**: from CI, from a script, or from an AI agent driving kane-cli. The coverage reads (`cover`, `cover gaps`) speak the same stream since 0.7.1.
 
 ## The ask policy: `--mode`
 
@@ -23,6 +23,8 @@ Rule of thumb: `agent` when something can read the pause and answer (an AI agent
 
 The same matrix drives `maintain reconcile`, with two reconcile-specific rules: no headless mode ever archives anything — ARCHIVE decisions wait for an interactive session — and a `ci`-mode run that hits a decision needing a human **stores the plan and exits `2`** (the work isn't lost; walk the stored plan interactively or apply it in `agent` mode).
 
+`context ingest` follows the matrix with one extra rule *(0.7.1)*: it lands the files and then runs the extraction under the given mode — except `--mode ci`, or piped stdin without any `--mode`, which **lands only** (exit `0`, with a stderr guidance line naming the next command). Two extraction dials also matter headless: `--trust hold` holds everything new for review instead of committing it (headless-only; `ci` refuses the flag entirely with exit `2`), and `--trust auto` is the default everywhere.
+
 ## Exit codes
 
 Consistent across extract, design, and the maintain commands that embed them:
@@ -32,7 +34,7 @@ Consistent across extract, design, and the maintain commands that embed them:
 | `0` | Complete. |
 | `1` | Runtime failure. For extract and design, a `ci`-mode fail-close on a high-risk question also exits `1`; reconcile's `ci` fail-close stores the plan and exits `2` instead. |
 | `2` | Usage / auth / refusal — bad flags, failed input validation, no store, bare non-TTY without `--mode`, missing `--yes` on a destructive command. Nothing was mutated. |
-| `3` | **Paused and resumable** — the only meaning of 3. A session is saved; resume it within 24 hours. |
+| `3` | **Paused and resumable** — the only meaning of 3. A session is saved; resume it within 24 hours. Since 0.7.1 this includes crashes: sessions are durable from the first turn, so even an agent crash exits `3` and names the exact resume command. |
 
 ## The NDJSON stream (`--mode agent`)
 
@@ -40,6 +42,7 @@ With `--mode agent`, stdout speaks a versioned NDJSON vocabulary — envelope `{
 
 | type | payload highlights |
 |---|---|
+| `ingested` *(0.7.1)* | one per source landed by a merged `context ingest … --mode agent` run — `source_id`, `status` (`created`/`unchanged`/`versioned`), `cid`; arrives **before** the extraction's own events |
 | `run_start` | `mode`, `trace` (the per-run log path); design adds `use_case` |
 | `corpus` | extract: the `sources[]` this run covers + already-extracted `skipped[]` |
 | `source_start` / `source_skipped` | `source_id`, `index`/`total`, `resumed` / `reason` |
@@ -48,16 +51,26 @@ With `--mode agent`, stdout speaks a versioned NDJSON vocabulary — envelope `{
 | `agent_activity` | progress: `kind` (`tool` / `decision` / `progress` / `thinking_done`) + a display `label` |
 | `usage` | per agent turn: `credits` + running `total_credits` |
 | `validate_failed` | a proposal failed kane-side validation: `codes[]`, `repairing` (the agent self-repairs) |
+| `degraded` *(0.7.1)* | duplicate detection fell back to a reduced mode this run (`reason`) — new items are held for review instead of auto-committed |
+| `held` / `update_held` *(0.7.1)* | items were **held** for your review instead of committed (`source_id`, `count`, `reason` / `count`, `targets[]`) — the `--trust hold` and degraded-detection paths |
 | `commit` | what landed: counts + `minted[]` (`cid` + `logical_id`); extract adds `proposal_id` |
-| `receipt` | design: per-phase commit receipt — `commit_n`, `phase`, `committed[]`, `warnings[]`, `parity`, and a human-readable `next` hint |
+| `receipt` | per-phase commit receipt (design; extract emits one at its commits too) — `commit_n`, `phase`, `committed[]`, `warnings[]`, `parity`, and a human-readable `next` hint |
 | `message_sent` | your `--message` was delivered: `sid`, `chars` |
-| `session_paused` | `sid`, the verbatim `resume` command, `expires_at`, and **`pending_questions[]`** in full |
+| `panel_resolved` *(0.7.1)* | a pending question was answered by a `--answer` flag: `id`, `by`, `via` |
+| `ask_deferred` *(0.7.1)* | a pending question batch was set aside because `--with-source` landed a new source first: `source_id`, `cid`, `questions` (count) |
+| `session_paused` | `sid`, the verbatim `resume` command, `expires_at`, and **`pending_questions[]`** in full. Two additional shapes *(0.7.1)*, distinguished by their fields: a crash-paused session carries `crashed: true` and **no** `pending_questions` (resume re-enters the conversation); a held-for-review pause carries `held` (a count) instead |
 | `session_complete` | `sid` |
 | `gate_refused` | a design gate refused the run (may be the first event) |
-| `error` | `message` + a stable `code` where one exists (`NO_STORE`, `PREFLIGHT`, `SOURCE_MISSING`, `BLOB_MISSING`, `HIGH_RISK_CI`, `STALE_BASIS`) |
-| `done` | **always the last event**: `status` (`complete`/`paused`/`error`/`refused`/`interrupted`/`aborted`) + `exit_code` |
+| `phase_entry_override` *(0.7.1)* | a design `--phase` entry point was applied: `phase`, `missing[]` |
+| `error` | `message` + a stable `code` where one exists — e.g. `NO_STORE`, `PREFLIGHT`, `SOURCE_MISSING`, `BLOB_MISSING`, `HIGH_RISK_CI`, `STALE_BASIS`, `EXTRACT_LOCKED`, `TRUST_USAGE`, `TRUST_UNDER_CI`, `HOLD_MULTI_SOURCE`, `UC_UNREVIEWED`, `UNKNOWN_PHASE`, `PHASE_ORDER`, `CITE_UNVERIFIED`, `WRONG_VERB`, `INGEST_UNAUTHORIZED_REF`, `PAIR_MISMATCH` (see below). Many runtime failures are message-only |
+| `done` | **always the last event**: `status` (`complete`/`paused`/`error`/`refused`/`interrupted`/`aborted`) + `exit_code`; may carry `next[]` |
 
 **The `done` guarantee:** every `--mode agent` invocation ends its stream with exactly one `done` event — including refusals and graceful interrupts. The one exception is operator force: a second Ctrl+C can hard-kill the process (exit `130`) without a `done`. Any other stream that ends without `done` should be treated as a crash. One more parsing note: the agent may also repair a draft mid-turn on its own — that surfaces only as `agent_activity` lines (labels like `validation failed`, `refining the draft`); treat activity labels as display text, never script against them.
+
+Two more parsing rules *(0.7.1)*:
+
+- **A merged ingest prints receipts before the stream.** `kane-cli context ingest … --mode agent` prints its landing receipts — up to two prose lines per file — *before* the NDJSON begins. This is deliberate (the receipts belong to the landing, which precedes the extraction). A strict per-line `JSON.parse` consumer must skip non-JSON prefix lines, or start consuming at the first line that begins with `{`.
+- **`next[]` carries follow-up commands.** Pauses, gate refusals, and `done` can carry a `next` list of ready-to-run follow-ups. The common shape is objects (`{cmd, why, title}`); a few refusal sites emit plain strings — handle both, and treat every entry as a command to offer, not to auto-run.
 
 ### Reconcile's stream
 
@@ -67,7 +80,7 @@ With `--mode agent`, stdout speaks a versioned NDJSON vocabulary — envelope `{
 |---|---|
 | `reconcile_plan` | the triage ahead: `source_id`, `plan_path`, `rows[]` (`kind`, `ref`, `why`), `archive[]` (proposed archivals with their evidence-decay reasons) |
 | `reconcile_row_start` | per row: `kind`, `ref`, plus the impact counts where they apply (`stale`, `direct`) |
-| `reconcile_row_end` | the row's `outcome` (`applied` \| `failed` \| `skipped` \| `plan-only` \| `paused`) + `exit_code`, and an additive `detail` carrying a failure's reason and hint. A row's embedded design run is folded in here, so the stream stays single-writer with exactly one `done` |
+| `reconcile_row_end` | the row's `outcome` (`applied` \| `failed` \| `skipped` \| `plan-only` \| `paused`) + `exit_code`, and an additive `detail` carrying a failure's reason and hint (e.g. a `HELD_CITES_STALE` refusal with its re-stage hint). A row's embedded design run is folded in here, so the stream stays single-writer with exactly one `done` |
 | `reconcile_paused` | `plan_path` + `pending[]` (`ref`, `why`) — resume with the same reconcile command (or `--apply`) |
 | `reconcile_summary` | the honest totals, always the same field set: `applied`, `skipped`, `deferred`, `plan_only`, `failed`, `paused`, `stale_created` |
 | `done` | always last — same guarantee as above |
@@ -109,6 +122,16 @@ $ kane-cli context extract --resume ext-20260716T140742-prd-online-store --mode 
 
 The agent maps your statement to its own pending questions. A statement that answers nothing pending is treated as steering ("also cover the coupon path"); if it leaves a high-risk ambiguity standing, the run pauses again with refreshed questions.
 
+Two structured alternatives to `--message` *(0.7.1)*:
+
+- **Answer by id** — `--answer <question-id>=<option number | free text>` (repeatable, `--resume --mode agent` only). Each landed answer echoes as a `panel_resolved` event before the run continues:
+
+  ```bash
+  kane-cli context extract --resume <sid> --mode agent --answer q1=1 --answer q2="use the staging URL"
+  ```
+
+- **Land a source instead of answering** — `--resume <sid> --with-source <path|url>` lands the file or URL first and sets the pending batch aside (`ask_deferred` on the stream); the agent reads the new source and re-asks only what it didn't settle. Only refs **you** provide can land — anything else refuses with `INGEST_UNAUTHORIZED_REF`.
+
 Between the pause and the resume, everything is inspectable without contending the session:
 
 ```bash
@@ -134,9 +157,30 @@ kane-cli context review --verdicts verdicts.json --json
 
 `resolution` is one of `approved | edited | rejected | skipped | supersede` (optional `reason`, `edit`, `supersede_target`). One unresolvable ref fails the whole file (exit `2`, nothing committed). With `--json`, each landed verdict echoes as one NDJSON row.
 
+Two 0.7.1 additions:
+
+- **Structured verdict flags** — for scripted single decisions without a file: `--approve <refs...>` lands approvals; `--skip <refs...>` and `--defer <refs...>` record nothing and leave the items queued. Mutually exclusive with `--verdicts`.
+- **Archives require explicit consent.** A headless rejection no longer destroys anything: rejected entries are held as non-destructive `pending_archive` facts (exit `0`, loudly summarized). Destroying them takes `--allow-archive` **plus** `--because "<reason>"` — and under `--mode ci`, archives are refused under any flag (exit `2`).
+
+The rule stands: there is no auto-approve. These paths land **your** decisions faster; they never make them.
+
+## Coverage on the stream *(0.7.1)*
+
+`cover --mode agent` and `cover gaps --mode agent` speak the same envelope (`verb: "cover"` / `"gaps"`): the full `--json` payload arrives as **one** `coverage` (or `gaps`) event, and `done` closes the stream carrying the worklist's ready-to-paste commands in `next[]`. `--mode ci` is the same with prose output. Any refusal is an `error` event + `done` with exit `2`.
+
+## When the release pair doesn't match
+
+The assurance commands ship as a matched pair of components inside one kane-cli release, and sessions bind to the pair that created them. Three refusals exist so a mismatch is loud instead of subtle, each naming its remedy:
+
+- `PAIR_MISMATCH` (exit `2`, at startup) — the installed halves are from different releases; rebuild or reinstall so both halves match.
+- `binding_mismatch` (exit `2`, on resume) — the session was created under a different release pair than the one resuming it; resume with the original pair, or abandon the session and start fresh.
+- `client_unsupported` (exit `2`) — the service now requires a newer kane-cli release; upgrade and retry.
+
+A paused session can hit `binding_mismatch` after upgrading kane-cli — that is the expected shape of "this session belongs to the old release", not a corruption.
+
 ## Machine-readable reads
 
-These read commands have structured forms: `context list --json` and `context sessions --json` (one JSON object per line), `context explain --json`, `context view --json` (the full computed graph payload), `context view --no-open --out graph.html` (render without a browser), and `cover --json`.
+These read commands have structured forms: `context list --json` and `context sessions --json` (one JSON object per line), `context explain --json`, `context view --json` (the full computed graph payload), `context view --no-open --out graph.html` (render without a browser), `cover --json`, and `cover gaps --json` (the nested dual-axis document — see [Coverage](./coverage.md)).
 
 ## Headless maintain
 

@@ -65,7 +65,9 @@ The verdicts per card:
 - **ADD / MODIFY** — **approve** (an ADD runs a design session for the new use-case right there; a MODIFY commits the update, or re-designs via [`maintain evolve`](#evolve) when the break is structural, blast radius stated first) · **reject** (drop the staged proposal) · **defer** (park it — the stored plan keeps it and a later run re-offers it) · or type to **steer** the re-design in your own words.
 - **ARCHIVE** — **retire** (the explicit verdict; reversible any time with [`kane-cli context revert`](./context.md#housekeeping) — nothing is ever deleted) · **skip** · **defer**.
 
-After the last card the composer wakes: type `<uc-ref> <what to change>` to route one more re-design through the same session. **Nothing lands unapproved** — beyond recording the source change itself, everything a reconcile proposes is staged until you decide. Ctrl+C pauses cleanly (pending work lives in the stored plan, and the same reconcile command picks it back up), and the session ends with an honest summary of what was applied, rejected, deferred, and retired.
+After the last card a **done panel** renders with the honest tally and three rows: `finish` · `evolve another use-case…` (a picker over stale targets, with a `✎` editor for what should change) · `view what changed` (a read-only list of this run's outcomes). **Nothing lands unapproved** — beyond recording the source change itself, everything a reconcile proposes is staged until you decide. Ctrl+C pauses cleanly (pending work lives in the stored plan, and the same reconcile command picks it back up).
+
+The walk can also surface pending **review** items *(0.7.1)* — held items awaiting a verdict and possible duplicates appear as REVIEW and PAIR cards in the same walk, so one pass covers everything waiting on you; a problem in that feeder never blocks the reconcile rows themselves. Held items' citations are re-verified against the source's current text before they commit — a citation that no longer holds refuses with `HELD_CITES_STALE` and a re-stage hint rather than committing silently.
 
 ### `--plan` — a preview that doesn't touch the suite
 

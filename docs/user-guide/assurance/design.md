@@ -18,8 +18,11 @@ kane-cli design explain t-add-first-item                 # replay WHY — zero f
 | `--strength pairwise\|3-wise` | Manual covering-array strength override; absent = risk-judged (3-wise when money, auth, or data loss is involved) |
 | `--mode <mode>` | Ask policy for headless runs: `agent` \| `ci` \| `override` — bare non-TTY exits `2`. See [Automation](./automation.md) |
 | `--force` | Redesign a use-case that already has a live design (supersedes its scenario+test pairs; equivalent ACs are reused) |
+| `--phase <name>` *(0.7.1)* | Enter the design at a specific phase (`grounding`, `acs`, `scenarios`, `wiring`, `tests`), re-seeded from the committed earlier phases. Missing predecessors prompt interactively; in agent mode the run exits `2` with the runnable commands in `next` |
+| `--allow-unreviewed` *(0.7.1)* | Design against a use-case that is still unreviewed (`derived`) without approving it first — see the gate below |
 | `--resume <sid>` | Resume a paused session ([sessions](./context.md#sessions)) |
 | `--message "<text>"` | With `--resume`: answer the pending questions (or steer) in plain words |
+| `--answer <q>=<v>` *(0.7.1)* | With `--resume --mode agent`: answer a specific pending question by id — `<question-id>=<option number or free text>`, repeatable |
 | `--plan` | Transcription only — print each finalize payload, commit nothing |
 
 ## The session — five phases
@@ -32,9 +35,13 @@ Interactive runs are a chat. The engine works phase by phase and parks between p
 3. **Path ACs + wiring** — per-scenario criteria, plus the record of which scenario exercises which invariant. An invariant nothing exercises becomes an `invariant-unexercised` gap.
 4. **Tests** — exactly **one test per scenario** (strict 1:1). Pairs are scored and cut at the budget; each kept test carries a runnable body, a baseline-capture step where a check needs a before/after delta, and a written check whose expected value comes from its AC — a check that disagrees with its criterion is rejected, so a test can't quietly assert something weaker than the requirement.
 
-Between phases you steer in plain words: `looks good` (approve) · rename or correct an item (edit) · `drop 3` (reject) · `show 2` / `hide` (drill in) — plus the local slash commands `/explain <ref>` (why an item exists — free, replayed from the record), `/done` (end the session), and `/pause` (save + exit `3`). The chat shell — the question panel, the composer grammar, ctrl+t, ctrl+c-to-pause — is exactly the one [extract uses](./context.md#the-interactive-chat).
+Between phases the session parks on a **check-in panel** — the same panel surface [extract uses](./context.md#the-interactive-session). The headline reads `<phase> done — next: <next>`, with `continue to <next>` as row 1 (pressing Enter at every check-in walks the whole design), plus `view what's saved`, `finish here`, and `✎ adjust — tell me what to change`. Typing anywhere seeds the `✎` editor: your words steer the engine (rename, drop, redirect) before the next phase. A dim line under the headline explains in plain words what the finished phase produced.
 
-Headless modes run all phases without parking and emit one combined result; a high-risk question pauses an `agent`-mode run (resumable) and fails a `ci`-mode run closed. See [Automation](./automation.md).
+**Questions that need a typed value.** When an answer is a concrete value (a URL, a fixture id), typing it is the only channel that carries data — selecting an option row sends only that option's label, so options on such questions are always the genuine alternatives (use a placeholder, reduce scope, skip). If a needed value doesn't arrive, the agent re-asks once and then proceeds on its stated fallback — announced in the narrative, never silently.
+
+Headless modes run all phases without parking; a high-risk question pauses an `agent`-mode run (resumable) and fails a `ci`-mode run closed. Each phase still commits and reports as it completes on the event stream. See [Automation](./automation.md).
+
+The design's progress is durable *(0.7.1)*: each finalized phase is recorded with its generation and completeness, which is what makes `--phase` re-entry and honest resumes possible.
 
 ## What you get
 
@@ -80,16 +87,15 @@ kane-cli testrun run --match 't-'                          # from then on: batch
 
 Until a test has been authored, [`kane-cli testrun`](../testrun.md) preflight reports it as `missing_meta` and [`kane-cli cover`](./coverage.md) reads its criteria as covered-on-paper but unproven. That reading is deliberate — see [Coverage](./coverage.md#the-authoring-bridge).
 
-## Re-runs and `--force`
+## Gates, re-runs, and `--force`
 
-A use-case with a live design refuses a re-run, staleness-aware:
+**The unreviewed-target gate** *(0.7.1)*. Designing against a use-case that is still unreviewed (`derived`) stops for an explicit decision: interactively you get a disclosure and choose; in agent mode the run exits `2` with the runnable review command in `next`; in `ci` mode it refuses outright. `--allow-unreviewed` bypasses the gate deliberately — reviewing first ([`context review`](./context.md#review)) is the recommended path.
 
-```
-'uc-manage-the-cart' is already designed @ v1 — current; use --force to redesign
-'uc-manage-the-cart' was designed @ v1 — the use-case is now @ v2 (STALE); use --force to redesign
-```
+**Re-runs are staleness-aware.** A use-case with a live design doesn't silently redesign — the situation becomes an actionable choice *(0.7.1)*: interactively, the session states whether the design is current or stale, what a redesign would supersede, and asks what to do (view it, redesign it, or pick another use-case); a redesign asks for your **reason**, which goes on the record. In agent mode the run exits `2` with the concrete follow-up commands in `next` (including the `--force` form); `ci` mode fails closed. There is no `--because` flag on `design tests` — headless `--force` proceeds with an auto-stamped reason.
 
 `--force` regenerates the scenario+test pairs (superseding the old ones); ACs are dedup-first — an equivalent AC re-emitted by the engine reuses the existing node instead of piling up copies. When the staleness comes from a source document you just changed, [`kane-cli maintain reconcile`](./maintain.md) surfaces the same re-design as part of its changed-source triage; for staleness from older changes, [`kane-cli maintain evolve`](./maintain.md#evolve) re-designs the use-case with the blast radius stated first.
+
+**Citations are verified before they commit** *(0.7.1)*. Every citation a design run wants to record is checked against the pinned source version's actual text before anything lands; a citation that doesn't verify is sent back to the agent to repair (surfacing as `CITE_UNVERIFIED` if it can't) — designed items never carry fabricated provenance.
 
 ## `design explain` — replay the why
 
@@ -114,7 +120,7 @@ The design engine ships with an embedded catalog of test-design techniques and s
 |---|---|
 | `0` | Design complete (or `--plan` transcription complete). |
 | `1` | Runtime failure. |
-| `2` | Usage / refusal — unknown use-case, already-designed without `--force`, bare non-TTY without `--mode`. |
+| `2` | Usage / refusal — unknown use-case, an already-designed or unreviewed target refused in a headless mode (the stream's `next` carries the follow-up commands), a `--phase` whose predecessors are missing, bare non-TTY without `--mode`. |
 | `3` | Session paused and resumable — see [sessions](./context.md#sessions). |
 
 ## Next steps

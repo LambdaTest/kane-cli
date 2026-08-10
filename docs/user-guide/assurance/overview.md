@@ -2,7 +2,7 @@
 
 kane-cli began as a way to author and replay browser tests. The **assurance** commands take on the step before and after: describe what your product must do, and kane-cli designs the tests that prove it — each one permanently linked to the requirement it verifies. Run them, and coverage stops being a guess: every run reports exactly what it proved and what it still owes. And as your product changes, the suite is reconciled instead of quietly rotting.
 
-> Requires kane-cli **0.6.1 or later** (`kane-cli --version`). On 0.6.0 these commands fail after a fresh install — upgrade.
+> Requires kane-cli **0.6.1 or later** (`kane-cli --version`). On 0.6.0 these commands fail after a fresh install — upgrade. This guide describes **0.7.1**; behavior introduced in 0.7.1 is marked *(0.7.1)* on its page.
 
 ## The loop
 
