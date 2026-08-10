@@ -6,7 +6,7 @@
 
 **The vocabulary is open**: new event types and fields may appear in any release — tolerate unknowns, never fail on them.
 
-**One stdout impurity to handle (0.7.1+):** a merged `context ingest … --mode agent` run prints its landing receipts — up to two prose lines per file — BEFORE the NDJSON begins (the receipts belong to the landing, which precedes the extraction). Skip non-JSON prefix lines; start parsing at the first line that begins with `{`.
+**One stdout impurity to handle (0.7.1+):** a merged `context ingest … --mode agent` run prints its landing receipts — a few prose lines per file — BEFORE the NDJSON begins (the receipts belong to the landing, which precedes the extraction). Skip non-JSON prefix lines; start parsing at the first line that begins with `{`.
 
 ## Terminal detection — the `done` guarantee
 

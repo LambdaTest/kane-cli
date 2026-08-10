@@ -118,7 +118,7 @@ During the chat, proposals commit as **drafts** (`derived`) — reviewing and pr
 
 ### Pausing and resuming
 
-When the agent needs an answer you're not there to give (or you Ctrl+C, or the process dies), the session is saved and the run exits `3` — **sessions are durable from the first turn** *(0.7.1)*: even a crash exits `3` and prints the exact resume command. Resume any time within 24 hours:
+When the agent needs an answer you're not there to give (or you Ctrl+C, or the process dies), the session is saved and the run exits `3` — **sessions are durable from the first turn** *(0.7.1)*: a crash that left a checkpoint exits `3` and prints the exact resume command (a crash before anything durable was saved still exits `1`). Resume any time within 24 hours:
 
 ```bash
 kane-cli context sessions                       # list resumable sessions + their resume commands
@@ -262,7 +262,7 @@ Two rules worth repeating from the [overview](./overview.md#the-store-context): 
 
 ### Tracing a run
 
-Every assurance run prints two things worth keeping: a **session id** (`as-…`, shown in the banner and on error footers — the id to share when reporting a problem) and a `trace: <path>` line naming the run's log file. The trace lives in a per-user log directory by default; with telemetry disabled (`KANE_TELEMETRY=0`) it stays under `.context/logs/`. Either way, the printed path is authoritative — it's the first place to look when a run surprises you.
+Every assurance run prints a `trace: <path>` line naming the run's log file — the printed path is authoritative, and it's the first place to look when a run surprises you. By default the trace lives in a per-user log directory; with telemetry disabled (`KANE_TELEMETRY=0`) it stays under `.context/logs/`. With telemetry on, the run also prints a **session id** (`as-…`, in the banner and on error footers) — the id to share when reporting a problem.
 
 ## For agents and CI
 

@@ -16,7 +16,7 @@ kane-cli testrun run --match 't-'                            # 6. batch replays 
 kane-cli cover gaps                                          # 7. designed % × proven %, with per-use-case debt + ready commands
 ```
 
-- On 0.7.1+, `context ingest --mode agent` lands the files and extracts them in one flow (its landing receipts print as up to two prose lines BEFORE the NDJSON — skip to the first `{` line). `kane-cli context extract --mode agent` remains the re-run/resume entry; on older releases run it after every ingest.
+- On 0.7.1+, `context ingest --mode agent` lands the files and extracts them in one flow (its landing receipts print as a few prose lines BEFORE the NDJSON — skip to the first `{` line). `kane-cli context extract --mode agent` remains the re-run/resume entry; on older releases run it after every ingest.
 - Ingest accepts text/markdown/structured text (2MB), images (5MB), PDF (25MB, 0.6.7+), DOCX (25MB, 0.6.10+), and Jira issue URLs (0.6.11+ — Jira must be connected in the user's LambdaTest Integrations screen; the refusal says so if not).
 - The two checkpoints are the **user's** decisions: everything the agents emit is unreviewed (`derived`) until a human promotes it. Do not auto-approve unless the user explicitly said to — and then enumerate what you promoted. 0.7.1+ adds structured verdict flags (`context review --approve/--skip/--defer <refs...>`); `--skip`/`--defer` leave items queued. Rejections land as non-destructive holds — actually archiving needs the user's explicit `--allow-archive --because "<reason>"` (refused under `--mode ci`).
 - Extract, design, and reconcile consume credits (reported per turn on the stream — surface the total). `--max` caps deliverable size (scenario+test pairs), **not** spend.
@@ -28,7 +28,7 @@ The assurance commands take **`--mode agent`** (never `--agent`; bare non-TTY ex
 
 1. If your context clearly answers the question, answer it; otherwise ask the user, showing the options and the recommendation.
 2. Resume in **plain words**: `kane-cli context extract --resume <sid> --mode agent --message "<the answer>"` — or, on 0.7.1+, by id (`--answer q1=2 --answer q2="<typed value>"`) or by landing the source the agent needs (`--with-source <path|url>` — the pending questions defer while it reads, then only what's still open is re-asked).
-3. Sessions are durable on 0.7.1+ — even a crash exits 3 with the resume command. They expire in 24 h; `kane-cli context sessions --json` lists them; `sessions clean <sid>` removes one you abandoned.
+3. Sessions are durable on 0.7.1+ — a crash that left a checkpoint exits 3 with the resume command. They expire in 24 h; `kane-cli context sessions --json` lists them; `sessions clean <sid>` removes one you abandoned.
 
 This exit-3 meaning applies to these assurance commands only — `run`/`testmd`/`testrun`/`generate` keep 3 = timeout/cancelled.
 

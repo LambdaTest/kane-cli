@@ -41,7 +41,7 @@ These commands take **`--mode agent`** — not `--agent`; they reject that flag,
 
 - The run exits `3`, emits `session_paused` with the session id, the questions in full (text, options, the recommended one, risk, rationale), and the verbatim resume command.
 - **Never drop a pause** (same rule as generate clarifications). Answer it: if your own context clearly resolves the question, answer it yourself; otherwise surface the question — with its options and recommendation — to your user and get their answer.
-- **0.7.1+ sessions are durable from the first turn**: even a crash exits `3` with a `session_paused` carrying `crashed: true` (no `pending_questions`) and the resume command. Exit 3 always means "resumable".
+- **0.7.1+ sessions are durable from the first turn**: a crash that left a checkpoint exits `3` with a `session_paused` carrying `crashed: true` (no `pending_questions`) and the resume command — exit 3 always means "resumable". A crash before anything durable was saved still exits `1`; check `context sessions --json` before retrying anything paid.
 
 Three ways to resume:
 
@@ -149,13 +149,14 @@ Since 0.6.8 the default `cover gaps` output (and bare `--json`) is a **nested du
 | `HIGH_RISK_CI` | a `--mode ci` run hit a judgement call | re-run with `--mode agent` and handle the pause |
 | `EXTRACT_LOCKED` (exit 2) | another extraction is live on this store | wait for it; never break locks |
 | `TRUST_USAGE` / `TRUST_UNDER_CI` | `--trust` used where it can't apply (interactive hold / any ci) | drop the flag, or run headless `agent` mode |
-| `HOLD_MULTI_SOURCE` (exit 2) | `--with-source` tried to add a source to a session holding items for review | finish the held review first; run hold one source at a time |
+| `HOLD_MULTI_SOURCE` (exit 2) | a `--resume --with-source` landing was refused — the resume carries `--trust hold`, or the session already holds items for review | finish the held review first; run hold one source at a time |
 | `UC_UNREVIEWED` (exit 2) | design target is unreviewed | run the review command from `next`; `--allow-unreviewed` only on explicit user instruction |
 | `UNKNOWN_PHASE` / `PHASE_ORDER` (exit 2) | bad `--phase` entry | run the predecessor commands named in `next` |
 | `CITE_UNVERIFIED` | a citation failed verification even after repair | report it; the item did not commit with bad provenance |
 | `INGEST_UNAUTHORIZED_REF` | a source ref not provided by the user tried to land | only user-provided paths/URLs can land — ask the user for the source |
 | `WRONG_VERB` (exit 2) | resuming a session with the wrong command family | use the resume command from `sessions --json` verbatim |
-| `PAIR_MISMATCH` / `binding_mismatch` / `client_unsupported` (exit 2) | the installed release pair is broken, the session belongs to another release, or the service requires a newer CLI | reinstall/upgrade kane-cli; a paused session from before an upgrade resumes only under its original release |
+| `PAIR_MISMATCH` / `BINDING_MISMATCH` (exit 2) | the installed release pair is broken, or the session belongs to another release | reinstall/upgrade kane-cli; a session from before an upgrade either resumes under its original release or restarts fresh (committed work is kept) |
+| "this version of kane-cli is no longer supported" (runtime failure, exit 1) | the service requires a newer CLI | have the user upgrade, then retry |
 | media refusals (`PDF_*`, `DOCX_*`, `ENCODING_UNSUPPORTED`, `UNSUPPORTED_MEDIA`, `FILE_TOO_LARGE`) | the source file can't be ingested as-is | relay the message — each names its remedy (save-as, split, re-encode) |
 | lock held | another assurance run is live | wait for it; never break locks |
 | `error` + `done` with exit `1` | runtime failure (incl. a sweep where some sources failed) | report the message; **do not blindly re-run a paid command** |
@@ -163,7 +164,7 @@ Since 0.6.8 the default `cover gaps` output (and bare `--json`) is a **nested du
 | stream ends with no `done` event | the process crashed — outcome unknown | check `context sessions --json` and `context list` before any retry, to avoid duplicate paid work |
 | exit `130` | force-interrupted | resumable only if a `session_paused` event was actually received |
 
-Every assurance run prints a session id (`as-…`) in its banner and error footers — include it when the user reports a problem to support.
+Runs print a session id (`as-…`) in the banner and error footers when telemetry is on — include it when the user reports a problem to support.
 
 ## 10. Narration
 

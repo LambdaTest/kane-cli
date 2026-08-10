@@ -34,7 +34,7 @@ Consistent across extract, design, and the maintain commands that embed them:
 | `0` | Complete. |
 | `1` | Runtime failure. For extract and design, a `ci`-mode fail-close on a high-risk question also exits `1`; reconcile's `ci` fail-close stores the plan and exits `2` instead. |
 | `2` | Usage / auth / refusal — bad flags, failed input validation, no store, bare non-TTY without `--mode`, missing `--yes` on a destructive command. Nothing was mutated. |
-| `3` | **Paused and resumable** — the only meaning of 3. A session is saved; resume it within 24 hours. Since 0.7.1 this includes crashes: sessions are durable from the first turn, so even an agent crash exits `3` and names the exact resume command. |
+| `3` | **Paused and resumable** — the only meaning of 3. A session is saved; resume it within 24 hours. Since 0.7.1 sessions are durable from the first turn, so a crash that left a checkpoint also exits `3` and names the exact resume command (a crash before anything durable — or a failed pause save — still exits `1`). |
 
 ## The NDJSON stream (`--mode agent`)
 
@@ -69,7 +69,7 @@ With `--mode agent`, stdout speaks a versioned NDJSON vocabulary — envelope `{
 
 Two more parsing rules *(0.7.1)*:
 
-- **A merged ingest prints receipts before the stream.** `kane-cli context ingest … --mode agent` prints its landing receipts — up to two prose lines per file — *before* the NDJSON begins. This is deliberate (the receipts belong to the landing, which precedes the extraction). A strict per-line `JSON.parse` consumer must skip non-JSON prefix lines, or start consuming at the first line that begins with `{`.
+- **A merged ingest prints receipts before the stream.** `kane-cli context ingest … --mode agent` prints its landing receipts — a few prose lines per file — *before* the NDJSON begins. This is deliberate (the receipts belong to the landing, which precedes the extraction). A strict per-line `JSON.parse` consumer must skip non-JSON prefix lines, or start consuming at the first line that begins with `{`.
 - **`next[]` carries follow-up commands.** Pauses, gate refusals, and `done` can carry a `next` list of ready-to-run follow-ups. The common shape is objects (`{cmd, why, title}`); a few refusal sites emit plain strings — handle both, and treat every entry as a command to offer, not to auto-run.
 
 ### Reconcile's stream
@@ -166,17 +166,17 @@ The rule stands: there is no auto-approve. These paths land **your** decisions f
 
 ## Coverage on the stream *(0.7.1)*
 
-`cover --mode agent` and `cover gaps --mode agent` speak the same envelope (`verb: "cover"` / `"gaps"`): the full `--json` payload arrives as **one** `coverage` (or `gaps`) event, and `done` closes the stream carrying the worklist's ready-to-paste commands in `next[]`. `--mode ci` is the same with prose output. Any refusal is an `error` event + `done` with exit `2`.
+`cover --mode agent` and `cover gaps --mode agent` speak the same envelope (`verb: "cover"` / `"gaps"`): the full `--json` payload arrives as **one** `coverage` (or `gaps`) event, and `done` closes the stream carrying the worklist's ready-to-paste commands in `next[]`. `--mode ci` speaks the identical stream. Any refusal is an `error` event + `done` with exit `2`.
 
 ## When the release pair doesn't match
 
 The assurance commands ship as a matched pair of components inside one kane-cli release, and sessions bind to the pair that created them. Three refusals exist so a mismatch is loud instead of subtle, each naming its remedy:
 
 - `PAIR_MISMATCH` (exit `2`, at startup) — the installed halves are from different releases; rebuild or reinstall so both halves match.
-- `binding_mismatch` (exit `2`, on resume) — the session was created under a different release pair than the one resuming it; resume with the original pair, or abandon the session and start fresh.
-- `client_unsupported` (exit `2`) — the service now requires a newer kane-cli release; upgrade and retry.
+- `BINDING_MISMATCH` (exit `2`, on resume) — the session was created under a different release pair than the one resuming it. The session is kept: start the conversation fresh (committed work is kept), or resume on the release that created it.
+- An outdated CLI can also be refused by the service mid-run — "this version of kane-cli is no longer supported — update kane-cli and retry". That surfaces as a runtime failure (exit `1`, message-only); upgrade and retry.
 
-A paused session can hit `binding_mismatch` after upgrading kane-cli — that is the expected shape of "this session belongs to the old release", not a corruption.
+A paused session can hit `BINDING_MISMATCH` after upgrading kane-cli — that is the expected shape of "this session belongs to the old release", not a corruption.
 
 ## Machine-readable reads
 
