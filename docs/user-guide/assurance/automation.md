@@ -33,7 +33,7 @@ Consistent across extract, design, and the maintain commands that embed them:
 |---|---|
 | `0` | Complete. |
 | `1` | Runtime failure. For extract and design, a `ci`-mode fail-close on a high-risk question also exits `1`; reconcile's `ci` fail-close stores the plan and exits `2` instead. |
-| `2` | Usage / auth / refusal — bad flags, failed input validation, no store, bare non-TTY without `--mode`, missing `--yes` on a destructive command. Nothing was mutated. |
+| `2` | Usage / auth / refusal — bad flags, failed input validation, no store, bare non-TTY without `--mode`, missing `--yes` on a destructive command. Nothing was mutated — with two durable exceptions: a merged ingest whose *extraction* refused keeps its landed sources (the run says they're safe), and reconcile's `ci` fail-close keeps its stored plan. |
 | `3` | **Paused and resumable** — the only meaning of 3. A session is saved; resume it within 24 hours. Since 0.7.1 sessions are durable from the first turn, so a crash that left a checkpoint also exits `3` and names the exact resume command (a crash before anything durable — or a failed pause save — still exits `1`). |
 
 ## The NDJSON stream (`--mode agent`)
@@ -54,18 +54,18 @@ With `--mode agent`, stdout speaks a versioned NDJSON vocabulary — envelope `{
 | `degraded` *(0.7.1)* | duplicate detection fell back to a reduced mode this run (`reason`) — new items are held for review instead of auto-committed |
 | `held` / `update_held` *(0.7.1)* | items were **held** for your review instead of committed (`source_id`, `count`, `reason` / `count`, `targets[]`) — the `--trust hold` and degraded-detection paths |
 | `commit` | what landed: counts + `minted[]` (`cid` + `logical_id`); extract adds `proposal_id` |
-| `receipt` | per-phase commit receipt (design; extract emits one at its commits too) — `commit_n`, `phase`, `committed[]`, `warnings[]`, `parity`, and a human-readable `next` hint |
+| `receipt` | per-phase commit receipt (design; extract emits one at its commits too) — `commit_n`, `phase`, `committed[]`, `warnings[]`, a human-readable `next` hint, and (design only) `parity` |
 | `message_sent` | your `--message` was delivered: `sid`, `chars` |
 | `panel_resolved` *(0.7.1)* | a pending question was answered by a `--answer` flag: `id`, `by`, `via` |
 | `ask_deferred` *(0.7.1)* | a pending question batch was set aside because `--with-source` landed a new source first: `source_id`, `cid`, `questions` (count) |
-| `session_paused` | `sid`, the verbatim `resume` command, `expires_at`, and **`pending_questions[]`** in full. Two additional shapes *(0.7.1)*, distinguished by their fields: a crash-paused session carries `crashed: true` and **no** `pending_questions` (resume re-enters the conversation); a held-for-review pause carries `held` (a count) instead |
+| `session_paused` | `sid`, the verbatim `resume` command, `expires_at`, and **`pending_questions[]`** in full. Two additional shapes *(0.7.1)*, distinguished by their fields: a crash-paused session carries `crashed: true` and **no** `pending_questions` (resume re-enters the conversation); a held-for-review pause carries only `sid`, `resume`, and `held` (a count) — no `expires_at` |
 | `session_complete` | `sid` |
 | `gate_refused` | a design gate refused the run (may be the first event) |
 | `phase_entry_override` *(0.7.1)* | a design `--phase` entry point was applied: `phase`, `missing[]` |
-| `error` | `message` + a stable `code` where one exists — e.g. `NO_STORE`, `PREFLIGHT`, `SOURCE_MISSING`, `BLOB_MISSING`, `HIGH_RISK_CI`, `STALE_BASIS`, `EXTRACT_LOCKED`, `TRUST_USAGE`, `TRUST_UNDER_CI`, `HOLD_MULTI_SOURCE`, `UC_UNREVIEWED`, `UNKNOWN_PHASE`, `PHASE_ORDER`, `CITE_UNVERIFIED`, `WRONG_VERB`, `INGEST_UNAUTHORIZED_REF`, `PAIR_MISMATCH` (see below). Many runtime failures are message-only |
+| `error` | `message` + a stable `code` where one exists — e.g. `NO_STORE`, `PREFLIGHT`, `SOURCE_MISSING`, `BLOB_MISSING`, `HIGH_RISK_CI`, `STALE_BASIS`, `EXTRACT_LOCKED`, `TRUST_USAGE`, `TRUST_UNDER_CI`, `HOLD_MULTI_SOURCE`, `UC_UNREVIEWED`, `UNKNOWN_PHASE`, `PHASE_ORDER`, `CITE_UNVERIFIED`, `WRONG_VERB`, `INGEST_UNAUTHORIZED_REF`, `STRUCTURED_FLAGS_USAGE` / `STRUCTURED_TARGET_UNKNOWN` (a misused `--answer`/structured verdict; the unknown-target refusal lists the addressable ids), `PAIR_MISMATCH` / `BINDING_MISMATCH` (see below). Many runtime failures are message-only |
 | `done` | **always the last event**: `status` (`complete`/`paused`/`error`/`refused`/`interrupted`/`aborted`) + `exit_code`; may carry `next[]` |
 
-**The `done` guarantee:** every `--mode agent` invocation ends its stream with exactly one `done` event — including refusals and graceful interrupts. The one exception is operator force: a second Ctrl+C can hard-kill the process (exit `130`) without a `done`. Any other stream that ends without `done` should be treated as a crash. One more parsing note: the agent may also repair a draft mid-turn on its own — that surfaces only as `agent_activity` lines (labels like `validation failed`, `refining the draft`); treat activity labels as display text, never script against them.
+**The `done` guarantee:** every `--mode agent` invocation that starts the stream ends it with exactly one `done` event — including refusals and graceful interrupts. Two exceptions. A merged `context ingest` that fails at the **landing itself** (a bad path, an unsupported or oversized file, a refused URL) ends with a prose error line and exit `1`/`2` *before any NDJSON begins* — no stream, no `done`; that is a refusal to fix, not a crash (sources already landed stay safe, and the run says so). And operator force: a second Ctrl+C can hard-kill the process (exit `130`) without a `done`. Any other stream that ends without `done` should be treated as a crash. One more parsing note: the agent may also repair a draft mid-turn on its own — that surfaces only as `agent_activity` lines (labels like `validation failed`, `refining the draft`); treat activity labels as display text, never script against them.
 
 Two more parsing rules *(0.7.1)*:
 
@@ -93,7 +93,7 @@ This is the heart of driving assurance from an agent. A real exchange (events ab
 
 ```bash
 $ kane-cli context extract --mode agent
-{"type":"run_start","v":1,"verb":"extract","mode":"agent","trace":".context/logs/extract-….log"}
+{"type":"run_start","v":1,"verb":"extract","mode":"agent","trace":"~/.testmuai/kaneai/assurance/…/logs/extract-….log"}
 {"type":"corpus","v":1,"verb":"extract","sources":[{"source_id":"prd-online-store","cid":"sha256:0661…"}],"skipped":[]}
 {"type":"agent_activity","v":1,"verb":"extract","kind":"decision","label":"asking to resolve an ambiguity"}
 {"type":"session_paused","v":1,"verb":"extract","sid":"ext-20260716T140742-prd-online-store",

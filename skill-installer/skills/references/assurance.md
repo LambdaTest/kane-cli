@@ -20,7 +20,7 @@ kane-cli design tests --use-case <uc-ref> --mode agent --max 8   # 3. design ACs
 kane-cli context review --verdicts <file> --json             # 4. CHECKPOINT: user approves the design
 kane-cli testmd run .testmuai/tests/<t>_test.md --agent      # 5. author each kept test once (real browser)
 kane-cli testrun run --match 't-'                            # 6. batch replays from then on
-kane-cli cover                                               # 7. what's proven vs what's owed
+kane-cli cover gaps                                          # 7. designed % × proven % + per-use-case debt
 kane-cli maintain reconcile --from <new.md> --source-id <id> --mode agent   # when a source changes (§11)
 ```
 
@@ -35,7 +35,7 @@ Extract, design, and reconcile call the KaneAI service and consume credits; ever
 
 ## 2. The pause loop — exit 3 is a pause, NOT a failure
 
-**Scope: this rule applies to `context extract`/`context ingest` and `design tests`.** (For `run`/`testmd`/`testrun`/`generate`, exit 3 still means timeout/cancelled.)
+**Scope: this rule applies to `context extract`/`context ingest`, `design tests`, and `maintain reconcile` (§11).** (For `run`/`testmd`/`testrun`/`generate`, exit 3 still means timeout/cancelled.)
 
 These commands take **`--mode agent`** — not `--agent`; they reject that flag, and a bare non-TTY invocation exits `2` asking for an explicit mode. In `--mode agent`, low/medium-risk questions are auto-answered with their recommended defaults (each reported on the stream); a **high-risk** question pauses the run:
 
@@ -77,13 +77,17 @@ Accepted sources (each with a size cap; oversized = `FILE_TOO_LARGE`, wrong type
 - **DOCX** (≤25MB; 0.6.10+) — password-protected/legacy `.doc` refuse `DOCX_ENCRYPTED_OR_LEGACY`; save-as-`.docx` is the remedy;
 - **Jira issue URLs** (0.6.11+) — `kane-cli context ingest https://<site>/browse/PROJ-123`. Prerequisite: Jira connected in the user's LambdaTest Integrations screen (the refusal says so if not). Comments are not ingested. Re-runs are `unchanged`/`versioned` like files.
 
+**A landing-phase failure produces no stream.** A bad path, an unsupported or oversized file, or a refused URL ends the merged ingest with a prose error line and exit `1`/`2` BEFORE any NDJSON begins — no `done` event. Treat it as a refusal (fix the input and re-run; sources already landed stay safe — the run says so), never as a crash.
+
 Re-ingesting changed bytes under the same id **versions** the source and marks everything derived from the old snapshot stale — but for a changed document, prefer `maintain reconcile` (§11), which does the version move AND triages the fallout.
 
 Extract behavior to expect (0.7.1+): the sweep **continues past a per-source failure** (one line each; exit 1 at the end if anything failed — the failed source simply retries next run, no `--force` needed). `--trust hold` holds everything new for the user's review instead of committing (headless-only; `--mode ci` refuses the flag entirely; use it one source at a time — resuming held work from a multi-source run is not yet supported). The agent cites every claim (fabrication is rejected before write), asks when the source contradicts itself, and commits proposals as `derived`. Watch the `commit` event and say it in plain language ("5 use-cases extracted from the PRD").
 
 ## 4. Review — trust is the user's decision
 
-Promotion from `derived` to `trusted` **always requires explicit user confirmation** — even when the user asked for an "end-to-end" run. End-to-end authorizes completing the workflow, not making product-requirement judgements. Present the proposals, collect decisions, then land them atomically:
+Promotion from `derived` to `trusted` **always requires explicit user confirmation** — even when the user asked for an "end-to-end" run. End-to-end authorizes completing the workflow, not making product-requirement judgements.
+
+**Present the material, not the counts.** The `commit` event carries counts and ids only — to run a checkpoint, enumerate what's waiting with `kane-cli context list --json --inferred` (one JSON row per unreviewed node) and pull any item's full content, citations, and history with `kane-cli context explain <ref> --json`. Present titles, descriptions, and the cited evidence; collect the user's decisions; build the verdicts from those same refs. The same recipe runs the design checkpoint. Then land the decisions atomically:
 
 ```bash
 kane-cli context review --verdicts verdicts.json --json
@@ -122,7 +126,7 @@ A freshly designed test has never been executed. `kane-cli testrun run` **refuse
 ## 7. What's next — let the tool tell you
 
 ```bash
-kane-cli cover                    # what the latest evidence pack PROVED
+kane-cli cover                    # the pack audit: what it proved, plus the live-graph completeness worklist
 kane-cli cover gaps               # the dual-axis tree: designed % × proven %, debt per use-case
 kane-cli cover gaps --json        # the nested document (designed axis, proven axis, per-UC pending rows with ready_command)
 kane-cli cover gaps --mode agent  # 0.7.1+: same data as ONE `gaps` event + done.next[] ready-commands
@@ -155,6 +159,7 @@ Since 0.6.8 the default `cover gaps` output (and bare `--json`) is a **nested du
 | `CITE_UNVERIFIED` | a citation failed verification even after repair | report it; the item did not commit with bad provenance |
 | `INGEST_UNAUTHORIZED_REF` | a source ref not provided by the user tried to land | only user-provided paths/URLs can land — ask the user for the source |
 | `WRONG_VERB` (exit 2) | resuming a session with the wrong command family | use the resume command from `sessions --json` verbatim |
+| `STRUCTURED_FLAGS_USAGE` / `STRUCTURED_TARGET_UNKNOWN` (exit 2) | a misused `--answer`/structured verdict, or an unknown question/item id | fix the `<id>=<value>` form, or use an id from the refusal's list (it names the addressable ids) |
 | `PAIR_MISMATCH` / `BINDING_MISMATCH` (exit 2) | the installed release pair is broken, or the session belongs to another release | reinstall/upgrade kane-cli; a session from before an upgrade either resumes under its original release or restarts fresh (committed work is kept) |
 | "this version of kane-cli is no longer supported" (runtime failure, exit 1) | the service requires a newer CLI | have the user upgrade, then retry |
 | media refusals (`PDF_*`, `DOCX_*`, `ENCODING_UNSUPPORTED`, `UNSUPPORTED_MEDIA`, `FILE_TOO_LARGE`) | the source file can't be ingested as-is | relay the message — each names its remedy (save-as, split, re-encode) |

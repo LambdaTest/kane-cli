@@ -19,7 +19,7 @@ for each line:
   else                             → per-type handling below
 ```
 
-A stream that ends **without** `done` means the process crashed — outcome unknown; inspect `context sessions --json` and `context list` before retrying anything paid.
+A stream that ends **without** `done` means the process crashed — outcome unknown; inspect `context sessions --json` and `context list` before retrying anything paid. One scoping rule *(0.7.1+ merged ingest)*: a landing-phase failure (bad path, unsupported media, refused URL) ends with prose + exit `1`/`2` **before any NDJSON begins** — no stream at all is a refusal to fix, not a crash; the guarantee starts with the extraction stream.
 
 ## Events (extract / design)
 
@@ -37,7 +37,7 @@ A stream that ends **without** `done` means the process crashed — outcome unkn
 | `degraded` *(0.7.1+)* | duplicate detection running in a reduced mode (`reason`) — new items will be HELD, not committed | tell the user their items will be held for review |
 | `held` / `update_held` *(0.7.1+)* | items held for the user's review instead of committed: `source_id` + `count` + `reason` / `count` + `targets[]` | surface the count and that review happens at resume/`context review` |
 | `commit` | what landed: counts + `minted[]` (`cid` + `logical_id`); extract adds `proposal_id` | translate ("5 use-cases extracted"); `logical_id` slugs are how you reference nodes later |
-| `receipt` | per-phase commit receipt (design; extract also emits one at its commits): `commit_n`, `phase`, `committed[]`, `reused`, `rejected[]`, `warnings[]`, `parity`, `next` | surface non-empty `rejected[]` and `warnings[]` in plain language; meaningful reuse is worth one line |
+| `receipt` | per-phase commit receipt (design; extract also emits one at its commits): `commit_n`, `phase`, `committed[]`, `reused`, `rejected[]`, `warnings[]`, `next`, and (design only) `parity` | surface non-empty `rejected[]` and `warnings[]` in plain language; meaningful reuse is worth one line |
 | `message_sent` | `--message` delivered: `sid`, `chars` | confirmation only |
 | `panel_resolved` *(0.7.1+)* | a `--answer` flag landed on a pending question: `id`, `by`, `via` | confirmation only |
 | `ask_deferred` *(0.7.1+)* | `--with-source` set the pending batch aside: `source_id`, `cid`, `questions` (count) | tell the user the questions were deferred while the agent reads the new source |
@@ -45,7 +45,7 @@ A stream that ends **without** `done` means the process crashed — outcome unkn
 | `session_complete` | `sid` | the session finished cleanly |
 | `gate_refused` | a design gate refused the run (may be the first event); may carry `next[]` | surface the reason + offer the `next` commands |
 | `phase_entry_override` *(0.7.1+)* | a design `--phase` entry applied: `phase`, `missing[]` | note the entry point |
-| `error` | `message` + stable `code` when one exists — the 0.6.x set (`NO_STORE`, `PREFLIGHT`, `SOURCE_MISSING`, `BLOB_MISSING`, `HIGH_RISK_CI`, `STALE_BASIS`) plus the 0.7.1+ set (`EXTRACT_LOCKED`, `TRUST_USAGE`, `TRUST_UNDER_CI`, `HOLD_MULTI_SOURCE`, `UC_UNREVIEWED`, `UNKNOWN_PHASE`, `PHASE_ORDER`, `CITE_UNVERIFIED`, `WRONG_VERB`, `INGEST_UNAUTHORIZED_REF`, `PAIR_MISMATCH`, media families `PDF_*`/`DOCX_*`). Many runtime failures are message-only — never require a code | map per `references/assurance.md` §9 |
+| `error` | `message` + stable `code` when one exists — the 0.6.x set (`NO_STORE`, `PREFLIGHT`, `SOURCE_MISSING`, `BLOB_MISSING`, `HIGH_RISK_CI`, `STALE_BASIS`) plus the 0.7.1+ set (`EXTRACT_LOCKED`, `TRUST_USAGE`, `TRUST_UNDER_CI`, `HOLD_MULTI_SOURCE`, `UC_UNREVIEWED`, `UNKNOWN_PHASE`, `PHASE_ORDER`, `CITE_UNVERIFIED`, `WRONG_VERB`, `INGEST_UNAUTHORIZED_REF`, `STRUCTURED_FLAGS_USAGE`/`STRUCTURED_TARGET_UNKNOWN`, `PAIR_MISMATCH`/`BINDING_MISMATCH`, media families `PDF_*`/`DOCX_*`). Many runtime failures are message-only — never require a code | map per `references/assurance.md` §9 |
 | `done` | **always last**: `status` + `exit_code`; may carry `next[]` | terminal |
 
 **`next[]`** on pauses, refusals, and `done` lists ready-to-run follow-up commands. Usual shape: objects `{cmd, why, title}`; a few refusal sites emit plain strings — handle both. Offer them to the user; never auto-run a mutating `next` command.
@@ -68,7 +68,7 @@ The full pause (questions pending):
 Two sibling shapes *(0.7.1+)*, distinguished by their fields — branch on presence:
 
 - `crashed: true` and **no** `pending_questions` — a crash-paused session; the `resume` command re-enters the conversation, nothing to answer up front.
-- `held` (a count) — the session holds items awaiting the user's review; resume presents them.
+- `held` (a count) — only `sid`, `resume`, and `held` are present (no `expires_at`); the session holds items awaiting the user's review; resume presents them.
 
 Use `text` + `options[].label` + `recommended_index` + `rationale` to decide or to present the question. An option carrying `input: true` *(0.7.1+)* needs a typed value with the pick — answer it via `--answer <id>="<value>"` or plain-words `--message`. The `resume` field is the exact command to run — append `--message "<plain words>"`, `--answer <id>=<v>` pairs, or `--with-source <ref>`.
 

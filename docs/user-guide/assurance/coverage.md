@@ -23,7 +23,13 @@ coverage — 8f0e…f2.evidence
 depth (proven by the pack):
   ◐ ███░░░░░░░  38%  uc-buy-as-a-guest — partial (1/4 ACs proven, 1 failed, 1 blocked)
   ✔ ██████████ 100%  uc-mobile-sign-in — covered (1/1 ACs proven)  · 1 stale
+
+completeness (live graph):
+  [high] create ac-payment-declined-message — no test verifies this AC
+         → kane-cli design tests --use-case uc-buy-as-a-guest
 ```
+
+The panel always shows **both** axes: the pack's proven depth, then the live-graph completeness worklist with its ready-to-paste commands (`--json` emits both as one document).
 
 - The default pack is the newest in `<cwd>/.testmuai/evidence`; `--from` takes a pack directory, a sealed `.evidence` file, or an execution id.
 - Depth is **risk-weighted and lenient**: a high-risk criterion weighs more, and a passed-but-stale criterion still counts as proven — staleness is surfaced (`· N stale`), never silently demoted. Per-use-case status is `covered` (every AC proved) · `blocked` (something couldn't run, nothing failed) · `partial` · `uncovered`.

@@ -19,7 +19,7 @@ kane-cli context ingest <src...> [--as <id>] [--mode <mode>] [--plan] [--force] 
 Snapshots one or more files into `.context/` (the store is created on first use) **and then extracts them** *(0.7.1)*:
 
 - On a terminal, the run continues straight into the interactive extract chat.
-- `--mode agent` extracts headless on the NDJSON stream (one `ingested` event per landing, before the extraction begins — see [Automation](./automation.md#the-ndjson-stream---mode-agent)).
+- `--mode agent` extracts headless on the NDJSON stream (one `ingested` event per landing, before the extraction begins — see [Automation](./automation.md#the-ndjson-stream---mode-agent)); `--mode override` extracts headless too, auto-taking every default.
 - `--mode ci` — or piped stdin without a `--mode` — **lands only**: the files snapshot, nothing extracts, exit `0`, with a guidance line on stderr telling you what to run next.
 - `--plan`, `--force`, and `--trust` pass through to the extraction; they refuse under the land-only modes.
 
@@ -98,7 +98,7 @@ Flags:
 
 ### The interactive session
 
-The chat has two zones. The **scrollback** is the complete session journey — source banners, the agent's narrative, its reasoning and tool lines, each turn's proposals as an **item table**, answer receipts, commit receipts, pause cards, and a session summary. The **live region** below holds only what's happening now: the working line, and one panel.
+The chat has two zones. The **scrollback** is the complete session journey — source banners, the agent's narrative, its reasoning and tool lines, each turn's proposals as an **item table**, answer receipts, commit receipts, pause cards, and a session summary. The **live region** below holds only what's happening now: the working line (**ctrl+t** expands the agent's reasoning), and one panel.
 
 **Everything is a panel** — there is no free-typing command line. Each state presents its actions as selectable rows; the cursor starts on row 1, and **row 1 is always the recommended next step**. `↑↓` move, `⏎` selects, digits jump, and **typing anywhere** seeds the trailing `✎` free-text row's inline editor — your words become an answer on a question, or steering between turns ("make UC-4 high risk", "also cover the coupon path").
 
