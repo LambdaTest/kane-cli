@@ -52,9 +52,9 @@ Only allowlisted media is accepted — anything else is rejected with `UNSUPPORT
 
 - **Text, cited verbatim by line** (2 MB): `.txt`, `.md`/`.markdown`, and the structured-text family `.json`, `.yaml`/`.yml`, `.toml`, `.xml`, `.log`. Structured files are ingested as-is — a malformed JSON is still citable evidence. Files must be valid UTF-8 (`ENCODING_UNSUPPORTED` otherwise); a file with very long lines (e.g. minified JSON) ingests with a warning, since line anchors lose granularity — consider pretty-printing first.
 - **Images, cited whole-image** (5 MB): PNG, JPEG, WebP.
-- **PDF** (25 MB): the document's extracted text becomes the citable text (page-marked, cited by line), and embedded images become citable parts of the same source. The summary reports pages and how many images were delivered vs omitted; omitted images are marked inline. PDFs must contain selectable text — scanned/image-only documents refuse with `PDF_NO_TEXT_LAYER`, password-protected ones with `PDF_ENCRYPTED`, extremely large ones with `PROJECTION_TOO_LARGE` (split and ingest the parts). A file that doesn't match its extension refuses with `MEDIA_SNIFF_MISMATCH`.
-- **Word documents (`.docx`)** (25 MB): converted to a deterministic text projection (body text, headers/footers, footnotes, tables, list items; tracked changes as the final view) plus embedded images as citable parts. Anything not extracted leaves an explicit marker (`[equation omitted]`, `[object omitted: drawing]`) — nothing vanishes silently. Password-protected files refuse with `DOCX_ENCRYPTED_OR_LEGACY` and save-as guidance; a renamed spreadsheet/presentation refuses with `DOCX_NOT_WORDPROCESSING`; a document with neither text nor images refuses with `DOCX_NO_TEXT`. Legacy binary `.doc` is not supported — save as `.docx` (or export to PDF) and re-ingest.
-- **Jira issues, by URL**: pass an issue URL instead of a file — `kane-cli context ingest https://<your-site>/browse/PROJ-123`. **Prerequisite:** Jira must be connected in your LambdaTest Integrations screen — otherwise the ingest refuses and points you there. What is ingested: the summary, description (verbatim), custom fields, and the full attachment inventory; image attachments become citable parts, other attachments are listed but not fetched. Comments are not ingested. Re-running the same URL is `unchanged` when nothing citable changed and `versioned` when it did — cosmetic display changes never move the head, and dependents go stale exactly like a re-ingested file. The default source id is the lowercased issue key (`proj-123`); `--as` overrides. A failed attachment download never fails the ingest — the item is inventoried as not fetched.
+- **PDF** (25 MB): the document's text becomes the citable text (page-marked), and embedded images become citable parts of the same source. PDFs need selectable text — scanned documents refuse with `PDF_NO_TEXT_LAYER`, password-protected ones with `PDF_ENCRYPTED`; every refusal names its remedy (split a very large document, re-save an encrypted one).
+- **Word documents (`.docx`)** (25 MB): converted to a plain-text projection (body, headers/footers, footnotes, tables; tracked changes as the final view) plus embedded images as citable parts — anything not extracted leaves an explicit marker, nothing vanishes silently. Password-protected files and legacy binary `.doc` are refused with save-as guidance.
+- **Jira issues, by URL**: pass an issue URL instead of a file — `kane-cli context ingest https://<your-site>/browse/PROJ-123`. Jira must be connected in your LambdaTest Integrations screen (the refusal points you there). Ingested: the summary, description, custom fields, and the attachment inventory (image attachments become citable parts). Comments are not ingested. Re-running the URL is `unchanged` or `versioned`, exactly like a re-ingested file; the default source id is the lowercased issue key (`--as` overrides).
 
 When the new bytes are a **changed version of a source you already extracted from**, prefer [`kane-cli maintain reconcile`](./maintain.md) over a bare re-ingest — it records the same head move *and* triages what the change means for your suite, in one step.
 
@@ -90,10 +90,10 @@ Flags:
 | `--force` | Re-extract sources even if their current snapshot was already extracted |
 | `--source <id>` | Extract exactly this ingested source instead of the whole corpus |
 | `--mode <mode>` | Ask policy for headless runs: `agent` \| `ci` \| `override` — see [Automation](./automation.md) |
-| `--trust <dial>` *(0.7.1)* | `auto` (the default: new items commit as `derived`, queued for review) \| `hold` (everything new is **held** for your review — nothing commits until you decide). `hold` is headless-only — interactive runs refuse it, and `ci` refuses the flag entirely (exit `2`, nothing executed). Tip: hold works best one source at a time (`--source <id>`); resuming held work from a multi-source run is not yet supported |
+| `--trust <dial>` *(0.7.1)* | `auto` (the default: new items commit as `derived`, queued for review) \| `hold` (everything new is **held** for your review — nothing commits until you decide; headless-only, and `ci` refuses it). Hold works best one source at a time (`--source <id>`) |
 | `--resume <sid>` | Resume a paused session ([sessions](#sessions)) |
 | `--message "<text>"` | With `--resume`: answer the pending questions in plain words |
-| `--answer <q>=<v>` *(0.7.1)* | With `--resume --mode agent`: answer a specific pending question by id — `<question-id>=<option number or free text>`, repeatable |
+| `--answer <q>=<v>` *(0.7.1)* | With `--resume --mode agent`: answer a pending question by id — see [Automation](./automation.md) |
 | `--with-source <ref>` *(0.7.1)* | With `--resume`: land this file or URL **first**, set the pending questions aside, let the agent read it — it then re-asks only what's still open |
 
 ### The interactive session
@@ -118,7 +118,7 @@ During the chat, proposals commit as **drafts** (`derived`) — reviewing and pr
 
 ### Pausing and resuming
 
-When the agent needs an answer you're not there to give (or you Ctrl+C, or the process dies), the session is saved and the run exits `3` — **sessions are durable from the first turn** *(0.7.1)*: a crash that left a checkpoint exits `3` and prints the exact resume command (a crash before anything durable was saved still exits `1`). Resume any time within 24 hours:
+When the agent needs an answer you're not there to give (or you Ctrl+C, or the process dies), the session is saved and the run exits `3` with the exact resume command — even when the process dies mid-run *(0.7.1)*. Resume any time within 24 hours:
 
 ```bash
 kane-cli context sessions                       # list resumable sessions + their resume commands
@@ -196,7 +196,7 @@ Replays a node's recorded history straight from the store — **no model call, e
 kane-cli context sessions [list|show|clean] [<sid>] [--all] [--json]
 ```
 
-Paused extract *and* design sessions live under `.context/sessions/` for 24 hours. `list` shows each with its pending-question count, expiry, and ready-to-paste resume command. `show <sid>` prints everything the paused agent is waiting on — the questions in full, any defaults it assumed in your absence, and the resume forms. `clean` garbage-collects expired sessions (`clean <sid>` removes one; `--all` removes everything). Sessions written by a **newer** kane-cli than the one you're running are listed honestly as unknown rather than with a resume command that would fail *(0.7.1)*.
+Paused extract *and* design sessions live under `.context/sessions/` for 24 hours. `list` shows each with its pending-question count, expiry, and ready-to-paste resume command. `show <sid>` prints everything the paused agent is waiting on — the questions in full, any defaults it assumed in your absence, and the resume forms. `clean` garbage-collects expired sessions (`clean <sid>` removes one; `--all` removes everything).
 
 ## Housekeeping
 
@@ -262,7 +262,7 @@ Two rules worth repeating from the [overview](./overview.md#the-store-context): 
 
 ### Tracing a run
 
-Every assurance run prints a `trace: <path>` line naming the run's log file — the printed path is authoritative, and it's the first place to look when a run surprises you. By default the trace lives in a per-user log directory; with telemetry disabled (`KANE_TELEMETRY=0`) it stays under `.context/logs/`. With telemetry on, the run also prints a **session id** (`as-…`, in the banner and on error footers) — the id to share when reporting a problem.
+Every extract and design run prints a `trace: <path>` line naming its log file — the first place to look when a run surprises you.
 
 ## For agents and CI
 

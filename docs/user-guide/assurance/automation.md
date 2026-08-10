@@ -168,15 +168,9 @@ The rule stands: there is no auto-approve. These paths land **your** decisions f
 
 `cover --mode agent` and `cover gaps --mode agent` speak the same envelope (`verb: "cover"` / `"gaps"`): the full `--json` payload arrives as **one** `coverage` (or `gaps`) event, and `done` closes the stream carrying the worklist's ready-to-paste commands in `next[]`. `--mode ci` speaks the identical stream. Any refusal is an `error` event + `done` with exit `2`.
 
-## When the release pair doesn't match
+## When releases don't match
 
-The assurance commands ship as a matched pair of components inside one kane-cli release, and sessions bind to the pair that created them. Three refusals exist so a mismatch is loud instead of subtle, each naming its remedy:
-
-- `PAIR_MISMATCH` (exit `2`, at startup) — the installed halves are from different releases; rebuild or reinstall so both halves match.
-- `BINDING_MISMATCH` (exit `2`, on resume) — the session was created under a different release pair than the one resuming it. The session is kept: start the conversation fresh (committed work is kept), or resume on the release that created it.
-- An outdated CLI can also be refused by the service mid-run — "this version of kane-cli is no longer supported — update kane-cli and retry". That surfaces as a runtime failure (exit `1`, message-only); upgrade and retry.
-
-A paused session can hit `BINDING_MISMATCH` after upgrading kane-cli — that is the expected shape of "this session belongs to the old release", not a corruption.
+Sessions bind to the kane-cli release that created them, and the refusals are loud with the remedy in the message: `PAIR_MISMATCH` at startup (exit `2` — reinstall so the installed pieces match), `BINDING_MISMATCH` on resume (exit `2` — the session belongs to another release: start fresh, committed work is kept, or resume on the release that created it), and a mid-run "this version of kane-cli is no longer supported — update kane-cli and retry" (a message-only runtime failure, exit `1`). Hitting `BINDING_MISMATCH` on a paused session right after upgrading is expected, not corruption.
 
 ## Machine-readable reads
 

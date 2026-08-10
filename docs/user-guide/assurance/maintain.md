@@ -67,7 +67,7 @@ The verdicts per card:
 
 After the last card a **done panel** renders with the honest tally and three rows: `finish` · `evolve another use-case…` (a picker over stale targets, with a `✎` editor for what should change) · `view what changed` (a read-only list of this run's outcomes). **Nothing lands unapproved** — beyond recording the source change itself, everything a reconcile proposes is staged until you decide. Ctrl+C pauses cleanly (pending work lives in the stored plan, and the same reconcile command picks it back up).
 
-The walk can also surface pending **review** items *(0.7.1)* — held items awaiting a verdict (including held updates to existing items) and possible duplicates ride the same walk as review cards, so one pass covers everything waiting on you; a problem in that feeder never blocks the reconcile rows themselves. Held items' citations are re-verified against the source's current text before they commit — a citation that no longer holds refuses with `HELD_CITES_STALE` and a re-stage hint rather than committing silently.
+The walk can also surface pending **review** items *(0.7.1)* — held items awaiting a verdict (including held updates to existing items) and possible duplicates ride the same walk as review cards, so one pass covers everything waiting on you; a problem in that feeder never blocks the reconcile rows themselves. Held items' citations are re-verified against the source's current text before they commit — a citation that no longer holds is refused with a re-stage hint rather than committing silently.
 
 ### `--plan` — a preview that doesn't touch the suite
 

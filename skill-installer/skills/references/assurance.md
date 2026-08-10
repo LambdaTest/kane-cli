@@ -169,8 +169,6 @@ Since 0.6.8 the default `cover gaps` output (and bare `--json`) is a **nested du
 | stream ends with no `done` event | the process crashed — outcome unknown | check `context sessions --json` and `context list` before any retry, to avoid duplicate paid work |
 | exit `130` | force-interrupted | resumable only if a `session_paused` event was actually received |
 
-Runs print a session id (`as-…`) in the banner and error footers when telemetry is on — include it when the user reports a problem to support.
-
 ## 10. Narration
 
 Same philosophy as SKILL.md §1 — translate, don't transcribe:

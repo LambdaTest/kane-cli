@@ -58,7 +58,7 @@ Flags on the tree:
 - `--stage design|cover|all` (default `all`) filters **which debt renders** — it never changes a mark or a percentage, and `--stage cover` needs no pack here.
 - `--top <n>` bounds the pending rows shown per use-case (`… +K more`).
 - `--from` belongs to the pack world: on the tree it exits `2` with a pointer to `kane-cli cover --from <pack>`. (It still works under `--flat`.)
-- `--json` emits one nested document: the designed axis, the proven axis (absent entirely when the store has no execution facts), and `usecases[]` whose `pending` rows keep the engine's field names verbatim (`ref`/`kind`/`why`/`risk`/`stage`/`tag`/`ready_command`) plus additive `id` and `title` — `id` is `null` when nothing in the chain has a name, never a truncated hash.
+- `--json` emits one nested document: the designed axis, the proven axis (absent entirely when the store has no execution facts), and the per-use-case pending rows, each carrying its `ready_command`.
 
 ### `--flat` — the legacy worklist
 

@@ -41,8 +41,6 @@ Between phases the session parks on a **check-in panel** — the same panel surf
 
 Headless modes run all phases without parking; a high-risk question pauses an `agent`-mode run (resumable) and fails a `ci`-mode run closed. Each phase still commits and reports as it completes on the event stream. See [Automation](./automation.md).
 
-The design's progress is durable *(0.7.1)*: each finalized phase is recorded with its generation and completeness, which is what makes `--phase` re-entry and honest resumes possible.
-
 ## What you get
 
 A design run commits to the graph **and writes files**. Each kept test lands as a normal, runnable `*_test.md` under `<cwd>/.testmuai/tests/`:
@@ -95,7 +93,7 @@ Until a test has been authored, [`kane-cli testrun`](../testrun.md) preflight re
 
 `--force` regenerates the scenario+test pairs (superseding the old ones); ACs are dedup-first — an equivalent AC re-emitted by the engine reuses the existing node instead of piling up copies. When the staleness comes from a source document you just changed, [`kane-cli maintain reconcile`](./maintain.md) surfaces the same re-design as part of its changed-source triage; for staleness from older changes, [`kane-cli maintain evolve`](./maintain.md#evolve) re-designs the use-case with the blast radius stated first.
 
-**Citations are verified before they commit** *(0.7.1)*. Every citation a design run wants to record is checked against the pinned source version's actual text before anything lands; a citation that doesn't verify is sent back to the agent to repair (surfacing as `CITE_UNVERIFIED` if it can't) — designed items never carry fabricated provenance.
+**Citations are verified before they commit** *(0.7.1)*. Every citation a design run wants to record is checked against the pinned source text before anything lands; one that doesn't verify is sent back to the agent to repair — designed items never carry fabricated provenance.
 
 ## `design explain` — replay the why
 
