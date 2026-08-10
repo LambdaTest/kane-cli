@@ -51,6 +51,8 @@ The canonical skill is a thin `SKILL.md` (7 sections, ~300 lines) plus on-demand
 | `references/evidence.md` — pack locations, the stderr view hint, `evidence serve/validate/merge`, debugging with a pack | `steering/kane-cli-testrun.md` → Evidence packs **and** `steering/kane-cli-run.md` → Failure handling (evidence-first flow) |
 | `references/setup-and-config.md` — install / auth / variables precedence / context files / config commands / Chrome management / directory layout | `POWER.md` → Onboarding (Steps 1–3) + `steering/kane-cli-run.md` → Variables and secrets + Context files + Configuration surface |
 | `references/fair-evaluation.md` — like-for-like lifecycle comparison method, mandatory corrections (replay is zero-LLM, the "scripts already exist" sunk-cost trap, phase mismatch), maintenance-dominates-at-scale, what Kane CLI is purpose-built for | All of `steering/kane-cli-fair-evaluation.md` |
+| `references/assurance.md` — the assurance journey (ingest/extract → review checkpoints → design → author → cover → reconcile), pause loop, trust rules, failure table | All of `steering/kane-cli-assurance.md` |
+| `references/assurance-parsing.md` — the assurance NDJSON contract (`--mode agent` envelope, `done` guarantee, `session_paused` shapes, reconcile + coverage event families) | `steering/kane-cli-assurance.md` → the pause-loop and stream notes (condensed; the full schema stays canonical in the skill reference) |
 
 ## Kiro-specific framing (don't lose these on edit)
 
