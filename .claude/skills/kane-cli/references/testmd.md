@@ -6,6 +6,8 @@ The §3 `run` command is the **primary** mode — one-shot, ephemeral. `testmd` 
 
 Use `testmd` whenever the user wants the test to persist. The decision is binary — once a test exists as a file, every later invocation is `testmd run`, never `run`.
 
+> **Mobile test?** `target: emulator|simulator` in the frontmatter — with the app as its own root `app:` key — makes a `_test.md` drive a native app on an Android emulator or iOS simulator (macOS Apple Silicon); `chrome`/`cdp`/`ws` on the same key is the browser. Read `references/mobile.md`.
+
 ## When to switch from `run` to `testmd`
 
 | User says | Use |

@@ -16,6 +16,14 @@ Every page below is standalone — start wherever your job starts.
 - [Getting started](./getting-started.md) — from a fresh install to a passing run in five minutes.
 - [Authentication](./authentication.md) — OAuth, username/access-key, profiles, CI logins.
 
+## Mobile testing
+
+Run tests against local mobile virtual devices. This release supports **macOS Apple Silicon (arm64) only**.
+
+- **[Mobile testing overview](./mobile/overview.md)**: start here for what's supported and why this release is mac-arm64 only.
+- [iOS Simulator setup](./mobile/simulator.md): install Xcode, then let kane-cli install its tooling.
+- [Android Emulator setup](./mobile/emulator.md): install Android Studio and an arm64 AVD, then let kane-cli install its tooling.
+
 ## Run and author tests
 
 - [Running tests](./running-tests.md) — objectives, the TUI, run flags, slash commands.

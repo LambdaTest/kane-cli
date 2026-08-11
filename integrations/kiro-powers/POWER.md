@@ -1,7 +1,7 @@
 ---
 name: "kane-cli"
 displayName: "Kane CLI — Browser Automation & AI Test Authoring"
-description: "Drive a real browser from natural-language objectives, AND author structured test cases / scenarios from a feature description. Kane CLI manages Chrome, an AI agent, and a TestMu AI session, then emits structured NDJSON Kiro can parse. Use for any task that needs a real browser (navigation, form fills, search, UI checks, screenshots, deploy verification), to author test cases / scenarios from a requirement (`kane-cli generate`), or for committable, replay-cached browser tests (`kane-cli testmd`)."
+description: "Drive a real browser from natural-language objectives, AND author structured test cases / scenarios from a feature description. On macOS Apple Silicon it can also drive a native Android or iOS app on a virtual emulator / simulator (the browser stays the default target). Kane CLI manages Chrome, an AI agent, and a TestMu AI session, then emits structured NDJSON Kiro can parse. Use for any task that needs a real browser (navigation, form fills, search, UI checks, screenshots, deploy verification), a native mobile app (macOS Apple Silicon only), to author test cases / scenarios from a requirement (`kane-cli generate`), or for committable, replay-cached browser tests (`kane-cli testmd`)."
 keywords:
   - "kane-cli"
   - "kaneai"
@@ -21,6 +21,14 @@ keywords:
   - "test-authoring"
   - "ai-test-generation"
   - "qa"
+  - "mobile"
+  - "mobile-testing"
+  - "mobile-app"
+  - "android"
+  - "ios"
+  - "emulator"
+  - "simulator"
+  - "app-testing"
 author: "TestMu AI"
 ---
 
@@ -60,6 +68,8 @@ npm install -g @testmuai/kane-cli
 ```
 
 Then re-verify with `kane-cli --version`. Requirements: **Node.js 18+** and **Google Chrome** installed locally (Kane CLI auto-launches Chrome over CDP on ports 9222–9230).
+
+**Mobile app testing is scoped to macOS on Apple Silicon (arm64).** The default browser (desktop) target has no such requirement and runs on any supported host. Only when the user wants to drive a native Android or iOS app do they additionally need macOS Apple Silicon plus **Xcode 16+** (iOS) or **Android Studio** with one `arm64-v8a` AVD (Android), then `kane-cli login` and `kane-cli doctor --install`. Load the **`kane-cli-mobile`** steering file for that flow.
 
 Common install failures:
 
@@ -163,13 +173,14 @@ Kane CLI requires a TestMu AI account. Configuration is per-flag — do not rely
 When the user's task makes one of these patterns relevant, load the matching steering file before composing the command:
 
 - **`steering/kane-cli-run.md`** — every `kane-cli run` invocation. Covers objective patterns (action / assertion / extraction), the full flag reference, NDJSON parsing, results presentation, failure diagnosis, parallel execution, and project/folder management.
+- **`steering/kane-cli-mobile.md`**: any time the user wants to drive a **native mobile app** (Android or iOS) instead of the browser, available on **macOS Apple Silicon only**. Covers the `--target desktop|emulator|simulator` axis (desktop / browser stays the default), selecting a device and the required app under test (`--app <build|APPid>`), one-time setup (Xcode / Android Studio plus `kane-cli doctor --install`), the flat `_test.md` `target:` + `app:` frontmatter keys, and why `kane-cli testrun` excludes mobile.
 - **`steering/kane-cli-testmd.md`** — any time the user wants a committable test, or is reading / editing / running a `_test.md` file. Covers the `kane-cli testmd` commands, `_test.md` file format and frontmatter (including `tags:`), `@import` composition, the replay-vs-author cache model, `Result.md`, lock conflicts, and CI patterns.
 - **`steering/kane-cli-testrun.md`** — any time the user wants to run **several** saved `_test.md` tests as one batch ("run the suite", "run all the smoke tests", "nightly regression"), or asks about evidence packs (viewing, sharing, validating a run's `.evidence` file). Covers `kane-cli testrun run` (selection by paths / `--match` / `--tags`, preflight, `--parallel`, `--dry-run`), its typed NDJSON events, exit codes, and the `kane-cli evidence` commands.
 - **`steering/kane-cli-generate.md`** — any time the user wants test cases or scenarios **written** (no browser action). Covers the three generate modes (new / refine / save), clarification round-trips, the refine→save→run loop, the typed NDJSON event schema, and the generate → testmd handoff.
 - **`steering/kane-cli-fair-evaluation.md`** — any time the user asks you to compare, evaluate, benchmark, or justify Kane CLI against another tool or approach (cost, tokens, effort, ROI). Covers the like-for-like lifecycle comparison method (Kane authoring vs the alternative's script *creation*; replay vs execution; plus locator-break repair and ongoing maintenance), the common comparison traps, and what Kane CLI is purpose-built for.
 - **`steering/kane-cli-assurance.md`** — any time the user has **requirement documents** (a PRD, a spec, acceptance notes) and wants tests designed from them, coverage accounting ("what exactly is covered?"), or the suite reconciled after a requirements change. Covers the assurance journey (`context ingest`/`extract` → review → `design tests` → author → `testrun` → `cover`), the pause loop (`--mode agent`, exit 3 = resumable), the review checkpoints, and `maintain reconcile`.
 
-Default to `kane-cli-run.md` for one-shot browser tasks. Switch to `kane-cli-testmd.md` the moment the user says anything like "save this test", "commit this", "regression / smoke test", "make this replayable", or "run in CI" — or asks about a `_test.md` file by name. Switch to `kane-cli-testrun.md` when the user wants **two or more** saved tests run together, or asks to see/share run evidence. Switch to `kane-cli-generate.md` when the user says anything like "write test cases for", "give me a test suite for", "generate tests for", "what edge cases should we cover" — or when the task needs cases authored but no browser. **Don't hand-draft test cases in chat or a scratch file** — load the generate steering and use `kane-cli generate`. Switch to `kane-cli-assurance.md` when the user brings **requirement documents** (a PRD, a spec) and wants a designed suite, requirement-linked coverage, or the suite reconciled after a requirements change — that flow uses `--mode agent` (not `--agent`) and its own exit-code meanings. Load **`kane-cli-fair-evaluation.md`** whenever the user asks whether Kane CLI is worth it, or to compare its cost / effort / ROI against generating Playwright scripts or any other approach — comparisons are only honest like-for-like across the test lifecycle.
+Default to `kane-cli-run.md` for one-shot browser tasks. Switch to `kane-cli-mobile.md` when the user wants to test a **native Android or iOS app** (macOS Apple Silicon only) rather than the browser. Desktop / browser stays the default target, so only load it once the user asks for a mobile app. Switch to `kane-cli-testmd.md` the moment the user says anything like "save this test", "commit this", "regression / smoke test", "make this replayable", or "run in CI" — or asks about a `_test.md` file by name. Switch to `kane-cli-testrun.md` when the user wants **two or more** saved tests run together, or asks to see/share run evidence. Switch to `kane-cli-generate.md` when the user says anything like "write test cases for", "give me a test suite for", "generate tests for", "what edge cases should we cover" — or when the task needs cases authored but no browser. **Don't hand-draft test cases in chat or a scratch file** — load the generate steering and use `kane-cli generate`. Switch to `kane-cli-assurance.md` when the user brings **requirement documents** (a PRD, a spec) and wants a designed suite, requirement-linked coverage, or the suite reconciled after a requirements change — that flow uses `--mode agent` (not `--agent`) and its own exit-code meanings. Load **`kane-cli-fair-evaluation.md`** whenever the user asks whether Kane CLI is worth it, or to compare its cost / effort / ROI against generating Playwright scripts or any other approach — comparisons are only honest like-for-like across the test lifecycle.
 
 # Command reference (condensed)
 

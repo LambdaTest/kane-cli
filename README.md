@@ -1,6 +1,6 @@
 # Kane CLI - TestMu AI (Formerly LambdaTest)
 
-**The validation layer for AI coding agents — natural-language browser automation and requirements-to-coverage assurance, called from your CLI or IDE.**
+**The validation layer for AI coding agents. Natural-language web and mobile-app automation, plus requirements-to-coverage assurance, called from your CLI or IDE.**
 
 [![npm version](https://img.shields.io/npm/v/@testmuai/kane-cli)](https://www.npmjs.com/package/@testmuai/kane-cli)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
@@ -85,6 +85,16 @@ kane-cli launches your locally installed Google Chrome (stable channel) via the 
 - **Slow / cold CI runners** — if Chrome is slow to come up, raise the per-attempt CDP readiness timeout with `KANE_CLI_CDP_TIMEOUT_MS` (default `30000`) and/or the launch-retry count with `KANE_CLI_CDP_RETRIES` (default `2`; `0` = single attempt).
 
 > Full install reference (platforms, updates, uninstall): [docs/user-guide/installation.md](docs/user-guide/installation.md). Chrome environment variables: [docs/user-guide/configuration.md](docs/user-guide/configuration.md#chrome-environment-variables).
+
+### Mobile (macOS Apple Silicon only)
+
+kane-cli can also run tests against a local iOS Simulator or Android Emulator. This is available on **macOS Apple Silicon (arm64)** only, and it is off by default, so your web runs are unaffected.
+
+- Install the platform tooling you already use: **Xcode** (for iOS), or **Android Studio** with one `arm64-v8a` AVD (for Android).
+- Sign in and install kane-cli's managed test tooling: `kane-cli login && kane-cli doctor --install`.
+- Run against a target: `kane-cli run "<objective>" --target simulator --app ./MyApp.zip`.
+
+> Full setup and prerequisites: [Mobile testing](docs/user-guide/mobile/overview.md).
 
 ## First run (under 60 seconds)
 
@@ -210,7 +220,12 @@ This installs the skill for Claude Code, Codex CLI, and Gemini CLI in one comman
 
 ```bash
 kane-cli --tui                         # Open the interactive TUI.
-kane-cli run "<objective>" [flags]     # Run a browser objective (headless/CLI mode).
+kane-cli run "<objective>" [flags]     # Run an objective on the browser (default) or a mobile device.
+
+# Mobile testing (macOS Apple Silicon; web stays the default target)
+kane-cli doctor                        # Check the mobile tooling this machine needs, with a fix per row.
+kane-cli doctor --install              # Download or repair kane-cli's managed mobile test tooling.
+kane-cli run "<objective>" --target simulator --app <path|APPid>   # Run against a simulator/emulator.
 
 # test.md files (replayable, committable tests)
 kane-cli testmd run <path>             # Run a _test.md file (caches steps; replays from cache after).
@@ -256,6 +271,10 @@ kane-cli config set-window <W>x<H>     # Browser window size (e.g. 1920x1080).
 kane-cli config set-url <url>          # Default start URL for runs (used when --url / test.md url: is absent).
 kane-cli config set-mode <action|testing>
                                        # Agent behaviour on auth walls / blocked pages.
+kane-cli config set-target <desktop|emulator|simulator>
+                                       # Default run target (emulator/simulator need macOS Apple Silicon).
+kane-cli config set-device <id>        # Default mobile device (name, serial, or udid).
+kane-cli config set-app <path|APPid>   # Default app under test for mobile runs.
 kane-cli config set-bug-detection <off|stop|continue>
                                        # Flag suspected product bugs while authoring (default off).
 kane-cli config project [<id>]         # Default project for uploads (interactive picker if no id).
@@ -268,7 +287,7 @@ kane-cli feedback --test-id <id> --feedback-type <positive|negative> --details "
 kane-cli --version                     # Print version.
 ```
 
-TUI slash commands (`/run`, `/login`, `/logout`, `/whoami`, `/balance`, `/profiles`, `/config`, `/new`, `/summary`, `/cancel`, `/help`, `/clear`, `/exit`) are listed in [docs/user-guide/running-tests.md](docs/user-guide/running-tests.md#slash-commands).
+TUI slash commands (`/run`, `/mobile`, `/desktop`, `/doctor`, `/login`, `/logout`, `/whoami`, `/balance`, `/profiles`, `/config`, `/new`, `/summary`, `/cancel`, `/help`, `/clear`, `/exit`) are listed in [docs/user-guide/running-tests.md](docs/user-guide/running-tests.md#slash-commands).
 
 ### `kane-cli run` flags
 
@@ -281,6 +300,9 @@ TUI slash commands (`/run`, `/login`, `/logout`, `/whoami`, `/balance`, `/profil
 | `--url <url>`               | config `default_url`                  | Start URL for the run. Overrides the configured default; bare domains get `https://`. |
 | `--allow-missing-url`       | off                                   | Non-TTY only: proceed from the browser's current page instead of failing when no start URL resolves. |
 | `--mode <name>`             | config value, otherwise `testing`     | `action` (strict) or `testing` (lenient) on auth walls / blocked pages. |
+| `--target <name>`           | saved session target, else `desktop`  | Where to run: `desktop` (browser), `emulator` (Android), or `simulator` (iOS). Emulator/simulator require macOS Apple Silicon. |
+| `--device <id>`             | none                                  | Which mobile device to use (name, serial, `ip:port`, or udid). Applies when the target is mobile. |
+| `--app <path\|APPid>`       | none                                  | App under test for a mobile run: a build (`.apk` for emulator, `.zip` for simulator) or an uploaded `APP…` id. |
 | `--bug-detection <mode>`    | config value, otherwise `off`         | Detect product bugs while authoring: `off`/`stop`/`continue` (`stop` halts on a confirmed bug; `continue` records it and keeps going). |
 | `--env <name>`              | active profile's env                  | Environment (e.g. `prod`).                                              |
 | `--cdp-endpoint <url>`      | none                                  | Connect to an existing Chrome via the Chrome DevTools Protocol.         |

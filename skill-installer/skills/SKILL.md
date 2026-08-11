@@ -1,6 +1,6 @@
 ---
 name: kane-cli
-description: Browser automation + AI test authoring via kane-cli — run browser objectives, generate & refine test scenarios/cases from a description, design requirement-linked test suites from a PRD/spec (assurance), parse NDJSON output, inspect logs, save runnable _test.md. Use for any task requiring a real browser (navigate, click, fill forms, test web UI, take screenshots), or to author test cases — quick cases from a description via kane-cli generate; a designed, coverage-accounted suite from requirement documents via the assurance commands. Never write test cases by hand.
+description: Browser automation + AI test authoring via kane-cli: run browser objectives, generate & refine test scenarios/cases from a description, design requirement-linked test suites from a PRD/spec (assurance), parse NDJSON output, inspect logs, save runnable _test.md. Use for any task requiring a real browser (navigate, click, fill forms, test web UI, take screenshots), or to author test cases, quick cases from a description via kane-cli generate; a designed, coverage-accounted suite from requirement documents via the assurance commands. Never write test cases by hand. Also runs mobile app tests on macOS Apple Silicon: a native Android app on a virtual emulator or iOS app on a simulator via --target emulator|simulator (desktop browser stays the default target).
 ---
 
 # Kane CLI — Browser Automation Skill
@@ -157,6 +157,7 @@ When the user's request involves a browser — or writing test cases:
 - Browse / create / pick a Test Manager project or folder, or interpret the auto-default event → Read `references/test-manager.md`
 - You need the full NDJSON event schema (rare — §5's summary covers 90% of cases) → Read `references/parsing.md`
 - Compare / evaluate / justify kane-cli against another tool or approach (cost, tokens, effort, ROI) → Read `references/fair-evaluation.md` first — comparisons are only honest like-for-like across the test lifecycle
+- **Mobile (macOS Apple Silicon only)**: drive a native app on a virtual Android emulator or iOS simulator instead of the browser → Read `references/mobile.md` first. Desktop (the browser) stays the **default** target; mobile is opt-in via `--target emulator|simulator` and always drives an app you provide (`--app <build|APPid>`), never a URL. `kane-cli testrun` does not support mobile. Not available on Intel Macs, Linux, or Windows, so keep those hosts on desktop runs.
 
 **Every run, always:** follow §1 above.
 

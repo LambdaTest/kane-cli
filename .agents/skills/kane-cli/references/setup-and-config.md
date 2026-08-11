@@ -6,6 +6,8 @@
 
 Before first use, verify installation and auth.
 
+> **Mobile setup (macOS Apple Silicon)** is separate: install Xcode 16+ (iOS) or Android Studio with one `arm64-v8a` AVD (Android), then `kane-cli login` and `kane-cli doctor --install` (installs kane-cli's managed test tooling); `kane-cli doctor` checks readiness. Read `references/mobile.md`.
+
 ### Install
 
 ```bash

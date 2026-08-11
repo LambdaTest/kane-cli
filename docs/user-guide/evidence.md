@@ -17,6 +17,8 @@ Opened in the viewer (or unzipped), a pack contains:
 - **Run logs** — the CLI and runner logs for the execution.
 - **Failure records** — on failed runs, a per-step record with the error message, the page state at failure, and references into the console/network logs.
 
+For a mobile run, the result summary records the **device** in the run environment (for example the device model and OS version), and the per-step logs include **device logs** from the emulator or simulator alongside the usual browser logs.
+
 The pack is the **only** place run artifacts live — there is no separate per-run log directory on disk.
 
 ## Inside the pack
