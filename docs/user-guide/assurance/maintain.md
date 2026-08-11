@@ -3,7 +3,7 @@
 Products change; tests shouldn't rot. `kane-cli maintain` closes the [assurance loop](./overview.md): when a requirement document changes, `maintain reconcile` turns that one changed source into an honest, row-by-row update plan for your suite, and `maintain evolve` re-designs a use-case whose design went stale. Everything works over the same `.context/` store — maintain adds no new knowledge kinds, it moves the existing ones.
 
 ```bash
-kane-cli maintain reconcile --from <file> --source-id <id>          # the interactive session (TTY default)
+kane-cli maintain reconcile --from <file> --source-id <id>          # the in-chat review (TTY default)
 kane-cli maintain reconcile --from <file> --source-id <id> --plan   # preview: stage + store the plan
 kane-cli maintain reconcile --apply [path]                          # continue a stored plan
 kane-cli maintain reconcile --from <file> --source-id <id> --mode agent   # headless — see Automation
@@ -14,14 +14,14 @@ kane-cli maintain evolve --from-stale                               # …or ever
 <a name="reconcile"></a>
 ## `maintain reconcile` — one changed source, one triage
 
-Reconcile is the on-change front door: a requirement document changed — what should the suite do about it? It re-ingests the source, re-extracts use-cases over the new snapshot, leads with a changeset (what the change did to your knowledge), and then triages the resulting rows with you.
+Reconcile is the on-change front door: a requirement document changed — what should the suite do about it? It re-ingests the source, re-extracts use-cases over the new snapshot, and leads with a changeset (what the change did to your knowledge). *(0.7.2)* In a terminal, every proposed change then **holds behind a review card** — adds, updated versions, archives — and nothing from the changeset commits until you give a verdict. Only two pass-throughs land at finalize: evidence attached to unchanged matches, and the extraction record itself.
 
 It takes **two explicit inputs** — reconcile never guesses which source a file belongs to:
 
-- `--from <file>` — the **new** version of the document (a file path).
-- `--source-id <id>` — the **existing** source this file succeeds; its head moves. Find ids with `kane-cli context list --type source`.
+- `--from <file|url>` — the **new** version of the document: a file path, or *(0.7.2)* a Jira issue / Confluence page URL (the same URLs [`context ingest`](./context.md#ingest) takes — see [Remote sources](#remote-sources)).
+- `--source-id <id>` — the **existing** source this file succeeds; its head moves. Find ids with `kane-cli context list --type source`. Required with a file; optional beside a URL, whose id is intrinsic.
 
-Both are required on a fresh run. `--apply <path>` alone is enough to continue a stored plan — the plan remembers its source.
+With a file, both are required on a fresh run. `--apply <path>` alone is enough to continue a stored plan — the plan remembers its source.
 
 > Hand reconcile the changed file directly — don't `context ingest` the new version first. Reconcile does the re-ingest itself, and [re-running the same command](#running-again) is always safe.
 
@@ -34,7 +34,8 @@ Before anything runs — no questions asked, nothing written, identical in every
 3. it is an ingestable document type;
 4. the source id names a known source;
 5. that source isn't retired (restore it first with [`kane-cli context revert`](./context.md#housekeeping));
-6. the file doesn't already back a **different** live source — the fork guard: the error suggests the `--source-id` you probably meant, so one document's history never silently forks into another's.
+6. the file doesn't already back a **different** live source — the fork guard: the error suggests the `--source-id` you probably meant, so one document's history never silently forks into another's;
+7. *(0.7.2)* the **held-source guard**: a live session already holding review work pinned to this source refuses the head move and names the session to finish first (`kane-cli context extract --resume <sid>`) — the head never moves under held evidence. A session file that can't be read fails **closed**, with the [`context sessions`](./context.md#sessions) list/clean remedy: a file that can't be read can't prove the absence of a hold.
 
 Any failure exits `2` with a message naming the next command to run. In `--mode agent`, validation failures ride the NDJSON stream (`error` + `done`), never stderr alone.
 
@@ -53,25 +54,47 @@ changeset: 3 item(s)
 - **ADD** — a use-case newly extracted from the changed source.
 - **ARCHIVE** — a strict, three-part evidence decay: every quote fails to relocate into the new text, *and* no other live source evidences the node, *and* this run attached no fresh evidence. All three, or it isn't proposed for archiving.
 
-### The session (the default in a terminal)
+### The in-chat review (the default in a terminal)
 
-Interactive reconcile is a **card walk**: one ADD / MODIFY / ARCHIVE card at a time, each with its why — ARCHIVE cards carry the full evidence-decay reasoning, and MODIFY and ARCHIVE cards state their honest downstream cost up front (`impact: approving marks 14 item(s) stale`). While a card is up, every keystroke belongs to the card:
+*(0.7.2)* A terminal reconcile runs as an **in-chat review**. The extraction runs over the change, every proposed change holds, and the check-in offers `review N change(s) from <source>` as its first row — `later` stays available, every other row keeps working, and the offer returns at each check-in until you take it. Selecting it walks the held changes **one card at a time, highest risk first**. Each card shows what changed (a compact diff), why it matched, its evidence cite, and its honest downstream cost (`impact: approving marks 14 item(s) stale`); a longer diff collapses to its summary plus a non-committing `view diff` row (esc returns to the card).
 
-- **Arrow keys** move through the options, **Enter** takes the highlighted one, and **digits** jump straight to an option.
-- **Typing anything else opens an inline editor** seeded with your words — they become the steering the re-design sees, and approving applies both in one gesture.
+The verdicts:
 
-The verdicts per card:
+- **approve** commits that change: an ADD mints the draft (and offers `design tests now`), a MODIFY mints the successor with a redirect from the old version (and offers `evolve the design now`), an ARCHIVE applies the non-destructive retire (reversible any time with [`kane-cli context revert`](./context.md#housekeeping)). Offers are rows you choose — never auto-run — and a child design run surfaces its questions in this same session.
+- **reject** drops the staged proposal and leaves **zero residue** — nothing is remembered, so a later reconcile may propose the same change again; that is deliberate.
+- **defer** parks the decision as **one durable gap**, visible in [`cover gaps`](./coverage.md) with the reconcile command as its remedy; it clears when a later verdict lands on the same change. One compatibility note: while a deferred change is on the record, the store **no longer passes integrity checks or accepts commits on older kane-cli versions** — machines sharing a store should upgrade to 0.7.2 together.
+- **✎ / typing is steering**: your words go to the agent, the remaining changes re-finalize, and revised cards re-present — cards you already resolved never come back (ARCHIVE cards take no steering).
 
-- **ADD / MODIFY** — **approve** (an ADD runs a design session for the new use-case right there; a MODIFY commits the update, or re-designs via [`maintain evolve`](#evolve) when the break is structural, blast radius stated first) · **reject** (drop the staged proposal) · **defer** (park it — the stored plan keeps it and a later run re-offers it) · or type to **steer** the re-design in your own words.
-- **ARCHIVE** — **retire** (the explicit verdict; reversible any time with [`kane-cli context revert`](./context.md#housekeeping) — nothing is ever deleted) · **skip** · **defer**.
+Three properties worth knowing:
 
-After the last card the composer wakes: type `<uc-ref> <what to change>` to route one more re-design through the same session. **Nothing lands unapproved** — beyond recording the source change itself, everything a reconcile proposes is staged until you decide. Ctrl+C pauses cleanly (pending work lives in the stored plan, and the same reconcile command picks it back up), and the session ends with an honest summary of what was applied, rejected, deferred, and retired.
+- **Every verdict re-validates at commit time.** A target retired mid-review, a source whose head moved again, or new live evidence on an archive target re-presents the card with the reason — an approved change never lands silently different from what you saw.
+- **There is no batch approve-all.** Row 1 carries the recommendation, so Enter-through-the-cards is the fast path — but every change gets its own decision. Esc on a card is a deliberate no-op: verdicts are commits, and there is nothing to back out of.
+- **Your decisions survive anything.** Verdicts persist beside the proposal as you make them — Ctrl+C keeps every decision, and the review resumes with `--apply` (below) or by resuming the session. The last verdict releases the source for other work.
+
+The review also surfaces pending items from earlier extract sessions *(0.7.1)* — held items awaiting a verdict (including held updates to existing items) and possible duplicates join the same card review, so one pass covers everything waiting on you; a problem in that feeder never blocks the reconcile changes themselves. Held items' citations are re-verified against the source's current text before they commit — a citation that no longer holds is refused with a re-stage hint rather than committing silently.
 
 ### `--plan` — a preview that doesn't touch the suite
 
 `--plan` records the source change and **stages everything downstream**: the proposed rows are held in a stored plan (`plan stored: <path>`, under `.context/reconcile/plans/`), and no tests or designs are touched. Two things do land, disclosed in the output: the head move (the change fact is true regardless of what you decide), and a matched use-case whose source content moved is updated as part of the re-extract itself. Every MODIFY and ARCHIVE row in the plan carries its impact line (`impact: approving marks N item(s) stale`), and a `skipped arms` line names every analysis this release does not run.
 
-Walk the plan later with `--apply <path>` — or bare `--apply`, which picks the latest plan behind an approval prompt (headless modes accept it silently). `--apply --from <file> --source-id <id>` recomputes live instead. `--plan` and `--apply` together is a usage error (exit `2`). A repeated `--plan` re-renders the stored plan; an unchanged source is a truthful no-op (`nothing to reconcile`).
+Walk the plan later with `--apply <path>` — or bare `--apply`. *(0.7.2)* If a live review is holding changes, bare `--apply` resumes it as cards first, **agent-free** — no model, no network; your stored verdicts are the pause state. (A headless run that meets a held review refuses instead of guessing verdicts.) With no held review, it picks the latest stored plan behind an approval prompt (headless modes accept it silently). `--apply --from <file> --source-id <id>` recomputes live instead. `--plan` and `--apply` together is a usage error (exit `2`). A repeated `--plan` re-renders the stored plan; an unchanged source is a truthful no-op (`nothing to reconcile`).
+
+<a name="remote-sources"></a>
+### Remote sources — `--from <url>` *(0.7.2)*
+
+`--from` also accepts a **Jira issue or Confluence page URL** — the same URLs [`context ingest`](./context.md#ingest) takes. Remote sources ride the same flow as files: reconcile fetches the latest content through your Atlassian connection, the head moves if anything you'd cite changed, and everything downstream — cards, `--plan`, `--apply` — is identical.
+
+```bash
+kane-cli maintain reconcile --from https://<your-site>/browse/PROJ-123 --plan
+kane-cli maintain reconcile --from https://<site>/wiki/spaces/<KEY>/pages/<id>/…
+```
+
+Remote-specific rules:
+
+- **The id comes from the URL** (`proj-123` for an issue, `page-<id>` for a page), so `--source-id` is optional. Passing one that contradicts the URL's own identity refuses — reconcile never adopts a URL under a different id. A source you ingested under a custom id (`context ingest --as`) is maintained by re-running that ingest with the same `--as`.
+- **Kind continuity, both ways.** A URL can't version a file-backed source that happens to share its id, and a file can't version a remote source — each refuses and names the correct `--from`. The same check runs when a stored plan replays, so a stale plan can never overwrite a source whose backing changed hands.
+- **Stored plans remember the URL** and recompute by re-fetching it — the same way a file plan re-reads its file.
+- **After an upgrade**, the first reconcile of a Jira issue ingested before 0.7.2 may report a head move that isn't a content edit — that's the source's one-time re-version (see [Accepted media](./context.md#accepted-media)), not a change to review.
 
 <a name="running-again"></a>
 ### Running again — reconcile converges
@@ -92,8 +115,9 @@ A plan stored by an earlier kane-cli version is refused with a hint to recompute
 
 `--mode agent|ci|override` is the same ask-policy matrix extract and design use — see [Automation](./automation.md) for the full contract and reconcile's NDJSON stream. Two things are specific to reconcile:
 
-- Headless runs don't stage: the re-extract commits as it goes, and rows apply per mode — `override` and `ci` auto-apply ADD and MODIFY rows; `ci` fail-closes when a run needs human judgement; `agent` streams typed events and pauses.
+- Headless runs don't stage: the re-extract commits as it goes, and rows apply per mode — `override` and `ci` auto-apply ADD and MODIFY rows; `ci` fail-closes when a run needs human judgement; `agent` streams typed events and pauses. The in-chat review is a terminal surface — headless verdict behavior is unchanged in 0.7.2 (the stream itself tightened; next bullet).
 - **Archiving is never automatic.** No headless mode archives anything; ARCHIVE decisions wait for an interactive session.
+- *(0.7.2)* The `--mode agent` stream is **pure NDJSON**: it opens with a minimal `run_start`, nothing else prints on either output, and the re-extract child rides the same stream — its extract events interleave with the `reconcile_*` events, each stamped `verb: "reconcile"`. See [Automation](./automation.md) for the event vocabulary.
 
 A bare non-TTY run refuses (exit `2`) and asks for an explicit `--mode` — or `--plan` for a preview.
 
