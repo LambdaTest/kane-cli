@@ -1,4 +1,4 @@
-<!-- Read this when the user wants to run or author a test against a mobile app (Android emulator or iOS simulator) instead of the browser. Owns mobile availability, the target axis, target/device/app selection on `run`, the app-under-test requirement, mobile setup (login + doctor --install), doctor flags, the testmd `target:` frontmatter mapping form, the testrun exclusion, and what objective grammar carries over to mobile. Desktop (browser) stays the default; this is the scoped mobile branch. -->
+<!-- Read this when the user wants to run or author a test against a mobile app (Android emulator or iOS simulator) instead of the browser. Owns mobile availability, the target axis, target/device/app selection on `run`, the app-under-test requirement, mobile setup (login + doctor --install), doctor flags, the testmd flat `target:` + `app:` frontmatter keys, the testrun exclusion, and what objective grammar carries over to mobile. Desktop (browser) stays the default; this is the scoped mobile branch. -->
 
 # Mobile testing (macOS Apple Silicon)
 
@@ -33,7 +33,7 @@ kane-cli run "<objective>" --agent --target simulator --app ./builds/MyApp.zip
 | Flag | Purpose |
 |---|---|
 | `--target desktop\|emulator\|simulator` | Pick the target. Default is the saved session target, else `desktop`. |
-| `--device <id>` | Choose a specific device by name, serial, `ip:port`, or udid. Optional: kane-cli picks a ready device if omitted. |
+| `--device <id>` | Choose a specific device by name, serial, `ip:port`, or udid. In a TTY, omitting it opens a one-time picker whose answer is saved; in `--agent`/non-TTY runs a device must already be set (`--device` or `config set-device`) or the run exits 2 naming the fix. |
 | `--app <path\|APPid>` | The app under test. **Required for every mobile run** (see below). |
 
 On **desktop**, `--device` and `--app` are ignored. They only apply to `emulator`/`simulator`.
@@ -84,21 +84,20 @@ Two halves, and kane-cli owns the second:
 
 ## `target:` in a `_test.md`
 
-The `target:` frontmatter key selects the transport for a saved test, and its **shape** decides browser vs mobile:
+The `target:` frontmatter key is **one scalar**, sharing the `--target` vocabulary. Browser transports and mobile targets are the same key; the app rides beside it as its own root key:
 
-- **Scalar** = a browser transport: `chrome`, `cdp`, or `ws`. This is the desktop path.
-- **Mapping** = mobile:
+- `chrome`, `cdp`, `ws` — the browser (desktop path).
+- `emulator` (Android), `simulator` (iOS) — mobile:
 
   ```yaml
   ---
-  target:
-    platform: android      # android | ios
-    app: ./builds/app-debug.apk   # a build (.apk / .zip) or an APP… id, never a package id
-    no_reset: false        # optional
+  target: emulator              # emulator (Android) | simulator (iOS)
+  app: ./builds/app-debug.apk   # a build (.apk / .zip) or an APP… id, never a package id
+  no_reset: false               # optional
   ---
   ```
 
-  `platform: android` maps to the emulator, `ios` to the simulator. `app` follows the same rule as `--app`: a build (`.apk`/`.zip`) or an uploaded `APP…` id, never a package id.
+  `app:` follows the same rule as `--app` and is **required** with a mobile target — and refused with a browser one; `no_reset:` pairs with a mobile target the same way. The platform never appears in the file: `emulator` is Android, `simulator` is iOS. The nested form (`target: {platform, app}`) is not accepted — the parser refuses it and spells out this flat shape.
 
 Everything else about `_test.md` (step bodies, replay/cascade, commands) is unchanged. See `references/testmd.md`. Run a mobile test with `kane-cli testmd run <path> --agent`.
 

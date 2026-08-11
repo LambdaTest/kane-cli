@@ -87,7 +87,9 @@ Frontmatter is YAML inside `---` fences at the top of the file. Every key is opt
 | `local_context` | string or file path | root + per-step | Project-scoped guidance. Same shape as `global_context`. |
 | `variables` | object | root + per-step | Named values usable as `{{name}}` in objectives. See [Variables](#variables). |
 | `session_context` | `{ prior_runs: [...] }` | root + per-step | Pre-loaded prior-run context for the agent. |
-| `target` | scalar (`"chrome"` \| `"cdp"` \| `"ws"`) or mapping (`{platform, app, no_reset}`) | root only | A scalar selects the browser transport (default `chrome`); a mapping selects a mobile target (a virtual Android or iOS device). See [Mobile target](#mobile-target). |
+| `target` | `"chrome"` \| `"cdp"` \| `"ws"` \| `"emulator"` \| `"simulator"` | root only | Where the test runs: a browser transport (default `chrome`) or a mobile target (a virtual Android or iOS device, macOS Apple Silicon). See [Mobile target](#mobile-target). |
+| `app` | string | root only | Mobile only: the app under test — a build path (emulator `.apk`, simulator `.zip`) or an uploaded `APP…` id. Required with `target: emulator\|simulator`, rejected with a browser target. |
+| `no_reset` | boolean | root only | Mobile only: keep the app's existing state between runs instead of resetting it. |
 | `chrome_profile` | string | root only | Named Chrome profile under `~/.testmuai/kaneai/chrome-profiles/`. |
 | `cdp_endpoint` | string | root only | Reuse an external Chrome over CDP. |
 | `ws_endpoint` | string | root only | LambdaTest / Playwright WebSocket endpoint. |
@@ -100,26 +102,27 @@ Keys not in this table are rejected with `unknown config key: <key>` at parse ti
 
 ### Mobile target
 
-`target:` accepts two shapes. As a **scalar** (`chrome`, `cdp`, or `ws`) it selects how kane-cli reaches a browser, as above. As a **mapping** it selects a mobile target (a virtual Android or iOS device), available on macOS Apple Silicon:
+On macOS Apple Silicon, `target:` also accepts the two mobile values — `emulator` (a virtual Android device) and `simulator` (a virtual iOS device) — with the app under test as its own root key:
 
 ```yaml
 ---
-target:
-  platform: android          # android | ios
-  app: ./builds/app-debug.apk
-  no_reset: false
+target: emulator             # emulator (Android) | simulator (iOS)
+app: ./builds/app-debug.apk
+no_reset: false              # optional
 ---
 ```
 
-- **`platform`**: `android` runs on an emulator, `ios` on a simulator.
-- **`app`**: the app under test, required. A build path (`android`: `.apk`, `ios`: `.zip`) or an uploaded app id (`APP` followed by six or more digits). On-device package ids are not accepted.
-- **`no_reset`**: keep the app's existing state between runs instead of resetting it.
+- **`target`**: `emulator` runs on an Android emulator, `simulator` on an iOS simulator. The platform never appears separately — the target implies it.
+- **`app`**: the app under test, required with a mobile target (and rejected with a browser one). A build path (emulator: `.apk`, simulator: `.zip`) or an uploaded app id (`APP` followed by six or more digits). On-device package ids are not accepted.
+- **`no_reset`**: optional; keep the app's existing state between runs instead of resetting it.
+
+The nested form (`target: {platform, app}`) is not accepted — the parser refuses it and spells out the flat shape above.
 
 Mobile tests run with `kane-cli testmd run`; batch [`testrun`](../testrun.md) does not support mobile members. Setup is covered in [Mobile testing](../mobile/overview.md).
 
 ### Root-only vs root-or-per-step
 
-- **Root only** — Chrome settings (`target`, `chrome_profile`, `cdp_endpoint`, `ws_endpoint`, `headless`), `url`, `mode`, `tags`, and `on_lock_conflict`. These apply to the whole run; setting them on an individual step is a parse error.
+- **Root only** — Chrome settings (`target`, `chrome_profile`, `cdp_endpoint`, `ws_endpoint`, `headless`), the mobile keys (`app`, `no_reset`), `url`, `mode`, `tags`, and `on_lock_conflict`. These apply to the whole run; setting them on an individual step is a parse error.
 - **Root or per-step** — everything else can appear in the per-step `yaml` block to override the frontmatter for that step only.
 
 ## Steps

@@ -40,7 +40,7 @@ kane-cli run "<objective>" --agent --target simulator --app APP123456
 | Flag | Purpose |
 |---|---|
 | `--target desktop\|emulator\|simulator` | Pick the target. Default is the saved session target, else `desktop`. |
-| `--device <id>` | Choose a specific device by name, serial, `ip:port`, or udid. Optional: kane-cli picks a ready device when omitted. |
+| `--device <id>` | Choose a specific device by name, serial, `ip:port`, or udid. In a TTY, omitting it opens a one-time picker whose answer is saved; in `--agent`/non-TTY runs a device must already be set (`--device` or `config set-device`) or the run exits 2 naming the fix. |
 | `--app <path\|APPid>` | The app under test. **Required for every mobile run** (see below). |
 
 On **desktop**, `--device` and `--app` are ignored (they only apply to `emulator` / `simulator`).
@@ -105,21 +105,20 @@ Two halves, and kane-cli owns the second:
 
 # Committing a mobile test (`_test.md`)
 
-A `_test.md` selects its surface through the **`target:`** frontmatter key, and its **shape** decides browser vs mobile:
+A `_test.md` selects its surface through the **`target:`** frontmatter key — **one scalar**, sharing the `--target` vocabulary:
 
-- **A scalar** (`chrome`, `cdp`, or `ws`) is a **browser** transport: the desktop path, used by every existing test.
-- **A mapping** is **mobile**:
+- `chrome`, `cdp`, or `ws` is a **browser** transport: the desktop path, used by every existing test.
+- `emulator` (Android) or `simulator` (iOS) is **mobile**, with the app as its own root key:
 
   ```yaml
   ---
-  target:
-    platform: android            # android | ios
-    app: ./builds/app-debug.apk  # a build (.apk / .zip) or an APP… id, never a package id
-    no_reset: false              # optional
+  target: emulator               # emulator (Android) | simulator (iOS)
+  app: ./builds/app-debug.apk    # a build (.apk / .zip) or an APP… id, never a package id
+  no_reset: false                # optional
   ---
   ```
 
-  `platform: android` maps to the emulator, `ios` to the simulator. `app` follows the same rule as `--app`: a build (`.apk` / `.zip`) or an uploaded `APP…` id, never a package id.
+  `app:` follows the same rule as `--app` and is **required** with a mobile target — and refused with a browser one; `no_reset:` pairs with a mobile target the same way. The platform never appears in the file: `emulator` is Android, `simulator` is iOS. The nested form (`target: {platform, app}`) is not accepted — the parser refuses it and spells out this flat shape.
 
 Author it once (real device, like any first run), then replay from cache. Everything else about the `_test.md` format is unchanged. Load the **`kane-cli-testmd`** steering file. Run a mobile test with `kane-cli testmd run <path> --agent`.
 
