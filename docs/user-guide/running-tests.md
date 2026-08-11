@@ -208,7 +208,7 @@ kane-cli run "Sign in and open the account tab" --target simulator --app ./build
 The mobile run flags:
 
 - `--target desktop|emulator|simulator`: which target to run against. Defaults to the saved session target, otherwise `desktop`.
-- `--device <id>`: pick a device by name, serial, `ip:port`, or udid. Optional; kane-cli selects a device when you omit it.
+- `--device <id>`: pick a device by name, serial, `ip:port`, or udid. In the TUI/TTY, omitting it opens a one-time picker and the choice is saved; in non-interactive runs a device must already be set (via `--device` or `kane-cli config set-device`) or the run exits with the fix spelled out.
 - `--app <path|APPid>`: the app under test, required for every mobile run. Pass a build (emulator: `.apk`, simulator: `.zip`) or an uploaded app id (`APP` followed by six or more digits). On the `desktop` target, `--device` and `--app` are ignored.
 
 In the interactive TUI, a first run offers a Desktop / Emulator / Simulator chooser, and you can switch targets at any time with `/mobile` and `/desktop`. Run `/doctor` to check mobile tooling and devices.

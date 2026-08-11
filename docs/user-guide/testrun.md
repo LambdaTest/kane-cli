@@ -47,7 +47,7 @@ error: plan invalid — 2 offending test(s):
   tests/other_project_test.md: project_mismatch
 ```
 
-> **Mobile is not supported in a batch run.** A `_test.md` with a mobile [`target:` mapping](./testmd/overview.md#mobile-target) is rejected up front, before the suite runs. Run mobile tests one at a time with `kane-cli testmd run <path>`.
+> **Mobile is not supported in a batch run.** A `_test.md` with a mobile [`target:`](./testmd/overview.md#mobile-target) (`emulator` / `simulator`) is rejected up front, before the suite runs. Run mobile tests one at a time with `kane-cli testmd run <path>`.
 
 ## Running
 
