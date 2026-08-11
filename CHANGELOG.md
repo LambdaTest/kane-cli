@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.2] - 2026-08-11
+
+### Jira and Confluence ingestion
+- **Ingest a Confluence page directly by URL** — `ingest <confluence-url>` pulls page content and images into kane-cli. Images are gated on your account's capabilities, and the canonical envelope is byte-deterministic so re-ingesting the same page never creates phantom versions. Space renames do not silently trigger a new version.
+- **Jira ingests now carry comments** — comments are fetched with full cursor pagination and appended to the canonical envelope. If Jira setup has not been completed, ingest prints the Integrations URL so the fix is one click away.
+- **Better error surfaces on the shared transport** — when the transport hits a 429, it retries with a bounded backoff. Wire errors map to clean codes and include the Integrations setup URL when relevant. Malformed attachments (raw bytes or base64 JSON) are handled tolerantly rather than failing the whole request.
+
+### Reconcile gets remote sources and in-chat review
+- **`reconcile --from` now accepts remote URLs** — remote sources are resolved through the provider table and use intrinsic identity, so conflicts are caught before anything lands rather than after.
+- **Reviews happen inside the chat shell** — instead of a separate flow, reconcile review sessions appear as cards directly in the terminal: inline diff vs. summary, a diff panel with window markers, and offer/steer actions. Verdicts are written to a durable ledger alongside the proposal so the session survives interruptions.
+- **Ctrl+C defers past an in-flight verdict** — pressing Ctrl+C during a reconcile review now waits for the current verdict to complete before exiting, avoiding corrupted state.
+- **`--apply <path>` can no longer be hijacked** — a path passed explicitly always resolves to that path; it is never overridden by a mounted session.
+
+### Diagnostics and observability
+- **Automatic ingest triage with `fsck`** — a new triage telemetry layer (`ASR_FSCK_REPORT`) tracks identity and error-floor data, making it easier to diagnose silent failures in ingest and reconcile pipelines.
+- **Windows logging is now UTF-8-safe** — log output on Windows no longer garbles non-ASCII characters (fixes kane-cli#149).
+
+### Reliability fixes
+- **Off-viewport assertions now anchor correctly** — full-page snapshots are taken so value and state assertions on elements scrolled out of view still pass.
+- **Retry attempts are nested, not flattened** — `--retry` now tracks each attempt as its own entry rather than merging all retries into a single flat list, making run history readable.
+- **Literal value templates recorded correctly** — the tape records the actual value template, not the checkpoint sentence that described it, so replays produce the right inputs.
+
 ## [0.7.1] - 2026-08-08
 
 ### Multi-source extraction and queued drain
