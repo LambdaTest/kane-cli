@@ -15,7 +15,7 @@ extract: no TTY — pass an explicit --mode agent|ci|override to run headless
 | Mode | Questions | stdout |
 |---|---|---|
 | `interactive` | asked in the chat (TTY default) | the Ink chat UI |
-| `agent` | low/medium-risk defaults are auto-taken (each reported); a **high-risk** question pauses the session — exit `3`, resumable | **NDJSON events** (one JSON object per line); prose diagnostics go to stderr |
+| `agent` | low/medium-risk defaults are auto-taken (each reported); a **high-risk** question pauses the session — exit `3`, resumable | **NDJSON events** (one JSON object per line); *(0.7.2)* nothing else on either output — stderr stays silent |
 | `ci` | any high-risk question **fails closed** — exit `1`, error code `HIGH_RISK_CI` | prose transcript |
 | `override` | every default is auto-taken, including high-risk (each flagged in the commit record) | prose transcript |
 
@@ -40,16 +40,21 @@ Consistent across extract, design, and the maintain commands that embed them:
 
 With `--mode agent`, stdout speaks a versioned NDJSON vocabulary — envelope `{"type": "<name>", "v": 1, "verb": "extract"|"design", ...}`, one object per line. The vocabulary is open: new event types may appear, so **tolerate unknown types**.
 
+*(0.7.2)* The stream is **strict**: stdout carries only NDJSON — the first line is an event, `done` is the last — and stderr stays silent (crash traces excepted). No version banner, no receipts, no progress lines; everything user-relevant arrives as a typed event. On 0.7.1, prose diagnostics could ride stderr and a merged ingest printed receipt lines before the stream — a consumer that skips non-JSON prefix lines works on both releases.
+
 | type | payload highlights |
 |---|---|
 | `ingested` *(0.7.1)* | one per source landed by a merged `context ingest … --mode agent` run — `source_id`, `status` (`created`/`unchanged`/`versioned`), `cid`; arrives **before** the extraction's own events |
-| `run_start` | `mode`, `trace` (the per-run log path); design adds `use_case` |
+| `run_start` | `mode`, `trace` (the per-run log path); design adds `use_case`; *(0.7.2)* `session` — a support id, present when telemetry is on |
 | `corpus` | extract: the `sources[]` this run covers + already-extracted `skipped[]` |
 | `source_start` / `source_skipped` | `source_id`, `index`/`total`, `resumed` / `reason` |
 | `plan` | the `--plan` transcription payload |
 | `assumed_default` | a question auto-answered with its recommended default: `id`, `selected_index`, `risk` |
 | `agent_activity` | progress: `kind` (`tool` / `decision` / `progress` / `thinking_done`) + a display `label` |
-| `usage` | per agent turn: `credits` + running `total_credits` |
+| `agent_message` *(0.7.2)* | the agent's narrative `text` — the conversational lead-in before a question batch and the closing statement at the end of a run |
+| `warning` *(0.7.2)* | an actionable non-fatal condition: `code` (`ZERO_USE_CASES`, `SAVE_FAILED`) + `message` |
+| `lock_steal` *(0.7.2)* | a stale run lock was taken over: `key`, `stale_owner`, `by`, `ts` — observability only, no action needed |
+| `usage` | per agent turn: `credits` + running `total_credits` (rounded to two decimals) |
 | `validate_failed` | a proposal failed kane-side validation: `codes[]`, `repairing` (the agent self-repairs) |
 | `degraded` *(0.7.1)* | duplicate detection fell back to a reduced mode this run (`reason`) — new items are held for review instead of auto-committed |
 | `held` / `update_held` *(0.7.1)* | items were **held** for your review instead of committed (`source_id`, `count`, `reason` / `count`, `targets[]`) — the `--trust hold` and degraded-detection paths |
@@ -62,19 +67,19 @@ With `--mode agent`, stdout speaks a versioned NDJSON vocabulary — envelope `{
 | `session_complete` | `sid` |
 | `gate_refused` | a design gate refused the run (may be the first event) |
 | `phase_entry_override` *(0.7.1)* | a design `--phase` entry point was applied: `phase`, `missing[]` |
-| `error` | `message` + a stable `code` where one exists — e.g. `NO_STORE`, `PREFLIGHT`, `SOURCE_MISSING`, `BLOB_MISSING`, `HIGH_RISK_CI`, `STALE_BASIS`, `EXTRACT_LOCKED`, `TRUST_USAGE`, `TRUST_UNDER_CI`, `HOLD_MULTI_SOURCE`, `UC_UNREVIEWED`, `UNKNOWN_PHASE`, `PHASE_ORDER`, `CITE_UNVERIFIED`, `WRONG_VERB`, `INGEST_UNAUTHORIZED_REF`, `STRUCTURED_FLAGS_USAGE` / `STRUCTURED_TARGET_UNKNOWN` (a misused `--answer`/structured verdict; the unknown-target refusal lists the addressable ids), `PAIR_MISMATCH` / `BINDING_MISMATCH` (see below). Many runtime failures are message-only |
+| `error` | `message` + a stable `code` where one exists — e.g. `NO_STORE`, `PREFLIGHT`, `SOURCE_MISSING`, `BLOB_MISSING`, `HIGH_RISK_CI`, `STALE_BASIS`, `EXTRACT_LOCKED`, `TRUST_USAGE`, `TRUST_UNDER_CI`, `HOLD_MULTI_SOURCE`, `UC_UNREVIEWED`, `UNKNOWN_PHASE`, `PHASE_ORDER`, `CITE_UNVERIFIED`, `WRONG_VERB`, `INGEST_UNAUTHORIZED_REF`, `STRUCTURED_FLAGS_USAGE` / `STRUCTURED_TARGET_UNKNOWN` (a misused `--answer`/structured verdict; the unknown-target refusal lists the addressable ids), `PAIR_MISMATCH` / `BINDING_MISMATCH` (see below). *(0.7.2)* Three reconcile refusals carry a bracketed marker at the END of the message instead of a `code` — `[SOURCE_HELD]` / `[SESSIONS_UNREADABLE]` (a head-move refused while a live review holds the source — finish, or list/clean, the named session) and `[HELD_REVIEW]` (a headless `--apply` met a held review that needs a human); match the marker, not a `code` field. Many runtime failures are message-only |
 | `done` | **always the last event**: `status` (`complete`/`paused`/`error`/`refused`/`interrupted`/`aborted`) + `exit_code`; may carry `next[]` |
 
-**The `done` guarantee:** every `--mode agent` invocation that starts the stream ends it with exactly one `done` event — including refusals and graceful interrupts. Two exceptions. A merged `context ingest` that fails at the **landing itself** (a bad path, an unsupported or oversized file, a refused URL) ends with a prose error line and exit `1`/`2` *before any NDJSON begins* — no stream, no `done`; that is a refusal to fix, not a crash (sources already landed stay safe, and the run says so). And operator force: a second Ctrl+C can hard-kill the process (exit `130`) without a `done`. Any other stream that ends without `done` should be treated as a crash. One more parsing note: the agent may also repair a draft mid-turn on its own — that surfaces only as `agent_activity` lines (labels like `validation failed`, `refining the draft`); treat activity labels as display text, never script against them.
+**The `done` guarantee:** every `--mode agent` invocation that starts the stream ends it with exactly one `done` event — including refusals and graceful interrupts. *(0.7.2)* The stream starts at the first line: a merged ingest's landing failures (a bad path, an unsupported or oversized file, a refused URL, misused flags) also arrive as `error` + `done` — codes `MODE_USAGE`, `AS_SINGLE_SOURCE`, `UNSUPPORTED_URL`, `INGEST_FAILED`, `DIALS_LAND_ONLY` — and sources already landed stay safe, with the run saying so. (On 0.7.1 these landing failures ended with a prose error line and exit `1`/`2` *before any NDJSON began* — no stream, no `done`.) The one exception on both releases is operator force: a second Ctrl+C can hard-kill the process (exit `130`) without a `done`. Any other stream that ends without `done` should be treated as a crash. One more parsing note: the agent may also repair a draft mid-turn on its own — that surfaces only as `agent_activity` lines (labels like `validation failed`, `refining the draft`); treat activity labels as display text, never script against them.
 
-Two more parsing rules *(0.7.1)*:
+Two more parsing rules:
 
-- **A merged ingest prints receipts before the stream.** `kane-cli context ingest … --mode agent` prints its landing receipts — a few prose lines per file — *before* the NDJSON begins. This is deliberate (the receipts belong to the landing, which precedes the extraction). A strict per-line `JSON.parse` consumer must skip non-JSON prefix lines, or start consuming at the first line that begins with `{`.
+- **Receipts and prefixes.** *(0.7.2)* Nothing precedes the stream — the landing receipts **are** the `ingested` events, and every stdout line parses as JSON. On 0.7.1, a merged ingest printed a few prose receipt lines per file before the NDJSON began, so strict per-line `JSON.parse` consumers had to skip non-JSON prefix lines. That skip is harmless on 0.7.2 — a version-tolerant consumer can keep it.
 - **`next[]` carries follow-up commands.** Pauses, gate refusals, and `done` can carry a `next` list of ready-to-run follow-ups. The common shape is objects (`{cmd, why, title}`); a few refusal sites emit plain strings — handle both, and treat every entry as a command to offer, not to auto-run.
 
 ### Reconcile's stream
 
-`maintain reconcile --mode agent` speaks the same envelope with `verb: "reconcile"` and its own event set:
+`maintain reconcile --mode agent` speaks the same envelope with `verb: "reconcile"` and its own event set. *(0.7.2)* The stream opens with `run_start`, and the re-extract child rides the **same stream**: its extract-vocabulary events (`source_start`, `agent_activity`, `plan`, `commit`, …) interleave between the `reconcile_*` events, all stamped `verb: "reconcile"` — one command, one stream. The engine itself is unchanged: ADD/MODIFY auto-apply, ARCHIVE pauses, `--apply` resumes.
 
 | type | payload highlights |
 |---|---|

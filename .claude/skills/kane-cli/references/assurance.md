@@ -1,4 +1,4 @@
-<!-- kane-cli skill reference: assurance (requirements → designed suite → coverage → upkeep). Read when the user has a requirements document and wants tests designed from it, coverage accounting, or suite upkeep. Requires kane-cli 0.6.1+; features marked 0.7.1+ need that release. -->
+<!-- kane-cli skill reference: assurance (requirements → designed suite → coverage → upkeep). Read when the user has a requirements document and wants tests designed from it, coverage accounting, or suite upkeep. Requires kane-cli 0.6.1+; features marked 0.7.1+ / 0.7.2+ need those releases. -->
 
 # Assurance — Agent Surface
 
@@ -9,7 +9,7 @@ When the user has **requirements** — a PRD, a spec, acceptance notes — and w
 
 Everything here works over a local store (`.context/` in the project directory) that the commands create and manage themselves.
 
-**Version gate — check before improvising.** The assurance commands exist on kane-cli **0.6.1 and later**; flags and events marked **0.7.1+** below need that release. On an older CLI, `kane-cli context …` fails as an *unknown command* (exit 2 with a "did you mean" suggestion) — that error means the CLI is too old, not that you typed it wrong. Confirm with `kane-cli --version`, tell the user to update (`npm install -g @testmuai/kane-cli`, or `brew upgrade kane-cli`), and stop — do not try to reproduce the workflow with other commands.
+**Version gate — check before improvising.** The assurance commands exist on kane-cli **0.6.1 and later**; flags and events marked **0.7.1+** / **0.7.2+** below need those releases. On an older CLI, `kane-cli context …` fails as an *unknown command* (exit 2 with a "did you mean" suggestion) — that error means the CLI is too old, not that you typed it wrong. Confirm with `kane-cli --version`, tell the user to update (`npm install -g @testmuai/kane-cli`, or `brew upgrade kane-cli`), and stop — do not try to reproduce the workflow with other commands.
 
 ## 1. The journey — follow in order, stop at the checkpoints
 
@@ -75,9 +75,10 @@ Accepted sources (each with a size cap; oversized = `FILE_TOO_LARGE`, wrong type
 - images `png`/`jpeg`/`webp` (≤5MB);
 - **PDF** (≤25MB; 0.6.7+) — needs a text layer: scanned docs refuse `PDF_NO_TEXT_LAYER`, password-protected `PDF_ENCRYPTED`;
 - **DOCX** (≤25MB; 0.6.10+) — password-protected/legacy `.doc` refuse `DOCX_ENCRYPTED_OR_LEGACY`; save-as-`.docx` is the remedy;
-- **Jira issue URLs** (0.6.11+) — `kane-cli context ingest https://<site>/browse/PROJ-123`. Prerequisite: Jira connected in the user's LambdaTest Integrations screen (the refusal says so if not). Comments are not ingested. Re-runs are `unchanged`/`versioned` like files.
+- **Jira issue URLs** (0.6.11+) — `kane-cli context ingest https://<site>/browse/PROJ-123`. Prerequisite: Jira connected in the user's LambdaTest Integrations screen (the refusal says so if not). 0.7.2+ ingests **all comments** (author, timestamp, body — citable; a failed comments read refuses the whole ingest); pre-0.7.2 comments were not ingested. Re-runs are `unchanged`/`versioned` like files — and an issue last ingested pre-0.7.2 versions ONCE on its next re-ingest: report that as the upgrade catching up, not a content change;
+- **Confluence page URLs** (0.7.2+) — `kane-cli context ingest https://<site>/wiki/spaces/<KEY>/pages/<id>/…` (the full URL — short-links refuse). Same Atlassian connection as Jira, but it must have Confluence access; a Jira-only connection refuses with reconnect guidance. Default id `page-<id>`; a body change versions the source, a no-op edit or bare version bump does not.
 
-**A landing-phase failure produces no stream.** A bad path, an unsupported or oversized file, or a refused URL ends the merged ingest with a prose error line and exit `1`/`2` BEFORE any NDJSON begins — no `done` event. Treat it as a refusal (fix the input and re-run; sources already landed stay safe — the run says so), never as a crash.
+**Landing-phase failures.** 0.7.2+ is strictly NDJSON in `--mode agent`: a bad path, an unsupported or oversized file, a refused URL, or misused flags arrive ON the stream as `error` (codes `MODE_USAGE`, `AS_SINGLE_SOURCE`, `UNSUPPORTED_URL`, `INGEST_FAILED`, `DIALS_LAND_ONLY`) + `done`, and nothing ever precedes the stream. On 0.7.1 the same failures end with a prose error line and exit `1`/`2` BEFORE any NDJSON begins — no `done` event. Either way it is a refusal (fix the input and re-run; sources already landed stay safe — the run says so), never a crash.
 
 Re-ingesting changed bytes under the same id **versions** the source and marks everything derived from the old snapshot stale — but for a changed document, prefer `maintain reconcile` (§11), which does the version move AND triages the fallout.
 
@@ -161,6 +162,9 @@ Since 0.6.8 the default `cover gaps` output (and bare `--json`) is a **nested du
 | `WRONG_VERB` (exit 2) | resuming a session with the wrong command family | use the resume command from `sessions --json` verbatim |
 | `STRUCTURED_FLAGS_USAGE` / `STRUCTURED_TARGET_UNKNOWN` (exit 2) | a misused `--answer`/structured verdict, or an unknown question/item id | fix the `<id>=<value>` form, or use an id from the refusal's list (it names the addressable ids) |
 | `PAIR_MISMATCH` / `BINDING_MISMATCH` (exit 2) | the installed release pair is broken, or the session belongs to another release | reinstall/upgrade kane-cli; a session from before an upgrade either resumes under its original release or restarts fresh (committed work is kept) |
+| message ends `[SOURCE_HELD]` (exit 2, 0.7.2+) | a reconcile head-move refused — a live session holds review items pinned to that source | finish that review first (the refusal names the session: `context extract --resume <sid>`), then re-run |
+| message ends `[SESSIONS_UNREADABLE]` (exit 2, 0.7.2+) | a session file can't be read, so the hold check fails **closed** | `context sessions --json` to list, `context sessions clean <sid>` for the broken one, then re-run |
+| message ends `[HELD_REVIEW]` (exit 2, 0.7.2+) | a headless `--apply` met a live held review that needs a human | have the user run `kane-cli maintain reconcile --apply` in a terminal — it resumes the cards agent-free |
 | "this version of kane-cli is no longer supported" (runtime failure, exit 1) | the service requires a newer CLI | have the user upgrade, then retry |
 | media refusals (`PDF_*`, `DOCX_*`, `ENCODING_UNSUPPORTED`, `UNSUPPORTED_MEDIA`, `FILE_TOO_LARGE`) | the source file can't be ingested as-is | relay the message — each names its remedy (save-as, split, re-encode) |
 | lock held | another assurance run is live | wait for it; never break locks |
@@ -186,5 +190,11 @@ kane-cli maintain reconcile --from ./prd-v2.md --source-id prd --mode agent
 ```
 
 Never `context ingest` the new version first — reconcile does its own re-ingest, records the version move, and triages the fallout into rows: ADD (new use-case → design it), MODIFY (content moved → update or re-design), ARCHIVE (evidence decayed — **never applied headless**, always waits for the user's interactive session). It emits its own event family (`reconcile_plan` → `reconcile_row_start`/`reconcile_row_end` per row → `reconcile_paused`? → `reconcile_summary` → `done`; see `references/assurance-parsing.md`). Modes: `agent` auto-applies the safe ADD/MODIFY tier and exits 3 with the stored plan when ARCHIVE rows need a human; `ci` fail-closes (plan stored, exit 2); `--plan` is a safe staged preview. Re-running the same command is idempotent — it resumes a pending plan rather than re-billing.
+
+0.7.2+ additions:
+
+- **Interactive is an in-chat review.** In a terminal, every proposed change holds behind a review card: **approve** commits it (an ADD offers a design run, a MODIFY mints a successor version, an ARCHIVE retires non-destructively), **reject** drops it with zero residue (it may be re-proposed on a later reconcile), **defer** mints ONE durable gap that appears in `cover gaps` with the reconcile command as its remedy, and typing steers a re-finalize of the remaining changes. Verdicts persist as they land — Ctrl+C loses nothing, and bare `--apply` resumes a held review as cards **agent-free** (no model, no network); a headless run that meets a held review refuses with a `[HELD_REVIEW]` message marker. While a deferred change is on the record, **older kane-cli versions refuse to open the store** — machines sharing a store upgrade together.
+- **`--from` takes URLs.** The same Jira/Confluence URLs ingest takes (§3). `--source-id` is then optional — the URL carries its own id, and a contradicting `--source-id` refuses. Kind continuity holds both ways: a URL can't version a file-backed source and a file can't version a remote one — each refusal names the correct `--from`. A source ingested under a custom id (`--as`) is maintained by re-running that ingest with the same `--as`. The first reconcile of a Jira issue last ingested pre-0.7.2 may report the one-time upgrade re-version (§3) — not a content edit.
+- **One stream.** The re-extract child's events ride the reconcile stream itself, stamped `verb: "reconcile"` — parse per `references/assurance-parsing.md`.
 
 For staleness that arrived outside a reconcile, `kane-cli maintain evolve` re-designs a use-case — it is interactive-only (the blast-radius confirmation is the point); suggest the user run it in a terminal rather than scripting around it.

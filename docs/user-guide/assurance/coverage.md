@@ -53,6 +53,8 @@ with the re-run command second, carrying its own warning — a failed test re-ru
 
 Use-case rows carry an at-a-glance mark: `✗` (something failing) · `⏸` (something blocked) · `✖` (nothing designed) · `◐` (partial) · `✔` (fully green — such a row collapses to one line).
 
+*(0.7.2)* A change you deferred during a [reconcile review](./maintain.md#reconcile) also appears here as a durable pending row, with the reconcile command as its remedy — deferring parks a decision, it never hides one.
+
 Flags on the tree:
 
 - `--stage design|cover|all` (default `all`) filters **which debt renders** — it never changes a mark or a percentage, and `--stage cover` needs no pack here.

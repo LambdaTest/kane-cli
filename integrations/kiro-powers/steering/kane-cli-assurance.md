@@ -2,7 +2,7 @@
 
 Load this file when the user has **requirement documents** (a PRD, a spec, acceptance notes) and wants tests designed from them, coverage accounting ("what exactly is covered?"), or the suite kept current when requirements change. For quick test cases from a one-line description, use `kane-cli generate` instead (load `kane-cli-generate.md`). Never write test cases by hand.
 
-Requires kane-cli 0.6.1+ — on an older CLI, `kane-cli context …` fails as an *unknown command* (exit 2). That means the CLI is too old, not a typo: confirm with `kane-cli --version`, have the user update, and stop rather than improvising the workflow with other commands. Flags marked 0.7.1+ need that release — an *unknown option* error on one of them means the same thing.
+Requires kane-cli 0.6.1+ — on an older CLI, `kane-cli context …` fails as an *unknown command* (exit 2). That means the CLI is too old, not a typo: confirm with `kane-cli --version`, have the user update, and stop rather than improvising the workflow with other commands. Flags marked 0.7.1+ or 0.7.2+ need those releases — an *unknown option* error on one of them means the same thing.
 
 # The journey — follow in order, stop at the checkpoints
 
@@ -16,8 +16,8 @@ kane-cli testrun run --match 't-'                            # 6. batch replays 
 kane-cli cover gaps                                          # 7. designed % × proven %, with per-use-case debt + ready commands
 ```
 
-- On 0.7.1+, `context ingest --mode agent` lands the files and extracts them in one flow (its landing receipts print as a few prose lines BEFORE the NDJSON — skip to the first `{` line). A landing-phase failure (bad path, unsupported file, refused URL) ends with prose + exit 1/2 and no stream at all — a refusal to fix, not a crash. `kane-cli context extract --mode agent` remains the re-run/resume entry; on older releases run it after every ingest.
-- Ingest accepts text/markdown/structured text (2MB), images (5MB), PDF (25MB, 0.6.7+), DOCX (25MB, 0.6.10+), and Jira issue URLs (0.6.11+ — Jira must be connected in the user's LambdaTest Integrations screen; the refusal says so if not).
+- On 0.7.1+, `context ingest --mode agent` lands the files and extracts them in one flow. On 0.7.2+ the stream is strict — every stdout line parses as JSON, nothing precedes it, and landing failures (bad path, unsupported file, refused URL) ride the stream as `error` + `done`. On 0.7.1 the landing receipts print as a few prose lines BEFORE the NDJSON (skip to the first `{` line — harmless on 0.7.2+), and a landing failure ends with prose + exit 1/2 and no stream at all — a refusal to fix, not a crash. `kane-cli context extract --mode agent` remains the re-run/resume entry; on older releases run it after every ingest.
+- Ingest accepts text/markdown/structured text (2MB), images (5MB), PDF (25MB, 0.6.7+), DOCX (25MB, 0.6.10+), Jira issue URLs (0.6.11+ — Jira must be connected in the user's LambdaTest Integrations screen; the refusal says so if not; 0.7.2+ also ingests all comments, and an issue last ingested pre-0.7.2 versions once on its next re-ingest — the upgrade catching up, not a content change), and Confluence page URLs (0.7.2+ — full URL, same Atlassian connection with Confluence access; default id `page-<id>`).
 - The two checkpoints are the **user's** decisions: everything the agents emit is unreviewed (`derived`) until a human promotes it. Do not auto-approve unless the user explicitly said to — and then enumerate what you promoted. 0.7.1+ adds structured verdict flags (`context review --approve/--skip/--defer <refs...>`); `--skip`/`--defer` leave items queued. Rejections land as non-destructive holds — actually archiving needs the user's explicit `--allow-archive --because "<reason>"` (refused under `--mode ci`).
 - Extract, design, and reconcile consume credits (reported per turn on the stream — surface the total). `--max` caps deliverable size (scenario+test pairs), **not** spend.
 - Never run two store-mutating assurance commands at once — the `.context/` store is single-writer, and extraction holds a store lock (`EXTRACT_LOCKED` = another run is live; wait, never delete locks). Never hand-edit the store.
@@ -49,6 +49,8 @@ kane-cli maintain reconcile --from ./prd-v2.md --source-id prd --mode agent
 ```
 
 It triages ADD / MODIFY / ARCHIVE rows on its own event stream; agent mode auto-applies the safe ADD/MODIFY tier and exits 3 with a stored plan when ARCHIVE rows need the user — archiving is never applied headless. Re-running the same command is idempotent (it resumes the plan, not the bill). `maintain evolve` is interactive-only — suggest the terminal rather than scripting around it.
+
+0.7.2+ additions: in a terminal, reconcile holds every proposed change behind a review card — approve commits, reject drops with zero residue, defer mints a durable gap visible in `cover gaps`, and verdicts persist so Ctrl+C loses nothing (`--apply` resumes a held review agent-free; a headless run that meets one refuses, its message ending `[HELD_REVIEW]`). `--from` also takes the same Jira/Confluence URLs ingest takes — `--source-id` is then optional, and a contradicting one refuses. A head-move under a source a live session holds for review refuses with a `[SOURCE_HELD]` message marker (finish the named session first); an unreadable session file fails closed (`[SESSIONS_UNREADABLE]` — list/clean the sessions). After a deferred reconcile change, older kane-cli versions refuse to open the store — machines sharing a store upgrade together. The re-extract child's events ride the reconcile stream itself, stamped `verb: "reconcile"`.
 
 # Present, don't transcribe
 
