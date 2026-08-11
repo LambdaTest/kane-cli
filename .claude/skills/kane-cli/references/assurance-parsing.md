@@ -19,7 +19,7 @@ for each line:
   else                             → per-type handling below
 ```
 
-A stream that ends **without** `done` means the process crashed — outcome unknown; inspect `context sessions --json` and `context list` before retrying anything paid. One version-scoped rule for merged-ingest landing failures (bad path, unsupported media, refused URL, misused flags): on 0.7.2+ they ride the stream as `error` (codes `MODE_USAGE`, `AS_SINGLE_SOURCE`, `UNSUPPORTED_URL`, `INGEST_FAILED`, `DIALS_LAND_ONLY`) + `done` — the guarantee covers the whole invocation; on 0.7.1 they end with prose + exit `1`/`2` **before any NDJSON begins** — no stream at all is a refusal to fix, not a crash, and the guarantee starts with the extraction stream.
+A stream that ends **without** `done` means the process crashed — outcome unknown; inspect `context sessions --json` and `context list` before retrying anything paid. One version-scoped rule for merged-ingest landing failures (bad path, unsupported media, refused URL, a misused `--mode` or `--as`): on 0.7.2+ they ride the stream as `error` (codes `MODE_USAGE`, `AS_SINGLE_SOURCE`, `UNSUPPORTED_URL`, `INGEST_FAILED`) + `done` — the guarantee covers the whole invocation; on 0.7.1 they end with prose + exit `1`/`2` **before any NDJSON begins** — no stream at all is a refusal to fix, not a crash, and the guarantee starts with the extraction stream.
 
 ## Events (extract / design)
 
@@ -35,7 +35,7 @@ A stream that ends **without** `done` means the process crashed — outcome unkn
 | `agent_message` *(0.7.2+)* | the agent's narrative `text` — the lead-in before a question batch, the closing statement | the story around the structured events; quote or fold, never script against it |
 | `warning` *(0.7.2+)* | actionable non-fatal condition: `code` (`ZERO_USE_CASES`, `SAVE_FAILED`) + `message` | surface it — non-fatal but user-relevant |
 | `lock_steal` *(0.7.2+)* | a stale run lock was taken over: `key`, `stale_owner`, `by`, `ts` | observability only — fold or ignore |
-| `usage` | per agent turn: `credits`, running `total_credits` (rounded to two decimals) | track; report the final total |
+| `usage` | per agent turn: `credits`, running `total_credits` (*(0.7.2+)* rounded to two decimals) | track; report the final total |
 | `validate_failed` | kane-side validation failed: `codes[]`, `repairing` | the agent self-repairs; only surface if the run then errors |
 | `degraded` *(0.7.1+)* | duplicate detection running in a reduced mode (`reason`) — new items will be HELD, not committed | tell the user their items will be held for review |
 | `held` / `update_held` *(0.7.1+)* | items held for the user's review instead of committed: `source_id` + `count` + `reason` / `count` + `targets[]` | surface the count and that review happens at resume/`context review` |
@@ -77,7 +77,7 @@ Use `text` + `options[].label` + `recommended_index` + `rationale` to decide or 
 
 ## Reconcile events (verb `reconcile`)
 
-*(0.7.2+)* the stream opens with `run_start` and the re-extract child rides the SAME stream: extract-vocabulary events (`source_start`, `agent_activity`, `plan`, `commit`, …) interleave between the `reconcile_*` events, all stamped `verb: "reconcile"` — dispatch on `type`, never on position. The reconcile family: `reconcile_plan` `{source_id, plan_path, rows[], archive[]}` → per row `reconcile_row_start` `{kind, ref, stale?, direct?}` + `reconcile_row_end` `{kind, ref, outcome: applied|failed|skipped|plan-only|paused, exit_code?, detail?}` → `reconcile_paused` `{plan_path, pending[]}` when ARCHIVE rows remain (exit 3; a human resumes with `--apply <plan_path>` in a terminal) → `reconcile_summary` `{applied, skipped, deferred, plan_only, failed, paused, stale_created}` on every path → `done` always last. Validation refusals ride the stream as `error` + `done` (exit 2), never stderr alone.
+*(0.7.2+)* the stream opens with a minimal `run_start` (`session` only — no `trace`) and the re-extract child rides the SAME stream: extract-vocabulary events (`source_start`, `agent_activity`, `plan`, `commit`, …) interleave between the `reconcile_*` events, all stamped `verb: "reconcile"` — dispatch on `type`, never on position. The reconcile family: `reconcile_plan` `{source_id, plan_path, rows[], archive[]}` → per row `reconcile_row_start` `{kind, ref, stale?, direct?}` + `reconcile_row_end` `{kind, ref, outcome: applied|failed|skipped|plan-only|paused, exit_code?, detail?}` → `reconcile_paused` `{plan_path, pending[]}` when ARCHIVE rows remain (exit 3; a human resumes with `--apply <plan_path>` in a terminal) → `reconcile_summary` `{applied, skipped, deferred, plan_only, failed, paused, stale_created}` on every path → `done` always last. Validation refusals ride the stream as `error` + `done` (exit 2), never stderr alone.
 
 ## Coverage events (verbs `cover` / `gaps`) *(0.7.1+)*
 

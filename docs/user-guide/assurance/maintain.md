@@ -62,7 +62,7 @@ The verdicts:
 
 - **approve** commits that change: an ADD mints the draft (and offers `design tests now`), a MODIFY mints the successor with a redirect from the old version (and offers `evolve the design now`), an ARCHIVE applies the non-destructive retire (reversible any time with [`kane-cli context revert`](./context.md#housekeeping)). Offers are rows you choose — never auto-run — and a child design run surfaces its questions in this same session.
 - **reject** drops the staged proposal and leaves **zero residue** — nothing is remembered, so a later reconcile may propose the same change again; that is deliberate.
-- **defer** parks the decision as **one durable gap**, visible in [`cover gaps`](./coverage.md) with the reconcile command as its remedy; it clears when a later verdict lands on the same change. One compatibility note: while a deferred change is on the record, **older kane-cli versions refuse to open the store** — machines sharing a store should upgrade to 0.7.2 together.
+- **defer** parks the decision as **one durable gap**, visible in [`cover gaps`](./coverage.md) with the reconcile command as its remedy; it clears when a later verdict lands on the same change. One compatibility note: while a deferred change is on the record, the store **no longer passes integrity checks or accepts commits on older kane-cli versions** — machines sharing a store should upgrade to 0.7.2 together.
 - **✎ / typing is steering**: your words go to the agent, the remaining changes re-finalize, and revised cards re-present — cards you already resolved never come back (ARCHIVE cards take no steering).
 
 Three properties worth knowing:
@@ -115,9 +115,9 @@ A plan stored by an earlier kane-cli version is refused with a hint to recompute
 
 `--mode agent|ci|override` is the same ask-policy matrix extract and design use — see [Automation](./automation.md) for the full contract and reconcile's NDJSON stream. Two things are specific to reconcile:
 
-- Headless runs don't stage: the re-extract commits as it goes, and rows apply per mode — `override` and `ci` auto-apply ADD and MODIFY rows; `ci` fail-closes when a run needs human judgement; `agent` streams typed events and pauses. The in-chat review is a terminal surface — headless behavior is unchanged in 0.7.2.
+- Headless runs don't stage: the re-extract commits as it goes, and rows apply per mode — `override` and `ci` auto-apply ADD and MODIFY rows; `ci` fail-closes when a run needs human judgement; `agent` streams typed events and pauses. The in-chat review is a terminal surface — headless verdict behavior is unchanged in 0.7.2 (the stream itself tightened; next bullet).
 - **Archiving is never automatic.** No headless mode archives anything; ARCHIVE decisions wait for an interactive session.
-- *(0.7.2)* The `--mode agent` stream is **pure NDJSON**: it opens with `run_start`, nothing else prints on either output, and the re-extract child rides the same stream — its extract events interleave with the `reconcile_*` events, each stamped `verb: "reconcile"`. See [Automation](./automation.md) for the event vocabulary.
+- *(0.7.2)* The `--mode agent` stream is **pure NDJSON**: it opens with a minimal `run_start`, nothing else prints on either output, and the re-extract child rides the same stream — its extract events interleave with the `reconcile_*` events, each stamped `verb: "reconcile"`. See [Automation](./automation.md) for the event vocabulary.
 
 A bare non-TTY run refuses (exit `2`) and asks for an explicit `--mode` — or `--plan` for a preview.
 
