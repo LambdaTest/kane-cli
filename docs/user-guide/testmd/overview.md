@@ -87,7 +87,7 @@ Frontmatter is YAML inside `---` fences at the top of the file. Every key is opt
 | `local_context` | string or file path | root + per-step | Project-scoped guidance. Same shape as `global_context`. |
 | `variables` | object | root + per-step | Named values usable as `{{name}}` in objectives. See [Variables](#variables). |
 | `session_context` | `{ prior_runs: [...] }` | root + per-step | Pre-loaded prior-run context for the agent. |
-| `target` | `"chrome"` \| `"cdp"` \| `"ws"` | root only | How kane-cli reaches a browser. Default is `chrome`. |
+| `target` | scalar (`"chrome"` \| `"cdp"` \| `"ws"`) or mapping (`{platform, app, no_reset}`) | root only | A scalar selects the browser transport (default `chrome`); a mapping selects a mobile target (a virtual Android or iOS device). See [Mobile target](#mobile-target). |
 | `chrome_profile` | string | root only | Named Chrome profile under `~/.testmuai/kaneai/chrome-profiles/`. |
 | `cdp_endpoint` | string | root only | Reuse an external Chrome over CDP. |
 | `ws_endpoint` | string | root only | LambdaTest / Playwright WebSocket endpoint. |
@@ -97,6 +97,25 @@ Frontmatter is YAML inside `---` fences at the top of the file. Every key is opt
 | `on_lock_conflict` | `"readonly"` \| `"fail"` \| `"wait"` | root only | Policy when another user holds the lock on this test in Test Manager. See [Lock conflicts](./running.md#lock-conflicts). |
 
 Keys not in this table are rejected with `unknown config key: <key>` at parse time. Authentication is set via CLI flags or your active profile, never in frontmatter.
+
+### Mobile target
+
+`target:` accepts two shapes. As a **scalar** (`chrome`, `cdp`, or `ws`) it selects how kane-cli reaches a browser, as above. As a **mapping** it selects a mobile target (a virtual Android or iOS device), available on macOS Apple Silicon:
+
+```yaml
+---
+target:
+  platform: android          # android | ios
+  app: ./builds/app-debug.apk
+  no_reset: false
+---
+```
+
+- **`platform`**: `android` runs on an emulator, `ios` on a simulator.
+- **`app`**: the app under test, required. A build path (`android`: `.apk`, `ios`: `.zip`) or an uploaded app id (`APP` followed by six or more digits). On-device package ids are not accepted.
+- **`no_reset`**: keep the app's existing state between runs instead of resetting it.
+
+Mobile tests run with `kane-cli testmd run`; batch [`testrun`](../testrun.md) does not support mobile members. Setup is covered in [Mobile testing](../mobile/overview.md).
 
 ### Root-only vs root-or-per-step
 

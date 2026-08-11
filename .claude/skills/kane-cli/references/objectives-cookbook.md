@@ -4,6 +4,8 @@
 
 Read this whenever you're constructing the prose objective for `kane-cli run "<objective>"` or the body of a `## Step` in a `_test.md` file. Both surfaces feed the same agent and accept the same grammar.
 
+> **Mobile runs** (`--target emulator|simulator`, macOS Apple Silicon) share this same objective grammar, but the browser/DevTools-only checkpoints below (Network, Console, DOM/selectors, Cookies, localStorage, Core Web Vitals) are **web-only** and do not apply. Read `references/mobile.md`.
+
 ---
 
 ## 1. Anatomy of a good objective

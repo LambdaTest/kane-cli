@@ -9,6 +9,7 @@
 - The user has **two or more saved `_test.md` tests** to run → `kane-cli testrun run`. Do NOT hand-roll a bash loop or spawn parallel `testmd run` processes — testrun does isolation, pooling, and a single rollup for you.
 - One test → `kane-cli testmd run` (`references/testmd.md`).
 - Multiple ad-hoc `run` objectives (not saved tests) → `references/parallel.md` still applies.
+- A **mobile** `_test.md` (Android emulator / iOS simulator) → testrun does **not** support mobile; a mobile member is rejected. Run it with `kane-cli testmd run <path>` instead. Read `references/mobile.md`.
 
 ## Command
 
