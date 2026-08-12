@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-08-12
+
+### Mobile is now a first-class platform
+- **Test against emulators and simulators** — device setup, persistent runner sessions, and evidence capture (screenshots, logs) all work end-to-end for mobile targets, mirroring what web automation already offers.
+- **The AI understands mobile screens** — perception, accessibility tree inspection, vision coordinates, and code generation are all platform-aware; the model reasons about mobile UI the same way it reasons about web pages.
+- **Replay works on mobile too** — recorded `.testmd` flows can be replayed against an emulator or simulator; the frontmatter now carries target vocabulary so the file knows what platform it belongs to.
+- **Gestures re-read the screen mid-turn** — after a gesture tool acts during a run, the agent immediately re-reads the screen before continuing, so it works from a fresh view rather than a stale one.
+
+### Discover devices and apps before you run
+- **`devices list` and `apps list` commands** — see available devices and uploaded apps from the terminal before starting a session, so you can confirm your target exists without leaving the CLI.
+
+### Faster, more reliable dependency downloads
+- **Dependencies download in parallel with live progress** — instead of sequential fetches, all deps are grabbed at once; a progress indicator shows what's happening, and failures retry automatically.
+- **Download errors surface immediately** — previously, non-404 errors from the download endpoint could be swallowed silently; they now appear in the terminal so you know exactly what went wrong.
+
 ## [0.7.2] - 2026-08-11
 
 ### Jira and Confluence ingestion
