@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.2] - 2026-08-13
+
+### Mobile workflows simplified
+- **App upload, list, and download go direct** — these commands now call the API directly instead of going through the extra service hop.
+- **`doctor --target` is now mandatory and singular** — the flag requires exactly one target; dependency status matches on bundle identity for accurate results.
+- **Mobile test creation uses the correct route** — `mobile test create` now shows the correct Mobile category on test manager.
+
+### Session and replay reliability
+- **Device persistence and prepared-device reuse** — sessions now lock to their target, persist device selection across reconnects, and reuse prepared devices when available.
+- **Scroll recording is replay-safe** — scroll-into-view actions are recorded as `SCROLL_UNTIL_ELEMENT` and written to the replay/export record so they survive round-trips.
+- **JSON path in sub-check results is preserved** — `json_path` is now stored, so replay and export honor the original check structure.
+- **Evidence steps show human-readable captions** — step labels in evidence output use descriptive text instead of raw locators or bare "Step N" strings.
+- **Pause, crash, and held summaries include credits used** — these session-end states previously omitted credit counts; they are now reported correctly.
+
+### Sharper assurance views
+- **Coverage table is high-level again** — the main table lists only use cases and progress; detailed census data and commands have moved into the dossier, so the default output is scannable at a glance.
+- **`--rollup` replaces `--aspect`** — the flag was renamed to match existing JSON vocabulary (`proven.aspect`) is unchanged.
+- **Gaps view is now the coverage ribbon** — use-case bands show full-word progress bars on a shared grid; detail lives in the dossier.
+- **New ContextBar** — a compact, status-first three-line bar sits behind a full-width divider and shows aggregated per-turn state; the transcript keeps one line per turn instead of accumulating duplicates.
+
+### Review results you can trust
+- **All-clear never claims proven without execution facts** — the review round no longer declares a use case proven on percentage alone; it requires an actual execution count.
+- **Single-UC JSON closes over its own use case** — other entries are emptied so agent next-step suggestions can't leak commands from unrelated project use cases.
+- **Dossier acceptance criteria sort numerically** — AC-2 now appears before AC-10 instead of sorting lexicographically.
+- **ID columns cap at 16 characters** — long slugs no longer push column widths negative or break the layout.
+- **Action commands in the dossier wrap at the label column** — long commands hang-wrap cleanly and never break mid-word at the terminal edge.
+- **Review fold IDs never clip** — the id column is now dynamic; class columns fit every word; degraded classes keep their commands; `--stage` no longer reorders bands.
+
 ## [0.8.1] - 2026-08-12
 
 ### Mobile is now a first-class platform
