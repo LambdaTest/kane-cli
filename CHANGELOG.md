@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.3] - 2026-08-14
+
+### Feed any web URL directly into context
+- **Any web URL is now a valid content source** — paste a remote URL as input and kane-cli fetches and ingests it automatically, no manual download step required.
+
+### More reliable evidence and log files
+- **Log and evidence files now write correctly on all systems** — UTF-8 encoding is pinned on every file write, so non-ASCII characters in logs and evidence no longer corrupt or fail silently.
+
+### Smarter click and scroll targets
+- **Clicks and scrolls hit the right element more often** — target resolution now looks at parent element context when identifying text nodes, removing a fallback that could silently miss on the first attempt.
+
+### All package manager bundles its own runtime
+- **Kane-CLI no longer requires a separate Node install** — the Node 24 runtime and assurance-agent are bundled directly into Kane-CLI; Node 20 is now the minimum supported version.
+
 ## [0.8.2] - 2026-08-13
 
 ### Mobile workflows simplified
