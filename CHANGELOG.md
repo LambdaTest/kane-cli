@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.4] - 2026-08-18
+
+### Remote execution on the grid
+- **Run tests on LambdaTest HyperExecute with `--remote`** — kane-cli dispatches your test run through the backend, spawns a HyperExecute job, and streams progress back to your terminal with the job ID and a sessions path.
+- **Automatic HyperExecute setup** — `kane-cli plugin install` sets up remote execution and places it where kane-cli expects it. `kane-cli doctor` tells you whether the setup, auth, and gitignore gate are all ready before you dispatch.
+- **Grid login now uses the right environment** — remote runs pass `--env` correctly, preventing stage credentials from being rejected against production endpoints. Chrome discovery is also handled automatically on the grid.
+
+### Plugin system
+- **New `kane-cli plugin` command** — install, list, and remove plugins with `kane-cli plugin install`, `kane-cli plugin list`, and `kane-cli plugin remove`. An allowlist controls which plugins kane-cli will load.
+- **Plugins install into a versioned local layout** — installed plugins materialize bundled assets into a `cwd`-local directory, so plugin versions are tied to your project rather than a global state.
+- **`kane-cli doctor` covers plugin readiness** — the readiness report flags a missing HyperExecute binary as an error (the plugin owns it), so you know exactly what to fix before running.
+
+### Smarter local run consolidation
+- **Authored and replayed evidence merge into one published execution** — after a run that includes both authored and replay members, kane-cli reconciles them into a single pack with kane merge rules applied, coverage recomputed, and facts synced into the local graph.
+- **Author members no longer cause a preflight failure** — members are now classified as `replay` or `author`; author-class members run standalone with their own pack and are folded into the consolidated result at reconcile.
+- **`--from-context` selects members by assurance test IDs** — and automatically follows edit supersessions, so only tombstoned tests are excluded.
+- **Gate auto-defaults now match local behavior** — `project_folder_auto_defaulted` surfaces in local runs the same way it does on the grid.
+
+### A clearer terminal view
+- **Evidence table now works in TTY and non-TTY modes** — TTY sessions get an interactive multi-pack evidence table with progress and a result box; non-TTY sessions get `serve` commands for each evidence row.
+- **Remote runs render again in the TTY view** — a missing event-surface hook (`willMountTTYView`) was preventing the themed progress and result box from appearing during `--remote` runs.
+- **Evidence display errors never flip the verdict** — a throw in the evidence presentation layer is now isolated, so a display bug cannot change the exit code of a passing run.
+- **Exit codes derive from reconcile verdicts** — the terminal status and exit code are now grounded in what reconcile actually decided, not an earlier assumption.
+
+### `testmd` improvements
+- **`testmd run` accepts `--target`, `--device`, and `--app`** — device meta fields are carried through the evidence environment, so runs targeting specific devices report the right context.
+
 ## [0.8.3] - 2026-08-14
 
 ### Feed any web URL directly into context
