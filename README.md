@@ -5,7 +5,7 @@
 [![npm version](https://img.shields.io/npm/v/@testmuai/kane-cli)](https://www.npmjs.com/package/@testmuai/kane-cli)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 ![Platforms](https://img.shields.io/badge/platforms-macOS%20%7C%20Linux%20%7C%20Windows-brightgreen)
-[![Discord](https://img.shields.io/badge/Discord-Join%20the%20community-5865F2?logo=discord&logoColor=white)](https://discord.gg/kanQPEx9)
+[![Discord](https://img.shields.io/badge/Discord-Join%20the%20community-5865F2?logo=discord&logoColor=white)](https://discord.gg/SqVMtNeWEf)
 
 ---
 
