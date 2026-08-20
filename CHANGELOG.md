@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.5] - 2026-08-20
+
+### Healing runs by default
+- **Adaptive healing is now on for every run** — kane-cli automatically recovers when a test step fails due to layout changes, without any extra flags. The `--retry` flag is retired; healing is the new baseline.
+- **Broken replays now recover cleanly** — when a replay hits an unrecoverable state, the browser is recycled and re-attempts start from a clean app, rather than compounding errors from a dirty session.
+
+### Smarter mobile scrolling
+- **Scroll until you find it** — kane-cli can now collapse a scroll-and-search sequence into a single `scroll_until` operation, making scroll-heavy test steps shorter and more reliable.
+- **Percent-based scroll vocabulary** — scroll steps can now be expressed as a percentage of the screen, and exploration scrolls are batched together automatically for efficiency.
+- **Drag and hold** — `drag_element` can now hold the finger at the destination, enabling drag-to-slot and long-press-drag interactions.
+
+### More reliable mobile automation
+- **App-start detection is more forgiving on Android** — kane-cli now accepts any activity as a valid app-started signal, so tests no longer stall waiting for a specific entry point.
+- **iOS and Android no longer interfere with each other** — tab reads on iOS are no longer gated by the Android Chrome rule, and iOS simulators no longer advertise volume controls that don't exist.
+- **Device reads are faster** — per-step device time drops by overlapping and reusing reads where possible.
+
+### Sharper planning and checkpoints
+- **Unified planning is now the default** — It handles both steps and checkpoints in one call, reducing round-trips and resolving confirm-step instability caused by missing reasoning.
+- **Pre-action checkpoints are now always scheduled** — kane-cli captures a checkpoint before each action by default, giving you a reliable record of what the screen looked like before anything was touched.
+
+### Cleaner setup and help
+- **`run --target` now works on every host** — setting a target at run time is no longer silently ignored depending on how kane-cli was launched; it behaves the same as `config set-target`.
+- **Help text reflects the correct product positioning** — `--help` output and the TUI boot header now show the Kane-CLI validation-layer tagline consistently.
+
 ## [0.8.4] - 2026-08-18
 
 ### Remote execution on the grid
