@@ -52,4 +52,5 @@ Run tests against local mobile virtual devices. This release supports **macOS Ap
 - [Variables & context](./variables-and-context.md) — `{{variables}}`, secrets, agent context files.
 - [Test Manager integration](./test-manager-integration.md) — projects, folders, uploads.
 - [CI/CD recipes](./cicd.md) — GitHub Actions, GitLab, Jenkins, Docker.
+- [Publish-gate recipe](./publish-gate.md) — reusable objective for gating a publish on one real-browser CTA check.
 - [Troubleshooting](./troubleshooting.md) — failure patterns and the debugging flow.
