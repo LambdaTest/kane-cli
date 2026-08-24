@@ -220,6 +220,13 @@ How you phrase the objective string determines what the agent does. Four pattern
 | 📦 **Extraction** | "store X as 'name'" | Persists a value into `run_end.final_state` |
 | 🔌 **API call** | "call", "POST/GET a URL", a pasted `curl` | The agent makes the HTTP request itself; "save the response as X", then assert/reference `{{X.status}}` / `{{X.response_body…}}` |
 
+### Two rules that make an objective replayable
+
+1. **End every flow in a terminal assertion.** Close with a check of the resulting page state (`verify the cart shows 1 item`), not a bare `submit` or `confirm the dialog`. A run only earns a replayable pass/fail from a verify/assert — a pure-action objective (`add a laptop to the cart`) gets none. If the objective has several phases, each ends in its own check. Two traps: `confirm the dialog` is an action, not a check; and `verify the Submit button is visible` fails exactly when the action worked (the control disappears on success) — assert the outcome, not the trigger.
+2. **Intent for the actions, literal for the data.** Phrase actions as goals (`Log in with {{user}}`) so the run absorbs layout drift; keep exact values literal or in `{{variables}}`. An expected-optional branch (a sometimes-there cookie banner) goes in an `if/else`, not assumed away.
+
+**Shape:** an intent action carrying literal data, then a verify of an observable end state — `Search for "{{query}}" and open the first result, then verify the title contains "{{query}}"`. Full grammar in `references/objectives-cookbook.md §1`.
+
 ### The "store as" rule (critical for extraction)
 
 Vague phrasing like "read", "tell me", "report" does NOT reliably extract data — the agent may see the value but won't capture it. Use "store as".
