@@ -25,6 +25,43 @@ Bad → better:
 
 The bad version leaves "test" undefined and gives the agent no end state. The better version names the URL, the credentials, and the assertion that closes the loop.
 
+Two rules turn those properties into a flow that replays reliably.
+
+### 1.1 End every flow in a terminal assertion
+
+Close each objective with a claim about the resulting **page state** — not a bare `submit`, not `confirm the dialog`. A closing assertion is what a replay checks: with it, the run passes or fails on the real end state; without it, "done" only means the agent believed it finished.
+
+```text
+❌ Add a laptop to the cart
+✅ Add a laptop to the cart, then verify the cart shows 1 item
+```
+
+If an objective has several phases (log in, then search, then check out), **each phase ends in its own assertion** — an intermediate phase with no check runs unverified, and a replay can't tell you which phase drifted.
+
+Two things look like assertions but are not:
+
+- **A UI-commit "confirm" is an action, not a check.** `confirm the dialog` / `click OK to confirm` presses a control; it verifies nothing about the outcome. Follow it with a real check: `… then verify the confirmation reads "Order placed"`.
+- **Don't assert the trigger.** `verify the Submit button is visible` fails exactly when the action worked — the control disappears on success. Assert the **outcome**, never the control that caused it.
+
+### 1.2 Intent for the actions, literal for the data
+
+Phrase actions as **goals**, not click-by-click scripts. A goal-level step lets the run absorb a new consent popup or a reordered form; a fixed click sequence is pinned to a layout that may have changed.
+
+```text
+❌ Click the email field, type alice@x.com, click the password field, type hunter2, click Sign in
+✅ Log in with {{user}} / {{password}}, then verify the account menu shows "{{user}}"
+```
+
+Keep exact values — credentials, search terms, prices, URLs — **literal, or lifted into `{{variables}}`** (§6). Intent for the verbs; literal or variable for the payloads.
+
+For an expected-but-optional branch (a cookie banner that only *sometimes* appears), author it as a conditional (§7) rather than assuming it away or hard-scripting it as an unconditional step.
+
+**The shape of a good step:** an intent action carrying literal data, then a verify of an observable end state —
+
+```text
+Search for "{{query}}" and open the first result, then verify the product title contains "{{query}}"
+```
+
 ---
 
 ## 2. Action verbs — quick catalog

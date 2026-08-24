@@ -10,7 +10,13 @@ What makes a good objective:
 
 - **Specific.** Name the site, the action, and the field values where they matter.
 - **Action-oriented.** Lead with a verb: search, open, fill, click, verify.
-- **Includes a success criterion.** State what "done" looks like so the agent knows when to stop.
+- **Ends in a check of the result.** State what "done" looks like as a claim about the page, so the agent knows when to stop and a replay has something to verify.
+
+Two habits make an objective reliable enough to save and replay.
+
+**End every flow in a check of the result.** Close with an assertion about the resulting page state — `verify the cart shows 1 item` — not a bare `submit` or `confirm the dialog`. Without a closing check, "done" only means the agent believed it finished; with one, the run passes or fails on the real end state. Name the outcome, never the control that triggered it: `verify the Submit button is visible` fails exactly when the action worked, because the button disappears on success. If an objective has several phases (log in, then search, then check out), each phase ends in its own check.
+
+**Say the goal, not the clicks.** Phrase actions as goals — `Log in as {{tester}}`, `Complete checkout with the saved card` — so a run absorbs a reordered form or a new popup instead of breaking on it. Keep exact values such as credentials, prices, and URLs literal or in `{{variables}}`. For a step that only sometimes appears, such as a cookie banner, write it as a condition (`if a cookie banner appears, dismiss it`) rather than assuming it away.
 
 ### Examples
 

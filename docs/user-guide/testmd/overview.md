@@ -160,7 +160,7 @@ Default is `false`, in which case any failure stops the run and marks the remain
 
 The body of a step (everything after the optional `yaml` block) must be exactly one of:
 
-- **A prose objective** — one or more lines of natural language describing what the agent should do.
+- **A prose objective** — one or more lines of natural language describing what the agent should do. A step body follows the same rules as any objective, so end it in a check of the result and phrase actions as goals — see [Writing objectives](../running-tests.md#writing-objectives).
 - **An `@import`** — a single line of the form `@import <path>` and nothing else.
 
 Mixing prose and `@import` in the same body is a parse error.
