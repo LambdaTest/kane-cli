@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.6] - 2026-08-24
+
+### Linear as a native source
+- **Paste a Linear URL and kane-cli does the rest** — Linear issues and documents are now recognized sources. kane-cli fetches the issue body, comments, attachments, and images directly via the Linear API rather than screen-scraping.
+- **Workspace login pages are rejected clearly** — if a Linear URL points to a gated workspace page that requires a login, kane-cli refuses loudly with a plain error message instead of silently scraping an empty shell.
+- **Attachments and images are extracted from issue bodies** — inline images and linked media in Linear issues are pulled out and made available to the run, not silently dropped.
+
+### Variable targets that actually survive replay
+- **`${variable}` targets are now recognized** — action targets written as `${variable}` are treated the same as `{{variable}}` — both forms work end to end.
+- **Variable-named targets are re-probed at replay** — if an action targets a variable element, kane-cli re-resolves and re-probes the element at replay time via autoheal instead of failing on a stale reference.
+- **The model is prompted to flag variable-target actions** — the queue prompt is stronger, so variable-targeted steps are correctly identified and handled through vision-fallback paths when needed.
+
+### Double- and triple-click support
+- **`click_count` is supported end to end** — actions can now specify double-click or triple-click, and the count is carried correctly through recording, migration, and replay.
+
+### Mobile sessions with smarter defaults
+- **Android and iOS permissions are accepted by default** — Android runtime permission dialogs and iOS alerts are granted automatically in new sessions, so automation does not stall waiting for a permission pop-up.
+- **New Mobile config knobs in `/config`** — session permission and alert behavior can be configured explicitly under the Mobile section, and those settings are forwarded correctly when building device configs from the TUI.
+
+### Navigation and interaction polish
+- **Expanding a submenu lands the cursor on the first item** — opening a submenu now positions the cursor on the first child entry instead of leaving it on the parent.
+- **Android emulator resolution is more reliable** — the emulator binary is now resolved from the SDK, verified with `-version`, rather than relying on `PATH` alone.
+
 ## [0.8.5] - 2026-08-20
 
 ### Healing runs by default
