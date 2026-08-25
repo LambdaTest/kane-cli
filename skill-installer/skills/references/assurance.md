@@ -1,4 +1,4 @@
-<!-- kane-cli skill reference: assurance (requirements → designed suite → coverage → upkeep). Read when the user has a requirements document and wants tests designed from it, coverage accounting, or suite upkeep. Requires kane-cli 0.6.1+; features marked 0.7.1+ / 0.7.2+ need those releases. -->
+<!-- kane-cli skill reference: assurance (requirements → designed suite → coverage → upkeep). Read when the user has a requirements document and wants tests designed from it, coverage accounting, or suite upkeep. Requires kane-cli 0.6.1+; features marked with a release (0.7.1+ … 0.8.6+) need at least that release. -->
 
 # Assurance — Agent Surface
 
@@ -9,7 +9,7 @@ When the user has **requirements** — a PRD, a spec, acceptance notes — and w
 
 Everything here works over a local store (`.context/` in the project directory) that the commands create and manage themselves.
 
-**Version gate — check before improvising.** The assurance commands exist on kane-cli **0.6.1 and later**; flags and events marked **0.7.1+** / **0.7.2+** below need those releases. On an older CLI, `kane-cli context …` fails as an *unknown command* (exit 2 with a "did you mean" suggestion) — that error means the CLI is too old, not that you typed it wrong. Confirm with `kane-cli --version`, tell the user to update (`npm install -g @testmuai/kane-cli`, or `brew upgrade kane-cli`), and stop — do not try to reproduce the workflow with other commands.
+**Version gate — check before improvising.** The assurance commands exist on kane-cli **0.6.1 and later**; flags and events marked with a release (**0.7.1+** … **0.8.6+**) below need at least that release. On an older CLI, `kane-cli context …` fails as an *unknown command* (exit 2 with a "did you mean" suggestion) — that error means the CLI is too old, not that you typed it wrong. Confirm with `kane-cli --version`, tell the user to update (`npm install -g @testmuai/kane-cli`, or `brew upgrade kane-cli`), and stop — do not try to reproduce the workflow with other commands.
 
 ## 1. The journey — follow in order, stop at the checkpoints
 
@@ -76,7 +76,12 @@ Accepted sources (each with a size cap; oversized = `FILE_TOO_LARGE`, wrong type
 - **PDF** (≤25MB; 0.6.7+) — needs a text layer: scanned docs refuse `PDF_NO_TEXT_LAYER`, password-protected `PDF_ENCRYPTED`;
 - **DOCX** (≤25MB; 0.6.10+) — password-protected/legacy `.doc` refuse `DOCX_ENCRYPTED_OR_LEGACY`; save-as-`.docx` is the remedy;
 - **Jira issue URLs** (0.6.11+) — `kane-cli context ingest https://<site>/browse/PROJ-123`. Prerequisite: Jira connected in the user's LambdaTest Integrations screen (the refusal says so if not). 0.7.2+ ingests **all comments** (author, timestamp, body — citable; a failed comments read refuses the whole ingest); pre-0.7.2 comments were not ingested. Re-runs are `unchanged`/`versioned` like files — and an issue last ingested pre-0.7.2 versions ONCE on its next re-ingest: report that as the upgrade catching up, not a content change;
-- **Confluence page URLs** (0.7.2+) — `kane-cli context ingest https://<site>/wiki/spaces/<KEY>/pages/<id>/…` (the full URL — short-links refuse). Same Atlassian connection as Jira, but it must have Confluence access; a Jira-only connection refuses with reconnect guidance. Default id `page-<id>`; a body change versions the source, a no-op edit or bare version bump does not.
+- **Confluence page URLs** (0.7.2+) — `kane-cli context ingest https://<site>/wiki/spaces/<KEY>/pages/<id>/…` (the full URL — short-links refuse). Same Atlassian connection as Jira, but it must have Confluence access; a Jira-only connection refuses with reconnect guidance. Default id `page-<id>`; a body change versions the source, a no-op edit or bare version bump does not;
+- **Linear issue URLs** (0.8.6+) — `kane-cli context ingest https://linear.app/<workspace>/issue/KEY-123` (slug/query/#comment variants converge). Prerequisite: a Linear connection (the refusal points at the Integrations screen). Comments incl. threaded replies are identity-bearing — a failed or partial comments read refuses the whole ingest; a recycled key (same key, different issue) refuses with retire/`--as` recovery; default id = the lowercased key (`eng-42`);
+- **Linear document URLs** (0.8.6+) — `…/document/<slug>` (the slug must end in the document's 12-hex id; the connection needs document access — resync hint otherwise). Default id `doc-<id>`. Workspace pages (project/team/view) refuse — ingest their issues or documents individually;
+- **Web page URLs** (0.8.3+) — any public http(s) URL that is not a Jira/Confluence/Linear URL; fetched server-side (the CLI never fetches pages). Default id = a URL slug + short hash; `--as` adopts a custom id, and re-pointing an adopted id at a DIFFERENT URL asks on a TTY / refuses headless. Inaccessible pages (not found, login/paywall, bot-blocked, non-HTML, too large, timeout) and private/internal addresses refuse in plain language.
+
+Remote ids share ONE space (0.8.6+): a URL whose id is already backed by a different kind of source refuses with retire/`--as` recovery — report it as an id collision; never retry blindly.
 
 **Landing-phase failures.** 0.7.2+ is strictly NDJSON in `--mode agent`: a bad path, an unsupported or oversized file, a refused URL, or a misused `--mode`/`--as` arrives ON the stream as `error` (codes `MODE_USAGE`, `AS_SINGLE_SOURCE`, `UNSUPPORTED_URL`, `INGEST_FAILED`) + `done`, and nothing ever precedes the stream. On 0.7.1 the same failures end with a prose error line and exit `1`/`2` BEFORE any NDJSON begins — no `done` event. Either way it is a refusal (fix the input and re-run; sources already landed stay safe — the run says so), never a crash.
 
@@ -117,23 +122,21 @@ kane-cli design tests --use-case <uc-ref> --mode agent --max 8
 - **Present tests, gaps, AND warnings** — first-class output, not noise. Then go to the review checkpoint (§4) before any authoring.
 - `kane-cli design explain <t-ref>` replays *why* a test exists (technique, boundary values, criteria) with zero AI cost — use it when the user asks "why this test?".
 
-## 6. The authoring bridge — designed ≠ runnable-in-batch yet
+## 6. The authoring bridge — from designed files to batch runs
 
-A freshly designed test has never been executed. `kane-cli testrun run` **refuses never-authored tests** (preflight failure `missing_meta`) — that is by design, not a bug. The sequence is:
-
-1. `kane-cli testmd run <file> --agent` once per kept test — the agent authors it in a real browser and commits the recording. Designed tests may carry `{{variables}}` for values the requirements never pinned (a store URL, a product name) — supply them per `references/testmd.md`.
-2. From then on the test replays like any other: batch with `kane-cli testrun run` (`references/testrun.md`), evidence packs seal per `references/evidence.md`.
+A freshly designed test has never been executed. On 0.8.4+ hand the set straight to `kane-cli testrun run`: unauthored members classify as `author`, the run authors them in a real browser, and afterwards the authored and replayed evidence consolidates into one published execution — best-effort: when consolidation cannot complete, evidence stays split rather than lost. `--from-context` (0.8.4+) selects members by assurance test ids and follows edit supersessions. Designed tests may carry `{{variables}}` for values the requirements never pinned (a store URL, a product name) — supply them per `references/testmd.md`. `kane-cli testmd run <file> --agent` remains the single-test authoring path, and on pre-0.8.4 CLIs it is REQUIRED first — `testrun` there refuses never-authored members (`missing_meta`). Evidence packs seal per `references/evidence.md`.
 
 ## 7. What's next — let the tool tell you
 
 ```bash
 kane-cli cover                    # the pack audit: what it proved, plus the live-graph completeness worklist
-kane-cli cover gaps               # the dual-axis tree: designed % × proven %, debt per use-case
+kane-cli cover gaps               # the coverage ribbon: one row per use-case, both axes
+kane-cli cover gaps <uc-id>       # 0.8.2+: the dossier — every AC of that use-case + next actions
 kane-cli cover gaps --json        # the nested document (designed axis, proven axis, per-UC pending rows with ready_command)
 kane-cli cover gaps --mode agent  # 0.7.1+: same data as ONE `gaps` event + done.next[] ready-commands
 ```
 
-Since 0.6.8 the default `cover gaps` output (and bare `--json`) is a **nested dual-axis tree** — designed (a live test verifies the criterion) × proven (the store's own recorded execution facts) with pending debt grouped under each use-case; `--flat` preserves the old ranked worklist for legacy pipes. Every pending row carries a `ready_command` — offer those commands instead of guessing the next action. A failing row leads with the evidence command (`evidence serve`), and its re-run line warns that re-running an authored test on a broken app may heal the test around the failure — surface that warning, don't auto-re-run.
+On 0.8.2+ the default `cover gaps` output is the **coverage ribbon** — a high-level band-table: one severity-ordered row per use-case with designed/proven bars and per-class debt counts, deliberately carrying NO commands. To act, drill in: `cover gaps <uc-id>` (the dossier) renders every AC of that use-case plus a `next` actions block — evidence first; surface its warning that re-running an authored test on a broken app may heal the test around the failure — or read `--json`, whose per-UC pending rows keep `ready_command`. `--rollup lenient|strict` selects the proven-axis formula. BREAKING at 0.8.2: `--flat` and gaps' `--from` are REMOVED and refuse (pre-0.8.2 CLIs still have the flat worklist). With a `<uc-id>`, `--json` and agent mode close the document over that use-case.
 
 ## 8. Store rules — don't corrupt the user's graph
 
@@ -167,6 +170,7 @@ Since 0.6.8 the default `cover gaps` output (and bare `--json`) is a **nested du
 | message ends `[HELD_REVIEW]` (exit 2, 0.7.2+) | a headless `--apply` met a live held review that needs a human | have the user run `kane-cli maintain reconcile --apply` in a terminal — it resumes the cards agent-free |
 | "this version of kane-cli is no longer supported" (runtime failure, exit 1) | the service requires a newer CLI | have the user upgrade, then retry |
 | media refusals (`PDF_*`, `DOCX_*`, `ENCODING_UNSUPPORTED`, `UNSUPPORTED_MEDIA`, `FILE_TOO_LARGE`) | the source file can't be ingested as-is | relay the message — each names its remedy (save-as, split, re-encode) |
+| a remote URL refuses because its id is backed by a different kind of source (0.8.6+) | cross-provider id collision — remote ids share one space | retire the existing source, or adopt the new one with `--as`; never retry blindly |
 | lock held | another assurance run is live | wait for it; never break locks |
 | `error` + `done` with exit `1` | runtime failure (incl. a sweep where some sources failed) | report the message; **do not blindly re-run a paid command** |
 | auth/credit failure mid-run | token or balance problem | keep the `sid`, have the user fix auth/balance (`kane-cli whoami`, `kane-cli balance`), then resume |
@@ -179,6 +183,7 @@ Same philosophy as SKILL.md §1 — translate, don't transcribe:
 
 - Surface: pause questions (the deliverable when paused), commits ("5 use-cases extracted, 3 promoted to trusted"), held items ("4 items are held for your review"), designed tests + gaps + warnings, the credit total, and each checkpoint decision you're asking the user for.
 - Fold: `agent_activity` lines (thinking/tool noise) into at most one progress remark.
+- (0.8.2+) In a terminal, every session ends with a **session summary** block — state, facts, the resume command, credits on pause/crash/held. Narrate from it; don't re-derive.
 - Never show event/field names, cids, or raw NDJSON to the user.
 
 ## 11. When requirements change — reconcile
@@ -194,7 +199,7 @@ Never `context ingest` the new version first — reconcile does its own re-inges
 0.7.2+ additions:
 
 - **Interactive is an in-chat review.** In a terminal, every proposed change holds behind a review card: **approve** commits it (an ADD offers a design run, a MODIFY mints a successor version, an ARCHIVE retires non-destructively), **reject** drops it with zero residue (it may be re-proposed on a later reconcile), **defer** mints ONE durable gap that appears in `cover gaps` with the reconcile command as its remedy, and typing steers a re-finalize of the remaining changes. Verdicts persist as they land — Ctrl+C loses nothing, and bare `--apply` resumes a held review as cards **agent-free** (no model, no network); a headless run that meets a held review refuses with a `[HELD_REVIEW]` message marker. While a deferred change is on the record, the store **fails integrity checks and refuses commits on older kane-cli versions** — machines sharing a store upgrade together.
-- **`--from` takes URLs.** The same Jira/Confluence URLs ingest takes (§3). `--source-id` is then optional — the URL carries its own id, and a contradicting `--source-id` refuses. Kind continuity holds both ways: a URL can't version a file-backed source and a file can't version a remote one — each refusal names the correct `--from`. A source ingested under a custom id (`--as`) is maintained by re-running that ingest with the same `--as`. The first reconcile of a Jira issue last ingested pre-0.7.2 may report the one-time upgrade re-version (§3) — not a content edit.
+- **`--from` takes URLs.** The same remote URLs ingest takes (§3): Jira/Confluence (0.7.2+), web pages (0.8.3+), Linear issues and documents (0.8.6+). `--source-id` is then optional — the URL carries its own id, and a contradicting `--source-id` refuses. Kind continuity holds both ways: a URL can't version a file-backed source and a file can't version a remote one — each refusal names the correct `--from`. A source ingested under a custom id (`--as`) is maintained by re-running that ingest with the same `--as`. The first reconcile of a Jira issue last ingested pre-0.7.2 may report the one-time upgrade re-version (§3) — not a content edit.
 - **One stream.** The re-extract child's events ride the reconcile stream itself, stamped `verb: "reconcile"` — parse per `references/assurance-parsing.md`.
 
 For staleness that arrived outside a reconcile, `kane-cli maintain evolve` re-designs a use-case — it is interactive-only (the blast-radius confirmation is the point); suggest the user run it in a terminal rather than scripting around it.

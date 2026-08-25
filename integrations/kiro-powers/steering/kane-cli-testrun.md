@@ -33,12 +33,10 @@ kane-cli testrun run [paths...] [flags]     # NDJSON is automatic when stdout is
 
 # Preflight (why members get rejected)
 
-Every member must be **authored** (run once to completion, committed) and all members must share one org + project. Failure reasons on the plan:
+All members must share one org + project. *(0.8.4+)* Members need **not** be authored — an unauthored member classifies as `author`: the run authors it in the author pass, and the evidence consolidates afterwards (best-effort). On pre-0.8.4 CLIs the same members refuse (`missing_meta` / `not_authored` — remedy: author once with `kane-cli testmd run`). Failure reasons on the plan:
 
 | Reason | Plain-language meaning | What to tell the user |
 |---|---|---|
-| `missing_meta` | No recorded output next to the test | "Run it once with `kane-cli testmd run` first" |
-| `not_authored` | Recorded but never committed | "Run it to completion so it commits, then retry" |
 | `org_mismatch` | Different organisation than the other tests | "Check `kane-cli testmd status <path>` — it belongs to another org" |
 | `project_mismatch` | Different project than the other tests | "Run it separately or per-project" |
 
