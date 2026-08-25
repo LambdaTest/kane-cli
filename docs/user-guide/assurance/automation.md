@@ -171,7 +171,7 @@ The rule stands: there is no auto-approve. These paths land **your** decisions f
 
 ## Coverage on the stream *(0.7.1)*
 
-`cover --mode agent` and `cover gaps --mode agent` speak the same envelope (`verb: "cover"` / `"gaps"`): the full `--json` payload arrives as **one** `coverage` (or `gaps`) event, and `done` closes the stream carrying the worklist's ready-to-paste commands in `next[]`. `--mode ci` speaks the identical stream. Any refusal is an `error` event + `done` with exit `2`.
+`cover --mode agent` and `cover gaps --mode agent` speak the same envelope (`verb: "cover"` / `"gaps"`): the full `--json` payload arrives as **one** `coverage` (or `gaps`) event — *(0.8.2)* `cover gaps <uc-id>` emits the document closed over that use-case — and `done` closes the stream carrying the worklist's ready-to-paste commands in `next[]`. `--mode ci` speaks the identical stream. Any refusal is an `error` event + `done` with exit `2`.
 
 ## When releases don't match
 
@@ -179,7 +179,7 @@ Sessions bind to the kane-cli release that created them, and the refusals are lo
 
 ## Machine-readable reads
 
-These read commands have structured forms: `context list --json` and `context sessions --json` (one JSON object per line), `context explain --json`, `context view --json` (the full computed graph payload), `context view --no-open --out graph.html` (render without a browser), `cover --json`, and `cover gaps --json` (the nested dual-axis document — see [Coverage](./coverage.md)).
+These read commands have structured forms: `context list --json` and `context sessions --json` (one JSON object per line), `context explain --json`, `context view --json` (the full computed graph payload), `context view --no-open --out graph.html` (render without a browser), `cover --json`, and `cover gaps --json` (the nested coverage document — see [Coverage](./coverage.md)).
 
 ## Headless maintain
 

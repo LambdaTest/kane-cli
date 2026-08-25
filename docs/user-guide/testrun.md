@@ -27,15 +27,13 @@ kane-cli testrun run --match 'tests/e2e/.*' --tags smoke
 
 Before anything runs, every member is checked:
 
-- **It must be authored** — run at least once and committed, so it has recordings and a test id.
+- *(0.8.4)* **It need not be authored** — a member with no recording classifies as an **author** member: the agent authors it during the run, and afterwards the authored and replayed evidence consolidates into one published execution (best-effort — when consolidation can't complete, the evidence stays split rather than lost). Before 0.8.4, unauthored members failed preflight (`missing_meta` / `not_authored`).
 - **All members must belong to one org and one project** — a testrun is one execution in Test Manager, so it can't span projects.
 
-A member can fail preflight for four reasons:
+A member can fail preflight for these reasons:
 
 | Reason | Meaning | Fix |
 |---|---|---|
-| `missing_meta` | No recorded output next to the test | Run it once with `kane-cli testmd run` |
-| `not_authored` | Recorded but never committed | Run it to completion so it commits |
 | `org_mismatch` | Belongs to a different organisation than the rest | Check with `kane-cli testmd status <path>` |
 | `project_mismatch` | Belongs to a different project than the rest | Check with `kane-cli testmd status <path>`; run project-by-project |
 
@@ -43,7 +41,7 @@ If any member fails preflight, the plan is invalid and **nothing runs** (exit `2
 
 ```
 error: plan invalid — 2 offending test(s):
-  tests/new_flow_test.md: not_authored
+  tests/other_org_test.md: org_mismatch
   tests/other_project_test.md: project_mismatch
 ```
 

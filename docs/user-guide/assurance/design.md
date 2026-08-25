@@ -83,7 +83,7 @@ kane-cli testmd run .testmuai/tests/t-add-one-…_test.md   # author it (first r
 kane-cli testrun run --match 't-'                          # from then on: batch replay
 ```
 
-Until a test has been authored, [`kane-cli testrun`](../testrun.md) preflight reports it as `missing_meta` and [`kane-cli cover`](./coverage.md) reads its criteria as covered-on-paper but unproven. That reading is deliberate — see [Coverage](./coverage.md#the-authoring-bridge).
+Until a test's first authored run, [`kane-cli cover`](./coverage.md) reads its criteria as covered-on-paper but unproven — that reading is deliberate. *(0.8.4)* [`kane-cli testrun`](../testrun.md) authors fresh members itself (they classify as `author` at preflight and consolidate after the run); `kane-cli testmd run` remains the single-test path — see [Coverage](./coverage.md#the-authoring-bridge).
 
 ## Gates, re-runs, and `--force`
 
