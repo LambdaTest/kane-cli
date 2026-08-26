@@ -1,6 +1,6 @@
 ---
 name: kane-cli
-description: Browser automation + AI test authoring via kane-cli: run browser objectives, generate & refine test scenarios/cases from a description, design requirement-linked test suites from a PRD/spec (assurance), parse NDJSON output, inspect logs, save runnable _test.md. Use for any task requiring a real browser (navigate, click, fill forms, test web UI, take screenshots), or to author test cases, quick cases from a description via kane-cli generate; a designed, coverage-accounted suite from requirement documents via the assurance commands. Never write test cases by hand. Also runs mobile app tests on macOS Apple Silicon: a native Android app on a virtual emulator or iOS app on a simulator via --target emulator|simulator (desktop browser stays the default target).
+description: Browser automation + AI test authoring via kane-cli - run browser objectives, generate & refine test scenarios/cases from a description, design requirement-linked test suites from a PRD/spec (assurance), parse NDJSON output, inspect logs, save runnable _test.md. Use for any task requiring a real browser (navigate, click, fill forms, test web UI, take screenshots), or to author test cases, quick cases from a description via kane-cli generate; a designed, coverage-accounted suite from requirement documents via the assurance commands. Never write test cases by hand. Also runs mobile app tests on macOS Apple Silicon - native Android app on a virtual emulator or iOS app on a simulator via --target emulator|simulator (desktop browser stays the default target).
 ---
 
 # Kane CLI — Browser Automation Skill
@@ -149,7 +149,7 @@ When the user's request involves a browser — or writing test cases:
 - A test they want to save / re-run / commit → Read `references/testmd.md` first, then use `kane-cli testmd`
 - Run a suite of saved tests (several `_test.md` at once) → Read `references/testrun.md` first, then use `kane-cli testrun run`
 - Need test cases or scenarios from a short description — because the user asked, or because the task needs them (no browser) → **don't hand-write them**; Read `references/generate.md` first, then use `kane-cli generate` (§6)
-- Has requirement documents (PRD/spec) and wants a designed suite, coverage accounting, or suite upkeep → Read `references/assurance.md` first — the assurance commands (`context`/`design`/`cover`/`maintain reconcile`, kane-cli 0.6.1+; several flags need 0.7.1+ or 0.7.2+ — the reference marks them), NOT `generate`
+- Has requirement documents (PRD/spec) and wants a designed suite, coverage accounting, or suite upkeep → Read `references/assurance.md` first — the assurance commands (`context`/`design`/`cover`/`maintain reconcile`, kane-cli 0.6.1+; several features need newer releases, up to 0.8.6+ — the reference marks each), NOT `generate`
 - Multiple independent browser tasks → Read `references/parallel.md` first
 - View, share, or validate run evidence (`.evidence` packs) → Read `references/evidence.md`
 - Debug a failed run → Read `references/debug.md`

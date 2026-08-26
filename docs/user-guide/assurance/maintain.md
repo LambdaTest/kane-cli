@@ -18,7 +18,7 @@ Reconcile is the on-change front door: a requirement document changed — what s
 
 It takes **two explicit inputs** — reconcile never guesses which source a file belongs to:
 
-- `--from <file|url>` — the **new** version of the document: a file path, or *(0.7.2)* a Jira issue / Confluence page URL (the same URLs [`context ingest`](./context.md#ingest) takes — see [Remote sources](#remote-sources)).
+- `--from <file|url>` — the **new** version of the document: a file path, or a remote source URL — *(0.7.2)* a Jira issue or Confluence page, *(0.8.3)* a web page, *(0.8.6)* a Linear issue or document (the same URLs [`context ingest`](./context.md#ingest) takes — see [Remote sources](#remote-sources)).
 - `--source-id <id>` — the **existing** source this file succeeds; its head moves. Find ids with `kane-cli context list --type source`. Required with a file; optional beside a URL, whose id is intrinsic.
 
 With a file, both are required on a fresh run. `--apply <path>` alone is enough to continue a stored plan — the plan remembers its source.
@@ -41,7 +41,7 @@ Any failure exits `2` with a message naming the next command to run. In `--mode 
 
 ### The changeset — what the change did
 
-Rendered first, before any actions:
+Rendered first, before any actions. The line list below is what `--plan` and the headless modes print; *(0.8.2)* a terminal review opens with the same facts as its **decision briefing** — a headline and a boxed table, one row per upcoming card (its kind, the item, why it's proposed, and its impact: `14 stale · 2 direct`, or `—` when nothing goes stale), with the plan facts dimmed beneath:
 
 ```
 changeset: 3 item(s)
@@ -56,7 +56,7 @@ changeset: 3 item(s)
 
 ### The in-chat review (the default in a terminal)
 
-*(0.7.2)* A terminal reconcile runs as an **in-chat review**. The extraction runs over the change, every proposed change holds, and the check-in offers `review N change(s) from <source>` as its first row — `later` stays available, every other row keeps working, and the offer returns at each check-in until you take it. Selecting it walks the held changes **one card at a time, highest risk first**. Each card shows what changed (a compact diff), why it matched, its evidence cite, and its honest downstream cost (`impact: approving marks 14 item(s) stale`); a longer diff collapses to its summary plus a non-committing `view diff` row (esc returns to the card).
+*(0.7.2)* A terminal reconcile runs as an **in-chat review**. The extraction runs over the change, every proposed change holds, and the check-in offers `review N change(s) from <source>` as its first row — `later` stays available, every other row keeps working, and the offer returns at each check-in until you take it. Selecting it opens with the decision briefing *(0.8.2)*, then walks the held changes **one card at a time, highest risk first**. Each card shows what changed (a compact diff), why it matched, its evidence cite, and its honest downstream cost (`impact: approving marks 14 item(s) stale`); a longer diff collapses to its summary plus a non-committing `view diff` row (esc returns to the card).
 
 The verdicts:
 
@@ -82,16 +82,18 @@ Walk the plan later with `--apply <path>` — or bare `--apply`. *(0.7.2)* If a 
 <a name="remote-sources"></a>
 ### Remote sources — `--from <url>` *(0.7.2)*
 
-`--from` also accepts a **Jira issue or Confluence page URL** — the same URLs [`context ingest`](./context.md#ingest) takes. Remote sources ride the same flow as files: reconcile fetches the latest content through your Atlassian connection, the head moves if anything you'd cite changed, and everything downstream — cards, `--plan`, `--apply` — is identical.
+`--from` also accepts a **remote source URL** — a Jira issue or Confluence page, *(0.8.3)* a web page, *(0.8.6)* a Linear issue or document: the same URLs [`context ingest`](./context.md#ingest) takes. Remote sources ride the same flow as files: reconcile fetches the latest content through the provider, the head moves if anything you'd cite changed, and everything downstream — cards, `--plan`, `--apply` — is identical.
 
 ```bash
 kane-cli maintain reconcile --from https://<your-site>/browse/PROJ-123 --plan
 kane-cli maintain reconcile --from https://<site>/wiki/spaces/<KEY>/pages/<id>/…
+kane-cli maintain reconcile --from https://linear.app/<workspace>/issue/ENG-42
+kane-cli maintain reconcile --from https://docs.example.com/guide
 ```
 
 Remote-specific rules:
 
-- **The id comes from the URL** (`proj-123` for an issue, `page-<id>` for a page), so `--source-id` is optional. Passing one that contradicts the URL's own identity refuses — reconcile never adopts a URL under a different id. A source you ingested under a custom id (`context ingest --as`) is maintained by re-running that ingest with the same `--as`.
+- **The id comes from the URL** (`proj-123` or `eng-42` for an issue, `page-<id>` for a Confluence page, `doc-<id>` for a Linear document, a slug plus short hash for a web page), so `--source-id` is optional. Passing one that contradicts the URL's own identity refuses — reconcile never adopts a URL under a different id. A source you ingested under a custom id (`context ingest --as`) is maintained by re-running that ingest with the same `--as`.
 - **Kind continuity, both ways.** A URL can't version a file-backed source that happens to share its id, and a file can't version a remote source — each refuses and names the correct `--from`. The same check runs when a stored plan replays, so a stale plan can never overwrite a source whose backing changed hands.
 - **Stored plans remember the URL** and recompute by re-fetching it — the same way a file plan re-reads its file.
 - **After an upgrade**, the first reconcile of a Jira issue ingested before 0.7.2 may report a head move that isn't a content edit — that's the source's one-time re-version (see [Accepted media](./context.md#accepted-media)), not a change to review.
@@ -141,6 +143,7 @@ Evolve re-designs the **parent use-case** of whatever you point it at — a test
 
 - **Staleness-gated:** a fresh target refuses. `--because "<reason>"` is the sanctioned override — your reason becomes the change context the re-design sees, on the record.
 - `--from-stale` collects every use-case with stale designed entities and walks them one confirm at a time.
+- *(0.8.2)* Evolve's terminal output leads with an aligned diff report, brackets its child design runs with progress-dot lines, and closes with the same session summary every interactive session prints.
 - After a clean run, evolve reports the diff between the two design generations — what was superseded, what was minted, what was **retained** unchanged, and which criteria's verifying tests moved. A re-design doesn't break what it didn't change.
 - Reconcile's MODIFY rows route here automatically — reach for evolve directly when staleness arrived outside a reconcile (an older change, a retired source). [`kane-cli cover gaps`](./coverage.md) lists stale designed entities in its ranked worklist.
 

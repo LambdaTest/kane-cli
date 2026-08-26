@@ -81,7 +81,7 @@ Use `text` + `options[].label` + `recommended_index` + `rationale` to decide or 
 
 ## Coverage events (verbs `cover` / `gaps`) *(0.7.1+)*
 
-One payload event carrying the full `--json` document — `coverage` for `cover`, `gaps` for `cover gaps` — then `done` (with the worklist's ready-commands in `next[]`). Refusal = `error` + `done{refused, 2}`.
+One payload event carrying the full `--json` document — `coverage` for `cover`, `gaps` for `cover gaps`; with a `<uc-id>` (0.8.2+) the `gaps` document closes over that use-case — then `done` (with the worklist's ready-commands in `next[]`). Refusal = `error` + `done{refused, 2}`.
 
 ## Exit codes (these commands only)
 
