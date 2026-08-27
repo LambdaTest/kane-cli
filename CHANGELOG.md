@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.7] - 2026-08-27
+
+### Mobile testing is now fully wired in
+- **Address devices by name and OS version** — test runs now resolve devices by their human-readable name and OS version (e.g. `iPhone 15 · iOS 17`), and that address is recorded into the `.testmd` for future replay.
+- **Mobile members work in local test runs** — mobile participants are no longer limited to remote runs; they can join and execute in local test runs.
+- **Evidence publishes on every mobile replay** — mobile replay now emits evidence on each step, matching the behavior already in place for web runs.
+- **Device session logging is selective** — irrelevant noise (UiAutomator tag family, iOS identity chatter, sub-error framework bookkeeping) is filtered from device logs, leaving only the signal that matters.
+
+### Viewport extraction is recordable and exportable
+- **Record and export viewport extractions** — viewport extraction steps are now captured in the `.testmd` and included in exports, so they round-trip through record and replay without manual reconstruction.
+- **Drifted viewport extractions self-heal** — a viewport extraction that drifts during replay now heals through its own sub-node rather than failing the run.
+
+### Assurance is more reliable
+- **Malformed verdicts can no longer sneak through** — a malformed per-action-check verdict in a parked replay is rejected outright and never laundered into un-resolved state.
+- **One dead fact no longer quarantines its siblings** — fact replay now partitions per fact, so a single failed fact no longer blocks valid facts in the same batch from committing.
+- **Thrown lock failures no longer lose the batch** — `facts commit` now correctly parks on `THROW`, preventing silent batch loss on thrown lock failures.
+- **Same-turn retractions are respected at review** — the final-review fold no longer allows rebless to resurrect an edge that was retracted in the same turn.
+
+### Analyzer and variable handling are more predictable
+- **Store key casing is preserved** — the analyzer no longer lowercases variable names; a store key you name explicitly keeps the casing you gave it.
+- **`{{var}}` substitution uses the authored key** — action parameters now look up the key exactly as authored, rather than re-deriving it from step text in a way that could produce a mismatch.
+- **Textual analyzer records as code and baseline capture for mobile** — `textual_analyzer` steps now record and replay as `code` + `capture_baseline`, giving them a stable, exportable representation.
+
+### Assurance window robustness
+- **Assurance-window keys are YAML-trimmed before comparison** — keys like `base:`, `id:`, and `assurance:` with surrounding whitespace now parse as their canonical forms, preventing duplicate pin insertion.
+- **CRLF and stray CR in assurance windows are tolerated** — a regression that caused the shared scanner to misparse Windows-style line endings is fixed.
+- **Edge revival is gated on live endpoints** — an edge can only be revived if both its source and destination are live and a free slot exists; rebless and fsck both enforce this.
+
+### Smaller fixes and polish
+- **Arrow keys step through filtered rows** — in filtered list views, up/down arrows now move through the filtered result set, not the full unfiltered list.
+- **iOS log stream no longer flaps** — identity chatter from iOS no longer causes the log stream to start and stop repeatedly; recovery evidence from iOS is also preserved correctly.
+- **Appium command lane released before logger round-trip** — a sequencing issue that could hold the Appium command lane open during the logger round-trip is resolved.
+
+---
+
 ## [0.8.6] - 2026-08-24
 
 ### Linear as a native source
