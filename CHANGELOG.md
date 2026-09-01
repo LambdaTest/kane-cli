@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.8] - 2026-09-01
+
+### Full control in agent mode
+- **`--mode agent` now pauses on every question** — kane-cli no longer auto-accepts recommended actions; every decision waits for your explicit input, so nothing runs without your approval.
+
+### Typing variables works correctly
+- **Variable placeholders no longer produce trailing garbage** — typing into a `{{var}}` field no longer appends stray characters after the substituted value.
+
+### Conditional branches that actually run
+- **`if_else` steps with no sub-checks are now anchored correctly** — branches authored without nested checks previously could be skipped or mis-executed; they now behave as expected.
+
+### Fatal exits deliver complete logs
+- **Logs are fully flushed before kane-cli exits on a fatal error** — the remote log buffer is now drained and spooled so nothing is lost when the process terminates unexpectedly.
+
+### Cleaner installs
+- **`package.json` engines field removed** — a stale version constraint was causing npm to silently install an older release of kane-cli instead of the latest; that trap is gone.
+
 ## [0.8.7] - 2026-08-27
 
 ### Mobile testing is now fully wired in
