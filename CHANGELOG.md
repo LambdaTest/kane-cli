@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.9] - 2026-09-02
+
+### Changed
+
+- Maintenance release — packaging/pipeline fixes only, no user-facing changes.
+
 ## [0.8.8] - 2026-09-01
 
 ### Full control in agent mode
