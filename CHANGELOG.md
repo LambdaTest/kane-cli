@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.10] - 2026-09-04
+
+### Mobile code export is here (Python only)
+- **Code export now works on mobile runs** — test runs against mobile targets generate exportable Python automation code, the same way web runs do.
+- **JavaScript export is blocked on mobile** — passing `--language javascript` on a mobile export now fails immediately with a clear message instead of silently producing broken output.
+- **The Python-only constraint is visible** — the export UI surfaces the mobile limitation so you know what to expect before you run.
+
+### More accurate mobile exports
+- **Drag gestures now export correctly** — a mobile drag's end point and timing values were missing from the export blob; they're now persisted and show up in generated code.
+- **Typed text no longer has trailing garbage** — the mobile text schema was appending junk characters at the end of typed strings; generated scripts now reproduce exactly what was typed.
+
+### Scroll and until-loop fixes
+- **Until-loop scroll behavior is consistent** — the scroll unit is now honored by default inside until-loops, so recorded scroll-until steps replay the way they were captured.
+- **Scroll unit is only set when it makes sense** — the unit key is now stamped only on distance-based scroll events, avoiding ambiguity on other scroll kinds.
+
+### Mobile replay reliability
+- **If/else branches replay correctly on mobile** — same-tape literal analyzers inside mobile if/else blocks now resolve properly during replay instead of failing or skipping.
+
 ## [0.8.9] - 2026-09-02
 
 ### Changed
