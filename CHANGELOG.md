@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.11] - 2026-09-09
+
+### `--author` re-authors in place
+- **`--author` keeps the test's identity** — every step is re-authored on the existing test and the run commits a new version on the same test case, instead of minting a brand-new test on each `--author` run. To fork a test on purpose, delete its `output-<stem>/` directory and run again.
+- **`testrun run --author` reaches every member** — the flag is forwarded to members locally and on `--remote`, where the grid now installs the same kane-cli version you dispatched from. `--no-adaptive-heal` is forwarded on `--remote` too; it was silently dropped before.
+- **A mid-run lock conflict no longer abandons a heal** — under the readonly policy the heal keeps shrinking and re-authoring locally, the result is not committed, and stderr points at `--push`. The readonly state sticks for the rest of the run instead of re-entering the lock API on every shrink.
+- **Locks are released on every early exit** — a bad `--name`, a tenant mismatch, a Chrome or device launch failure, or a missing runner used to leave the test's lock held for up to 15 minutes, degrading every later run on that test to readonly. An imported unit whose commit fails after the root committed releases its lock as well.
+- **Evolve commits report correctly** — the `test_md_summary` event and the TTY box now agree on whether a commit landed (the event said `not_committed` for a commit that had landed), the box says "commit did not land" when a scheduled commit fails, and the evidence pack keeps the known test case id so cloud ingest of a `--author` run no longer fails.
+- **`result.yaml` describes the heal** — the `adaptive_heal` block gains `shrink_count`, `complete_reauthor`, `author_boundary`, `total_steps`, `reauthored_steps` and `credits_consumed`, is emitted for a forced `--author` run too, and `external_id` carries the HyperExecute test-instance, job and task ids.
+
+### Cloud modules as import units
+- **`*_module.md` is a third import kind** — it runs like a helper (import-only, never committed, no lock) but carries the cloud module's identity from its `meta.json`, and the bundle ships that identity beside the module's tape so a grid rebuild keeps it. Step events and the summary's imports rollup report `unit_kind: "module"`.
+- **Each `@import` of a module becomes a module block in the uploaded execution** — importing a module twice yields two occurrences, a module inside a module nests, and an occurrence is flagged dirty only when its tape existed before the run and a step inside it was authored this run. A test with no modules uploads exactly what it did before.
+- **A `*_module.md` without a cloud identity never folds** — it still runs as a module, warns once on stderr, and is no longer uploaded under an empty shared module id.
+- **Module-importing pure replays keep their skipped tail** — a module block is treated as a linear container, so a pure replay of a test that imports a module no longer withholds the skipped tail.
+
+### Replay-only steps survive adaptive heal
+- **Heading markers pin a step to its tape** — `## Step 3 @db` (also `@api`, `@js`, `@smartui`, `@network_query`, `@network_assertion`) marks a cloud-generated step the agent cannot author. It always replays from its recording, even inside a re-authored tail, and adaptive heal never promotes it to author. The marker composes with `@verifies` in either order and can be added to an already-recorded step without invalidating its tape.
+- **A marked step that cannot replay refuses the run up front** — the run exits 2 naming every such step before anything spawns; a marked step that breaks during replay ends the run with a `🩹 step N … broke on replay` notice instead of spending heal budget or stopping silently.
+- **A heal commit keeps the original instruction** — the regenerated execution re-emits the cloud's DB query, API request, script, SmartUI and network instructions verbatim, refreshing only status, timestamps and this run's result, so those steps no longer render as junk in the evidence viewer.
+
+### Variables resolve through paths
+- **`{{var.path}}` and `{{rows[0].id}}` reach the analyzer with their value** — a variable consumed only through a dotted or bracketed path (in `{{x}}` or `${x}` form) was dropped before the agent saw it and reported as unknown; `assert {{api_var.status}} equals 200` after a replayed API step now passes. A longer name that merely shares the prefix is not treated as a reference.
+- **JS snippets see API and DB results as objects** — `return api_var.status` after a replayed `@api` step returned null because the runner re-seeded the value as a JSON string; it now keeps the typed object, and parses a string-only value on grid retries and `--remote`.
+- **One row per variable in Test Manager's Variables panel** — a re-assignment (`set X = a`, then `X = b`) updates the persisted row in place instead of adding a row per store; the instructions, the tape and the code export still carry every store.
+
+### Cloud sync for inline and TUI runs
+- **`kane-cli run … --name x` and TUI sessions push their testmd bundle** — a persisted test now syncs its `{commit_id}-testmd.zip` after upload (exit and `/new` included), the same as `testmd run` already did; a skipped sync logs its reason in the session log.
+- **The bundle is pushed before every commit** — a committed version whose bundle never uploaded could not be rebuilt on the grid; a failed root push now stops the commit and releases the lock, and a failed unit push skips only that unit's commit.
+
+### Reliability on Windows, macOS and the grid
+- **The runner is UTF-8 on every platform** — stdin, stdout and stderr are forced to UTF-8 and the frozen binary is built in UTF-8 mode, so a macOS grid host without a UTF-8 locale no longer fails every step with `'utf-8' codec can't encode characters … surrogates not allowed` once a prior flow's summary carries a non-ASCII character.
+- **A passing heal no longer keeps the failed attempt in `execution.json`** — Windows refused to archive a failed attempt's `logs/` while the runner still held the tape open, and the error was swallowed. The runner now releases its tape and run-log handles when an author run ends, and a refused rename is logged and falls back to copy-and-truncate, so the archived attempt and the canonical pack are both complete.
+- **Healed selectors on repeated rows are unique** — a heal on a list whose rows share one `data-testid` now yields a locator that resolves to a single element instead of failing Playwright's strict mode on the very element the heal found (testmuai-playwright-bindings 0.1.37).
+
 ## [0.8.10] - 2026-09-04
 
 ### Mobile code export is here (Python only)
