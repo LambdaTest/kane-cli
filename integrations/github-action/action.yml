@@ -1,0 +1,136 @@
+name: "Kane CLI Test"
+description: "Run plain English browser tests with Kane CLI. Pass/fail verdict, sealed evidence, PR comment with screenshots."
+author: "TestMu AI"
+branding:
+  icon: "check-circle"
+  color: "green"
+
+inputs:
+  objective:
+    description: "Plain English test objective, e.g. 'go to /cart, click Checkout, assert page contains Order Summary'"
+    required: true
+  url:
+    description: "Base URL of the app under test (staging/preview URL)"
+    required: true
+  username:
+    description: "TestMu username (pass from secrets.LT_USERNAME)"
+    required: true
+  access-key:
+    description: "TestMu access key (pass from secrets.LT_ACCESS_KEY)"
+    required: true
+  timeout:
+    description: "Max seconds for the run"
+    required: false
+    default: "300"
+  comment-on-pr:
+    description: "Post a pass/fail comment with evidence on the PR (true/false)"
+    required: false
+    default: "true"
+  kane-version:
+    description: "Version of @testmuai/kane-cli to install"
+    required: false
+    default: "latest"
+
+outputs:
+  status:
+    description: "passed | failed | timeout | auth_error"
+    value: ${{ steps.run.outputs.status }}
+  summary:
+    description: "One-line summary from the run_end event"
+    value: ${{ steps.run.outputs.summary }}
+  duration:
+    description: "Run duration in seconds"
+    value: ${{ steps.run.outputs.duration }}
+  session-dir:
+    description: "Path to the sealed evidence session directory"
+    value: ${{ steps.run.outputs.session_dir }}
+  test-url:
+    description: "Hosted test/evidence URL if returned by the CLI"
+    value: ${{ steps.run.outputs.test_url }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install Kane CLI
+      shell: bash
+      run: npm install -g @testmuai/kane-cli@${{ inputs.kane-version }}
+
+    - name: Authenticate
+      shell: bash
+      run: kane-cli login --username "${{ inputs.username }}" --access-key "${{ inputs.access-key }}"
+
+    - name: Run Kane test
+      id: run
+      shell: bash
+      run: |
+        set +e
+        kane-cli run "${{ inputs.objective }}" \
+          --url "${{ inputs.url }}" \
+          --headless --agent \
+          --timeout ${{ inputs.timeout }} 2>kane-stderr.log | tee kane-stream.ndjson
+        EXIT_CODE=${PIPESTATUS[0]}
+        set -e
+
+        RUN_END=$(grep '"type":[[:space:]]*"run_end"' kane-stream.ndjson | tail -1 || echo '{}')
+        echo "status=$(echo "$RUN_END" | jq -r '.status // "unknown"')" >> "$GITHUB_OUTPUT"
+        echo "summary=$(echo "$RUN_END" | jq -r '.summary // "No summary returned"')" >> "$GITHUB_OUTPUT"
+        echo "duration=$(echo "$RUN_END" | jq -r '.duration // 0')" >> "$GITHUB_OUTPUT"
+        echo "session_dir=$(echo "$RUN_END" | jq -r '.session_dir // ""')" >> "$GITHUB_OUTPUT"
+        echo "test_url=$(echo "$RUN_END" | jq -r '.test_url // ""')" >> "$GITHUB_OUTPUT"
+        echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
+
+        # Copy evidence pack into workspace so it can be uploaded as an artifact
+        SESSION_DIR=$(echo "$RUN_END" | jq -r '.session_dir // ""')
+        SESSION_DIR="${SESSION_DIR/#\~/$HOME}"
+        if [ -n "$SESSION_DIR" ] && [ -d "$SESSION_DIR" ]; then
+          mkdir -p kane-evidence && cp -r "$SESSION_DIR"/. kane-evidence/
+        elif [ -d ".testmuai/evidence" ]; then
+          mkdir -p kane-evidence && cp -r .testmuai/evidence/. kane-evidence/
+        fi
+
+        exit $EXIT_CODE
+
+    - name: Upload evidence artifact
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: kane-evidence-${{ github.run_id }}
+        path: |
+          kane-evidence/
+          kane-stream.ndjson
+        if-no-files-found: ignore
+        retention-days: 30
+
+    - name: Comment on PR
+      if: always() && inputs.comment-on-pr == 'true' && github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      env:
+        KANE_STATUS: ${{ steps.run.outputs.status }}
+        KANE_SUMMARY: ${{ steps.run.outputs.summary }}
+        KANE_DURATION: ${{ steps.run.outputs.duration }}
+        KANE_TEST_URL: ${{ steps.run.outputs.test_url }}
+      with:
+        script: |
+          const status = process.env.KANE_STATUS;
+          const passed = status === 'passed';
+          const icon = passed ? '✅' : '❌';
+          const artifactUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+          const evidenceLine = process.env.KANE_TEST_URL
+            ? `**Evidence:** ${process.env.KANE_TEST_URL}`
+            : `**Evidence:** download the \`kane-evidence\` artifact from [this run](${artifactUrl})`;
+          const body = [
+            `## ${icon} Kane CLI: ${status}`,
+            ``,
+            `> ${process.env.KANE_SUMMARY}`,
+            ``,
+            `**Duration:** ${process.env.KANE_DURATION}s`,
+            evidenceLine,
+            ``,
+            `<sub>Verified in a real browser by [Kane CLI](https://testmuai.com/kane-cli) · screenshots, network traces, and console logs in the evidence pack</sub>`
+          ].join('\n');
+          await github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+            body
+          });
