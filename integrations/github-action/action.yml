@@ -1,0 +1,332 @@
+name: "Kane CLI Test"
+description: "Run plain-English browser tests with Kane CLI. Inline objective or committed test.md files. Pass/fail verdict, sealed evidence, PR comment."
+author: "TestMu AI"
+branding:
+  icon: "check-circle"
+  color: "green"
+
+inputs:
+  objective:
+    description: "Plain-English test objective, e.g. 'Go to https://staging.myapp.com/cart, click Checkout, assert the page contains Order Summary'. Use this OR test-files."
+    required: false
+    default: ""
+  test-files:
+    description: "Glob of Kane test.md files, e.g. 'tests/**/*_test.md'. Every matching file runs as one kane-cli testrun suite. Use this OR objective."
+    required: false
+    default: ""
+  url:
+    description: "Start URL for an inline objective. Optional when the objective names the site. Test files use their own url: frontmatter."
+    required: false
+    default: ""
+  username:
+    description: "TestMu username (pass from secrets.LT_USERNAME)"
+    required: true
+  access-key:
+    description: "TestMu access key (pass from secrets.LT_ACCESS_KEY)"
+    required: true
+  timeout:
+    description: "Max seconds for an inline objective (kane-cli --timeout). Test files use their own timeout: frontmatter; bound a suite with the job's timeout-minutes."
+    required: false
+    default: "300"
+  parallel:
+    description: "Worker count for a test-files suite (kane-cli testrun --parallel). Each worker gets an isolated Chrome."
+    required: false
+    default: "1"
+  fail-fast:
+    description: "Stop dispatching new suite members after the first failure (true/false)"
+    required: false
+    default: "false"
+  extra-args:
+    description: "Extra flags appended to the kane-cli invocation: run flags for an objective (e.g. '--max-steps 40', '--ws-endpoint wss://...'), testrun flags for a suite (e.g. '--tags smoke', '--no-adaptive-heal')"
+    required: false
+    default: ""
+  comment-on-pr:
+    description: "Post (or update) a pass/fail comment with the results table on the PR (true/false). Needs pull-requests: write."
+    required: false
+    default: "true"
+  kane-version:
+    description: "Version of @testmuai/kane-cli to install"
+    required: false
+    default: "latest"
+  node-version:
+    description: "Node.js version set up before installing kane-cli"
+    required: false
+    default: "24"
+  install-chrome:
+    description: "Install Google Chrome (stable) on the runner with browser-actions/setup-chrome (true/false). Set false when the runner image already has Chrome, or export KANE_CLI_CHROME_PATH yourself."
+    required: false
+    default: "true"
+  artifact-name:
+    description: "Prefix for the uploaded evidence artifact. The run id and attempt are appended. Set a distinct value per matrix leg."
+    required: false
+    default: "kane-evidence"
+
+outputs:
+  status:
+    description: "passed | failed"
+    value: ${{ steps.run.outputs.status }}
+  summary:
+    description: "One-line result summary, e.g. '4/5 tests passed'"
+    value: ${{ steps.run.outputs.summary }}
+  total:
+    description: "Number of tests executed"
+    value: ${{ steps.run.outputs.total }}
+  failed:
+    description: "Number of failed tests"
+    value: ${{ steps.run.outputs.failed }}
+  results-file:
+    description: "Path to the Markdown results table written by the run"
+    value: ${{ steps.run.outputs.results-file }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Validate inputs
+      shell: bash
+      env:
+        KANE_OBJECTIVE: ${{ inputs.objective }}
+        KANE_TEST_FILES: ${{ inputs.test-files }}
+      run: |
+        if [ -z "$KANE_OBJECTIVE" ] && [ -z "$KANE_TEST_FILES" ]; then
+          echo "::error::Provide either 'objective' (inline test) or 'test-files' (glob of test.md files)."
+          exit 1
+        fi
+        if [ -n "$KANE_OBJECTIVE" ] && [ -n "$KANE_TEST_FILES" ]; then
+          echo "::error::Provide only one of 'objective' and 'test-files'."
+          exit 1
+        fi
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Set up Chrome
+      if: inputs.install-chrome == 'true'
+      id: chrome
+      uses: browser-actions/setup-chrome@v2
+      with:
+        chrome-version: stable
+
+    - name: Point kane-cli at the installed Chrome
+      if: inputs.install-chrome == 'true'
+      shell: bash
+      env:
+        CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
+        CHROME_VERSION: ${{ steps.chrome.outputs.chrome-version }}
+      run: |
+        if [ -n "$CHROME_PATH" ]; then
+          echo "KANE_CLI_CHROME_PATH=$CHROME_PATH" >> "$GITHUB_ENV"
+          echo "Using Chrome $CHROME_VERSION at $CHROME_PATH"
+        else
+          echo "::warning::setup-chrome reported no chrome-path; kane-cli will look for Chrome at its standard locations."
+        fi
+
+    - name: Install Kane CLI
+      shell: bash
+      env:
+        KANE_VERSION: ${{ inputs.kane-version }}
+      run: |
+        npm install -g "@testmuai/kane-cli@${KANE_VERSION}"
+        kane-cli --version
+
+    - name: Authenticate
+      shell: bash
+      env:
+        LT_USERNAME: ${{ inputs.username }}
+        LT_ACCESS_KEY: ${{ inputs.access-key }}
+      run: |
+        if [ -z "$LT_USERNAME" ] || [ -z "$LT_ACCESS_KEY" ]; then
+          echo "::error::'username' and 'access-key' are required. Pass them from repository secrets."
+          exit 1
+        fi
+        kane-cli login --username "$LT_USERNAME" --access-key "$LT_ACCESS_KEY"
+
+    - name: Run Kane tests
+      id: run
+      shell: bash
+      env:
+        KANE_OBJECTIVE: ${{ inputs.objective }}
+        KANE_TEST_FILES: ${{ inputs.test-files }}
+        KANE_URL: ${{ inputs.url }}
+        KANE_TIMEOUT: ${{ inputs.timeout }}
+        KANE_PARALLEL: ${{ inputs.parallel }}
+        KANE_FAIL_FAST: ${{ inputs.fail-fast }}
+        KANE_EXTRA_ARGS: ${{ inputs.extra-args }}
+        KANE_CLI_USER_AGENT: github-action
+      run: |
+        # Runner defaults for a cold CI Chrome. A job-level env with the same
+        # names wins, so callers can raise them further.
+        : "${KANE_CLI_CDP_TIMEOUT_MS:=60000}"
+        : "${KANE_CLI_CDP_RETRIES:=2}"
+        export KANE_CLI_CDP_TIMEOUT_MS KANE_CLI_CDP_RETRIES
+
+        OUT="kane-out"
+        mkdir -p "$OUT/evidence"
+        RESULTS="$OUT/results.md"
+        STREAM="$OUT/stream.ndjson"
+        ERRLOG="$OUT/stderr.log"
+        PARSER="$GITHUB_ACTION_PATH/parse-stream.js"
+
+        {
+          echo "| Test | Status | Duration | Details |"
+          echo "|---|---|---|---|"
+        } > "$RESULTS"
+
+        # Build the one kane-cli command this step runs: an inline objective
+        # through `kane-cli run`, or every matched test file as a single
+        # `kane-cli testrun run` suite (one execution, one evidence pack).
+        local_label="inline objective"
+        cmd=()
+        if [ -n "$KANE_TEST_FILES" ]; then
+          if ! shopt -s globstar 2>/dev/null; then
+            echo "::warning::bash $BASH_VERSION has no globstar; '**' in test-files matches a single directory level."
+          fi
+          shopt -s nullglob
+          # shellcheck disable=SC2206 # glob expansion of the caller-supplied pattern is intended
+          files=($KANE_TEST_FILES)
+          shopt -u nullglob
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "::error::No files matched pattern: $KANE_TEST_FILES"
+            exit 1
+          fi
+          if [ -n "$KANE_URL" ]; then
+            echo "::warning::'url' applies to inline objectives only; test files take their start URL from url: frontmatter."
+          fi
+          local_label="suite"
+          cmd=(kane-cli testrun run "${files[@]}" --headless --parallel "$KANE_PARALLEL" --name "${GITHUB_WORKFLOW:-kane} #${GITHUB_RUN_NUMBER:-0}")
+          if [ "$KANE_FAIL_FAST" = "true" ]; then cmd+=(--on-failure fail-fast); fi
+        else
+          cmd=(kane-cli run "$KANE_OBJECTIVE" --agent --headless --timeout "$KANE_TIMEOUT")
+          if [ -n "$KANE_URL" ]; then cmd+=(--url "$KANE_URL"); fi
+        fi
+        if [ -n "$KANE_EXTRA_ARGS" ]; then
+          # shellcheck disable=SC2206 # word-splitting of caller-supplied flags is intended
+          cmd+=($KANE_EXTRA_ARGS)
+        fi
+
+        echo "::group::kane-cli ($local_label)"
+        set +e
+        "${cmd[@]}" 2>"$ERRLOG" | tee "$STREAM"
+        rc="${PIPESTATUS[0]}"
+        set -e
+        cat "$ERRLOG" >&2 || true
+        echo "::endgroup::"
+
+        # Turn the stream into table rows and a key=value summary.
+        STATUS="" TOTAL="" FAILED="" DURATION="" LINK="" SUMMARY="" DETAIL=""
+        while IFS='=' read -r key value; do
+          case "$key" in
+            status) STATUS="$value" ;;
+            total) TOTAL="$value" ;;
+            failed) FAILED="$value" ;;
+            duration) DURATION="$value" ;;
+            link) LINK="$value" ;;
+            summary) SUMMARY="$value" ;;
+            detail) DETAIL="$value" ;;
+          esac
+        done < <(node "$PARSER" --stream "$STREAM" --rc "$rc" --label "$local_label" --results "$RESULTS")
+        TOTAL="${TOTAL:-1}"
+        FAILED="${FAILED:-1}"
+
+        # Collect sealed evidence packs. kane-cli names the pack on stderr
+        # ("evidence: view locally with `kane-cli evidence serve <pack>`");
+        # testrun and testmd runs also place it in .testmuai/evidence/, and an
+        # inline run seals it under its session directory.
+        hinted=$(sed -n 's/.*kane-cli evidence serve \([^`]*\.evidence\).*/\1/p' "$ERRLOG" | tail -1)
+        hinted="${hinted/#\~/$HOME}"
+        if [ -n "$hinted" ] && [ -f "$hinted" ]; then cp -n "$hinted" "$OUT/evidence/" 2>/dev/null || true; fi
+        session_dir=$(node -e '
+          const fs = require("fs"); let d = "";
+          for (const l of fs.readFileSync(process.argv[1], "utf8").split("\n")) {
+            try { const o = JSON.parse(l); if (o && o.type === "run_end" && o.session_dir) d = o.session_dir; } catch (e) {}
+          }
+          process.stdout.write(d);
+        ' "$STREAM")
+        session_dir="${session_dir/#\~/$HOME}"
+        for dir in "$session_dir/evidence" ".testmuai/evidence"; do
+          if [ -d "$dir" ]; then
+            find "$dir" -maxdepth 1 -type f -name '*.evidence' -exec cp -n {} "$OUT/evidence/" \; 2>/dev/null || true
+          fi
+        done
+
+        if [ "$FAILED" -eq 0 ] && [ "$STATUS" = "passed" ]; then OVERALL="passed"; else OVERALL="failed"; fi
+        if [ "$OVERALL" = "failed" ]; then
+          echo "::error::kane-cli $local_label: $STATUS (exit $rc). $SUMMARY${DETAIL:+. $DETAIL}"
+        fi
+
+        {
+          echo "status=$OVERALL"
+          echo "summary=$SUMMARY"
+          echo "total=$TOTAL"
+          echo "failed=$FAILED"
+          echo "results-file=$RESULTS"
+        } >> "$GITHUB_OUTPUT"
+
+        {
+          if [ "$OVERALL" = "passed" ]; then echo "## :white_check_mark: Kane CLI: passed"; else echo "## :x: Kane CLI: $STATUS"; fi
+          echo
+          echo "> $SUMMARY${DURATION:+ in ${DURATION}s}"
+          if [ -n "$DETAIL" ]; then echo ">"; echo "> $DETAIL"; fi
+          echo
+          cat "$RESULTS"
+          if [ -n "$LINK" ]; then echo; echo "[Open the run in Test Manager]($LINK)"; fi
+        } >> "$GITHUB_STEP_SUMMARY"
+
+        echo "$SUMMARY"
+        [ "$OVERALL" = "passed" ]
+
+    - name: Upload evidence artifact
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.artifact-name }}-${{ github.run_id }}-${{ github.run_attempt }}
+        path: kane-out/
+        if-no-files-found: ignore
+        retention-days: 30
+
+    - name: Comment on PR
+      if: always() && inputs.comment-on-pr == 'true' && (github.event_name == 'pull_request' || github.event_name == 'pull_request_target')
+      uses: actions/github-script@v7
+      env:
+        KANE_STATUS: ${{ steps.run.outputs.status }}
+        KANE_SUMMARY: ${{ steps.run.outputs.summary }}
+        KANE_RESULTS_FILE: ${{ steps.run.outputs.results-file }}
+        KANE_ARTIFACT: ${{ inputs.artifact-name }}-${{ github.run_id }}-${{ github.run_attempt }}
+      with:
+        script: |
+          const fs = require('fs');
+          const marker = '<!-- kane-cli-action -->';
+          const status = process.env.KANE_STATUS || 'error';
+          const summary = process.env.KANE_SUMMARY || 'Kane CLI did not produce a result. Check the job log.';
+          const icon = status === 'passed' ? ':white_check_mark:' : ':x:';
+          let table = '';
+          try { table = fs.readFileSync(process.env.KANE_RESULTS_FILE || 'kane-out/results.md', 'utf8'); } catch (e) {}
+          const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+          const body = [
+            marker,
+            `## ${icon} Kane CLI: ${status}`,
+            ``,
+            `> ${summary}`,
+            ``,
+            table,
+            `**Evidence:** download the \`${process.env.KANE_ARTIFACT}\` artifact from [this run](${runUrl}) and open it with \`kane-cli evidence serve <pack>\`.`,
+            ``,
+            `<sub>Verified in a real browser by [Kane CLI](https://testmuai.com/kane-cli). Screenshots, network traces, and console logs are in the evidence pack.</sub>`
+          ].join('\n');
+
+          const issue_number = context.issue.number;
+          if (!issue_number) { core.info('No PR number in context; skipping comment.'); return; }
+          try {
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner, repo: context.repo.repo, issue_number, per_page: 100
+            });
+            const existing = comments.find(c => c.body && c.body.startsWith(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({ owner: context.repo.owner, repo: context.repo.repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number, body });
+            }
+          } catch (e) {
+            core.warning(`Could not post the PR comment (${e.message}). Grant the job 'pull-requests: write' or set comment-on-pr: false.`);
+          }

@@ -1,0 +1,26 @@
+# Run every committed Kane test (tests/**/*_test.md) on pull requests as one
+# testrun suite. Commit each test's output-<name>/ directory so CI replays
+# recorded steps. Tests take their start URL from their own url: frontmatter.
+name: Kane test suite
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  kane-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Kane tests
+        uses: LambdaTest/kane-cli/integrations/github-action@main
+        with:
+          test-files: "tests/**/*_test.md"
+          parallel: "3"
+          fail-fast: "false"
+          username: ${{ secrets.LT_USERNAME }}
+          access-key: ${{ secrets.LT_ACCESS_KEY }}
