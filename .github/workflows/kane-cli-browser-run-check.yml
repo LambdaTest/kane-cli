@@ -1,8 +1,10 @@
-name: Kane action check
+name: kane-cli-browser-run check
 
-# On-demand end-to-end check of integrations/github-action. On a clean runner it
+# On-demand end-to-end check of integrations/github-action/kane-cli-browser-run.
+# On a clean runner it
 # sets up Chrome and kane-cli, then runs the bundled test
-# (integrations/github-action/tests/latest-release_test.md): open the releases
+# (integrations/github-action/kane-cli-browser-run/tests/latest-release_test.md):
+# open the releases
 # page, call the GitHub API for the latest release, and assert the two agree.
 # Pass an objective to run that instead. Needs the LT_USERNAME and
 # LT_ACCESS_KEY repository secrets.
@@ -31,13 +33,14 @@ jobs:
 
       - name: Run through the action
         id: kane
-        uses: ./integrations/github-action
+        uses: ./integrations/github-action/kane-cli-browser-run
         with:
           objective: ${{ inputs.objective }}
-          test-files: ${{ inputs.objective == '' && 'integrations/github-action/tests/*_test.md' || '' }}
+          test-files: ${{ inputs.objective == '' && 'integrations/github-action/kane-cli-browser-run/tests/*_test.md' || '' }}
           kane-version: ${{ inputs.kane-version }}
           comment-on-pr: "false"
-          artifact-name: kane-action-check
+          artifact-name: kane-cli-browser-run-evidence
+          logs-artifact-name: kane-cli-browser-run-logs
           username: ${{ secrets.LT_USERNAME }}
           access-key: ${{ secrets.LT_ACCESS_KEY }}
 

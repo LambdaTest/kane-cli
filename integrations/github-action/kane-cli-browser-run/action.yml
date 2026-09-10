@@ -1,4 +1,4 @@
-name: "Kane CLI Test"
+name: "Kane CLI Browser Run"
 description: "Run plain-English browser tests with Kane CLI. Inline objective or committed test.md files. Pass/fail verdict, sealed evidence, PR comment."
 author: "TestMu AI"
 branding:
@@ -57,9 +57,13 @@ inputs:
     required: false
     default: "true"
   artifact-name:
-    description: "Prefix for the uploaded evidence artifact. The run id and attempt are appended. Set a distinct value per matrix leg."
+    description: "Prefix for the evidence artifact, which holds only the sealed .evidence pack(s). The run id and attempt are appended. Set a distinct value per matrix leg."
     required: false
     default: "kane-evidence"
+  logs-artifact-name:
+    description: "Prefix for the logs artifact (results table, raw NDJSON stream, stderr). The run id and attempt are appended."
+    required: false
+    default: "kane-logs"
 
 outputs:
   status:
@@ -276,12 +280,24 @@ runs:
         echo "$SUMMARY"
         [ "$OVERALL" = "passed" ]
 
-    - name: Upload evidence artifact
+    - name: Upload evidence pack
       if: always()
       uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.artifact-name }}-${{ github.run_id }}-${{ github.run_attempt }}
-        path: kane-out/
+        path: kane-out/evidence/
+        if-no-files-found: ignore
+        retention-days: 30
+
+    - name: Upload run logs
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ inputs.logs-artifact-name }}-${{ github.run_id }}-${{ github.run_attempt }}
+        path: |
+          kane-out/results.md
+          kane-out/stream.ndjson
+          kane-out/stderr.log
         if-no-files-found: ignore
         retention-days: 30
 
@@ -293,6 +309,7 @@ runs:
         KANE_SUMMARY: ${{ steps.run.outputs.summary }}
         KANE_RESULTS_FILE: ${{ steps.run.outputs.results-file }}
         KANE_ARTIFACT: ${{ inputs.artifact-name }}-${{ github.run_id }}-${{ github.run_attempt }}
+        KANE_LOGS_ARTIFACT: ${{ inputs.logs-artifact-name }}-${{ github.run_id }}-${{ github.run_attempt }}
       with:
         script: |
           const fs = require('fs');
@@ -310,7 +327,7 @@ runs:
             `> ${summary}`,
             ``,
             table,
-            `**Evidence:** download the \`${process.env.KANE_ARTIFACT}\` artifact from [this run](${runUrl}) and open it with \`kane-cli evidence serve <pack>\`.`,
+            `**Evidence:** download the \`${process.env.KANE_ARTIFACT}\` artifact from [this run](${runUrl}) and open the pack with \`kane-cli evidence serve <pack>\`. Raw logs are in \`${process.env.KANE_LOGS_ARTIFACT}\`.`,
             ``,
             `<sub>Verified in a real browser by [Kane CLI](https://testmuai.com/kane-cli). Screenshots, network traces, and console logs are in the evidence pack.</sub>`
           ].join('\n');

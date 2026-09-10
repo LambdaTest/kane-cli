@@ -19,7 +19,7 @@ jobs:
 
       - name: Run smoke tests
         id: kane
-        uses: LambdaTest/kane-cli/integrations/github-action@main
+        uses: LambdaTest/kane-cli/integrations/github-action/kane-cli-browser-run@main
         with:
           test-files: "tests/**/*_test.md"
           parallel: "3"

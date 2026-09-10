@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Verify the pricing page
-        uses: LambdaTest/kane-cli/integrations/github-action@main
+        uses: LambdaTest/kane-cli/integrations/github-action/kane-cli-browser-run@main
         with:
           objective: "Go to https://staging.myapp.com/pricing and verify the Pro plan card shows a monthly price"
           username: ${{ secrets.LT_USERNAME }}
