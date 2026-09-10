@@ -11,11 +11,11 @@ inputs:
     required: false
     default: ""
   test-files:
-    description: "Glob of Kane test.md files to run, e.g. 'tests/**/*_test.md'. Every matching file runs in order. Use this OR objective."
+    description: "Glob of Kane test.md files, e.g. 'tests/**/*_test.md'. Every matching file runs as one kane-cli testrun suite. Use this OR objective."
     required: false
     default: ""
   url:
-    description: "Start URL for the run (overrides a test file's url: frontmatter). Optional when the objective names the site or the test file sets url:."
+    description: "Start URL for an inline objective. Optional when the objective names the site. Test files use their own url: frontmatter."
     required: false
     default: ""
   username:
@@ -25,11 +25,19 @@ inputs:
     description: "TestMu access key (pass from secrets.LT_ACCESS_KEY)"
     required: true
   timeout:
-    description: "Max seconds per test run (kane-cli --timeout)"
+    description: "Max seconds for an inline objective (kane-cli --timeout). Test files use their own timeout: frontmatter; bound a suite with the job's timeout-minutes."
     required: false
     default: "300"
+  parallel:
+    description: "Worker count for a test-files suite (kane-cli testrun --parallel). Each worker gets an isolated Chrome."
+    required: false
+    default: "1"
+  fail-fast:
+    description: "Stop dispatching new suite members after the first failure (true/false)"
+    required: false
+    default: "false"
   extra-args:
-    description: "Extra flags appended to every kane-cli invocation, e.g. '--max-steps 40' or '--ws-endpoint wss://...' for a remote browser"
+    description: "Extra flags appended to the kane-cli invocation: run flags for an objective (e.g. '--max-steps 40', '--ws-endpoint wss://...'), testrun flags for a suite (e.g. '--tags smoke', '--no-adaptive-heal')"
     required: false
     default: ""
   comment-on-pr:
@@ -142,6 +150,8 @@ runs:
         KANE_TEST_FILES: ${{ inputs.test-files }}
         KANE_URL: ${{ inputs.url }}
         KANE_TIMEOUT: ${{ inputs.timeout }}
+        KANE_PARALLEL: ${{ inputs.parallel }}
+        KANE_FAIL_FAST: ${{ inputs.fail-fast }}
         KANE_EXTRA_ARGS: ${{ inputs.extra-args }}
         KANE_CLI_USER_AGENT: github-action
       run: |
@@ -154,110 +164,20 @@ runs:
         OUT="kane-out"
         mkdir -p "$OUT/evidence"
         RESULTS="$OUT/results.md"
-        TOTAL=0
-        FAILED=0
-
-        # Read the terminal event from an NDJSON stream: test_md_done for a
-        # test.md run (one run_end per step precedes it), else the last run_end
-        # of an inline objective. Prints one line, fields separated by the
-        # ASCII unit separator (0x1f): status, duration, session_dir, link, summary.
-        parse_stream() {
-          node -e '
-            const fs = require("fs");
-            let end = null, done = null, sessionDir = "";
-            for (const line of fs.readFileSync(process.argv[1], "utf8").split("\n")) {
-              if (!line.trim()) continue;
-              let o; try { o = JSON.parse(line); } catch (_) { continue; }
-              if (!o || typeof o !== "object") continue;
-              if (o.type === "run_end") { end = o; if (o.session_dir) sessionDir = o.session_dir; }
-              if (o.type === "test_md_done") done = o;
-            }
-            const sep = String.fromCharCode(31);
-            const clean = (v) => String(v == null ? "" : v).split(sep).join(" ").replace(/[\r\n\t]+/g, " ").trim();
-            const num = (v) => (v == null || isNaN(Number(v))) ? "" : Number(v).toFixed(1);
-            let status = "", duration = "", link = "";
-            if (done) { status = done.overall_status; duration = num(done.duration_s); link = done.share_url || ""; }
-            else if (end) { status = end.status; duration = num(end.duration); link = end.test_url || ""; }
-            const summary = end && end.summary ? end.summary : "";
-            process.stdout.write([status, duration, sessionDir, link, summary].map(clean).join(sep));
-          ' "$1"
-        }
-
-        collect_packs() {
-          # $1 = directory that may hold sealed .evidence packs
-          local dir="$1"
-          [ -d "$dir" ] || return 0
-          find "$dir" -maxdepth 1 -type f -name '*.evidence' -exec cp -n {} "$OUT/evidence/" \; 2>/dev/null || true
-        }
-
-        run_one() {
-          # $1 = label shown in the table, $2 = kind (objective | file), $3 = objective text or file path
-          local label="$1" kind="$2" target="$3"
-          local n="$TOTAL"
-          local stream="$OUT/stream-$n.ndjson"
-          local errlog="$OUT/stderr-$n.log"
-          local -a cmd
-          if [ "$kind" = "file" ]; then
-            cmd=(kane-cli testmd run "$target")
-          else
-            cmd=(kane-cli run "$target")
-          fi
-          cmd+=(--agent --headless --timeout "$KANE_TIMEOUT")
-          if [ -n "$KANE_URL" ]; then cmd+=(--url "$KANE_URL"); fi
-          if [ -n "$KANE_EXTRA_ARGS" ]; then
-            # shellcheck disable=SC2206 # word-splitting of caller-supplied flags is intended
-            cmd+=($KANE_EXTRA_ARGS)
-          fi
-
-          echo "::group::[$n] $label"
-          set +e
-          "${cmd[@]}" 2>"$errlog" | tee "$stream"
-          local rc="${PIPESTATUS[0]}"
-          set -e
-          cat "$errlog" >&2 || true
-          echo "::endgroup::"
-
-          local status duration session_dir link summary
-          IFS=$'\x1f' read -r status duration session_dir link summary < <(parse_stream "$stream"; printf '\n')
-
-          case "$rc" in
-            0) status="${status:-unknown}" ;;
-            1) status="${status:-failed}" ;;
-            2) status="error" ;;
-            3) status="timeout" ;;
-            *) status="exit $rc" ;;
-          esac
-
-          local icon
-          if [ "$rc" -eq 0 ] && [ "$status" = "passed" ]; then
-            icon=":white_check_mark:"
-          else
-            icon=":x:"
-            FAILED=$((FAILED + 1))
-            echo "::error::[$n] $label: $status (exit $rc)${summary:+ - $summary}"
-          fi
-
-          local details="-"
-          if [ -n "$link" ]; then details="[open]($link)"; fi
-          printf '| %s | %s %s | %ss | %s |\n' "\`$label\`" "$icon" "$status" "${duration:-?}" "$details" >> "$RESULTS"
-
-          # Collect the sealed evidence pack. kane-cli names it on stderr
-          # ("evidence: view locally with `kane-cli evidence serve <pack>`");
-          # inline runs also seal it under the session directory, and test.md
-          # runs copy it to .testmuai/evidence/ in the workspace.
-          local hinted
-          hinted=$(sed -n 's/.*kane-cli evidence serve \([^`]*\.evidence\).*/\1/p' "$errlog" | tail -1)
-          hinted="${hinted/#\~/$HOME}"
-          if [ -n "$hinted" ] && [ -f "$hinted" ]; then cp -n "$hinted" "$OUT/evidence/" 2>/dev/null || true; fi
-          session_dir="${session_dir/#\~/$HOME}"
-          collect_packs "$session_dir/evidence"
-        }
+        STREAM="$OUT/stream.ndjson"
+        ERRLOG="$OUT/stderr.log"
+        PARSER="$GITHUB_ACTION_PATH/parse-stream.js"
 
         {
           echo "| Test | Status | Duration | Details |"
           echo "|---|---|---|---|"
         } > "$RESULTS"
 
+        # Build the one kane-cli command this step runs: an inline objective
+        # through `kane-cli run`, or every matched test file as a single
+        # `kane-cli testrun run` suite (one execution, one evidence pack).
+        local_label="inline objective"
+        cmd=()
         if [ -n "$KANE_TEST_FILES" ]; then
           if ! shopt -s globstar 2>/dev/null; then
             echo "::warning::bash $BASH_VERSION has no globstar; '**' in test-files matches a single directory level."
@@ -270,23 +190,73 @@ runs:
             echo "::error::No files matched pattern: $KANE_TEST_FILES"
             exit 1
           fi
-          for f in "${files[@]}"; do
-            TOTAL=$((TOTAL + 1))
-            run_one "$f" file "$f"
-          done
+          if [ -n "$KANE_URL" ]; then
+            echo "::warning::'url' applies to inline objectives only; test files take their start URL from url: frontmatter."
+          fi
+          local_label="suite"
+          cmd=(kane-cli testrun run "${files[@]}" --headless --parallel "$KANE_PARALLEL" --name "${GITHUB_WORKFLOW:-kane} #${GITHUB_RUN_NUMBER:-0}")
+          if [ "$KANE_FAIL_FAST" = "true" ]; then cmd+=(--on-failure fail-fast); fi
         else
-          TOTAL=1
-          run_one "inline objective" objective "$KANE_OBJECTIVE"
+          cmd=(kane-cli run "$KANE_OBJECTIVE" --agent --headless --timeout "$KANE_TIMEOUT")
+          if [ -n "$KANE_URL" ]; then cmd+=(--url "$KANE_URL"); fi
+        fi
+        if [ -n "$KANE_EXTRA_ARGS" ]; then
+          # shellcheck disable=SC2206 # word-splitting of caller-supplied flags is intended
+          cmd+=($KANE_EXTRA_ARGS)
         fi
 
-        collect_packs ".testmuai/evidence"
+        echo "::group::kane-cli ($local_label)"
+        set +e
+        "${cmd[@]}" 2>"$ERRLOG" | tee "$STREAM"
+        rc="${PIPESTATUS[0]}"
+        set -e
+        cat "$ERRLOG" >&2 || true
+        echo "::endgroup::"
 
-        PASSED=$((TOTAL - FAILED))
-        if [ "$FAILED" -eq 0 ]; then STATUS="passed"; else STATUS="failed"; fi
-        SUMMARY="$PASSED/$TOTAL tests passed"
+        # Turn the stream into table rows and a key=value summary.
+        STATUS="" TOTAL="" FAILED="" DURATION="" LINK="" SUMMARY="" DETAIL=""
+        while IFS='=' read -r key value; do
+          case "$key" in
+            status) STATUS="$value" ;;
+            total) TOTAL="$value" ;;
+            failed) FAILED="$value" ;;
+            duration) DURATION="$value" ;;
+            link) LINK="$value" ;;
+            summary) SUMMARY="$value" ;;
+            detail) DETAIL="$value" ;;
+          esac
+        done < <(node "$PARSER" --stream "$STREAM" --rc "$rc" --label "$local_label" --results "$RESULTS")
+        TOTAL="${TOTAL:-1}"
+        FAILED="${FAILED:-1}"
+
+        # Collect sealed evidence packs. kane-cli names the pack on stderr
+        # ("evidence: view locally with `kane-cli evidence serve <pack>`");
+        # testrun and testmd runs also place it in .testmuai/evidence/, and an
+        # inline run seals it under its session directory.
+        hinted=$(sed -n 's/.*kane-cli evidence serve \([^`]*\.evidence\).*/\1/p' "$ERRLOG" | tail -1)
+        hinted="${hinted/#\~/$HOME}"
+        if [ -n "$hinted" ] && [ -f "$hinted" ]; then cp -n "$hinted" "$OUT/evidence/" 2>/dev/null || true; fi
+        session_dir=$(node -e '
+          const fs = require("fs"); let d = "";
+          for (const l of fs.readFileSync(process.argv[1], "utf8").split("\n")) {
+            try { const o = JSON.parse(l); if (o && o.type === "run_end" && o.session_dir) d = o.session_dir; } catch (e) {}
+          }
+          process.stdout.write(d);
+        ' "$STREAM")
+        session_dir="${session_dir/#\~/$HOME}"
+        for dir in "$session_dir/evidence" ".testmuai/evidence"; do
+          if [ -d "$dir" ]; then
+            find "$dir" -maxdepth 1 -type f -name '*.evidence' -exec cp -n {} "$OUT/evidence/" \; 2>/dev/null || true
+          fi
+        done
+
+        if [ "$FAILED" -eq 0 ] && [ "$STATUS" = "passed" ]; then OVERALL="passed"; else OVERALL="failed"; fi
+        if [ "$OVERALL" = "failed" ]; then
+          echo "::error::kane-cli $local_label: $STATUS (exit $rc). $SUMMARY${DETAIL:+. $DETAIL}"
+        fi
 
         {
-          echo "status=$STATUS"
+          echo "status=$OVERALL"
           echo "summary=$SUMMARY"
           echo "total=$TOTAL"
           echo "failed=$FAILED"
@@ -294,15 +264,17 @@ runs:
         } >> "$GITHUB_OUTPUT"
 
         {
-          if [ "$STATUS" = "passed" ]; then echo "## :white_check_mark: Kane CLI: passed"; else echo "## :x: Kane CLI: failed"; fi
+          if [ "$OVERALL" = "passed" ]; then echo "## :white_check_mark: Kane CLI: passed"; else echo "## :x: Kane CLI: $STATUS"; fi
           echo
-          echo "> $SUMMARY"
+          echo "> $SUMMARY${DURATION:+ in ${DURATION}s}"
+          if [ -n "$DETAIL" ]; then echo ">"; echo "> $DETAIL"; fi
           echo
           cat "$RESULTS"
+          if [ -n "$LINK" ]; then echo; echo "[Open the run in Test Manager]($LINK)"; fi
         } >> "$GITHUB_STEP_SUMMARY"
 
         echo "$SUMMARY"
-        [ "$FAILED" -eq 0 ]
+        [ "$OVERALL" = "passed" ]
 
     - name: Upload evidence artifact
       if: always()

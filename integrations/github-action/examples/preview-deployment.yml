@@ -19,7 +19,7 @@ jobs:
       - name: Smoke-test the preview
         uses: LambdaTest/kane-cli/integrations/github-action@main
         with:
-          test-files: "tests/smoke/*_test.md"
+          objective: "Open the start page, verify the main navigation is visible, then open the first navigation link and verify the page has a heading"
           url: ${{ github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
           comment-on-pr: "false"
           username: ${{ secrets.LT_USERNAME }}
