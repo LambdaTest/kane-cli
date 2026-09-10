@@ -11,12 +11,12 @@ The agent builds it. Kane CLI proves it works.
 On every PR, this action:
 
 1. Installs Kane CLI and authenticates
-2. Runs your plain English objective against a real Chrome browser
+2. Runs your plain English objective, or every test.md file matching a glob pattern, against a real Chrome browser
 3. Uploads the sealed evidence pack (screenshots, HAR network traces, console logs) as a build artifact
-4. Comments the pass/fail verdict on the PR with a link to the evidence
-5. Fails the check if the test fails, so broken UI never merges
+4. Comments the pass/fail verdict on the PR, with a per-test results table
+5. Fails the check if any test fails, so broken UI never merges
 
-## Quick start
+## Quick start: inline objective
 
 Add two secrets to your repo (`LT_USERNAME`, `LT_ACCESS_KEY`), then create `.github/workflows/kane.yml`:
 
@@ -39,15 +39,31 @@ jobs:
 
 No selectors. No test framework. One plain English sentence.
 
+## Run your test.md suite
+
+Keep Kane tests as plain markdown files in your repo, and run all of them on every PR with a glob pattern:
+
+```yaml
+      - uses: testmuai/kane-action@v1
+        with:
+          test-files: "tests/**/*_test.md"
+          url: "https://staging.myapp.com"
+          username: ${{ secrets.LT_USERNAME }}
+          access-key: ${{ secrets.LT_ACCESS_KEY }}
+```
+
+Every matching file runs, and the PR comment shows a table with each test's pass/fail and duration. The check fails if any test fails.
+
 ## Inputs
 
 | Input | Required | Default | Description |
 |---|---|---|---|
-| `objective` | yes | | Plain English test objective |
+| `objective` | one of these two | | Plain English test objective |
+| `test-files` | one of these two | | Glob of test.md files to run, e.g. `tests/**/*_test.md` |
 | `url` | yes | | Base URL of the app under test |
 | `username` | yes | | TestMu username (use secrets) |
 | `access-key` | yes | | TestMu access key (use secrets) |
-| `timeout` | no | `300` | Max seconds for the run |
+| `timeout` | no | `300` | Max seconds per test run |
 | `comment-on-pr` | no | `true` | Post verdict comment on the PR |
 | `kane-version` | no | `latest` | Kane CLI version to install |
 
@@ -55,11 +71,10 @@ No selectors. No test framework. One plain English sentence.
 
 | Output | Description |
 |---|---|
-| `status` | `passed`, `failed`, `timeout`, or `auth_error` |
-| `summary` | One-line result summary |
-| `duration` | Run duration in seconds |
-| `session-dir` | Evidence session directory |
-| `test-url` | Hosted evidence URL when available |
+| `status` | `passed` or `failed` |
+| `summary` | e.g. `4/5 tests passed` |
+| `total` | Number of tests executed |
+| `failed` | Number of failed tests |
 
 ## Badge
 
@@ -71,7 +86,7 @@ Add to your README:
 
 ## Exit codes
 
-The action fails the check when Kane CLI exits non-zero: `1` test failed, `2` auth error, `3` timeout.
+The action fails the check when any test fails or Kane CLI exits non-zero: `1` test failed, `2` auth error, `3` timeout.
 
 ## Pricing
 
