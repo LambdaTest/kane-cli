@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Smoke-test the preview
-        uses: LambdaTest/kane-cli/integrations/github-action@main
+        uses: LambdaTest/kane-cli/integrations/github-action/kane-cli-browser-run@main
         with:
           objective: "Open the start page, verify the main navigation is visible, then open the first navigation link and verify the page has a heading"
           url: ${{ github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}

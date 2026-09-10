@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run Kane tests
-        uses: LambdaTest/kane-cli/integrations/github-action@main
+        uses: LambdaTest/kane-cli/integrations/github-action/kane-cli-browser-run@main
         with:
           test-files: "tests/**/*_test.md"
           parallel: "3"

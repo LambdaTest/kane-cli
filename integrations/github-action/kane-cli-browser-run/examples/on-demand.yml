@@ -23,7 +23,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run objective
-        uses: LambdaTest/kane-cli/integrations/github-action@main
+        uses: LambdaTest/kane-cli/integrations/github-action/kane-cli-browser-run@main
         with:
           objective: ${{ inputs.objective }}
           url: ${{ inputs.url }}
