@@ -1,0 +1,50 @@
+name: Kane action check
+
+# On-demand end-to-end check of integrations/github-action. On a clean runner it
+# sets up Chrome and kane-cli, then runs the bundled test
+# (integrations/github-action/tests/latest-release_test.md): open the releases
+# page, call the GitHub API for the latest release, and assert the two agree.
+# Pass an objective to run that instead. Needs the LT_USERNAME and
+# LT_ACCESS_KEY repository secrets.
+
+on:
+  workflow_dispatch:
+    inputs:
+      objective:
+        description: "Optional plain-English objective to run instead of the bundled test"
+        required: false
+        default: ""
+      kane-version:
+        description: "kane-cli version to install"
+        required: false
+        default: "latest"
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run through the action
+        id: kane
+        uses: ./integrations/github-action
+        with:
+          objective: ${{ inputs.objective }}
+          test-files: ${{ inputs.objective == '' && 'integrations/github-action/tests/*_test.md' || '' }}
+          kane-version: ${{ inputs.kane-version }}
+          comment-on-pr: "false"
+          artifact-name: kane-action-check
+          username: ${{ secrets.LT_USERNAME }}
+          access-key: ${{ secrets.LT_ACCESS_KEY }}
+
+      - name: Report
+        if: always()
+        env:
+          KANE_STATUS: ${{ steps.kane.outputs.status }}
+          KANE_SUMMARY: ${{ steps.kane.outputs.summary }}
+        run: |
+          echo "Kane CLI: ${KANE_STATUS:-error} (${KANE_SUMMARY:-no result})"

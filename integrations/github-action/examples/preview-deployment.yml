@@ -1,0 +1,26 @@
+# Test the preview URL reported by Vercel, Netlify, or your own deploy step.
+# deployment_status is not a pull_request event, so the PR comment is skipped;
+# the verdict lands in the job summary and the check on the commit.
+name: Kane preview check
+
+on:
+  deployment_status:
+
+permissions:
+  contents: read
+
+jobs:
+  kane:
+    if: github.event.deployment_status.state == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Smoke-test the preview
+        uses: LambdaTest/kane-cli/integrations/github-action@main
+        with:
+          test-files: "tests/smoke/*_test.md"
+          url: ${{ github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
+          comment-on-pr: "false"
+          username: ${{ secrets.LT_USERNAME }}
+          access-key: ${{ secrets.LT_ACCESS_KEY }}

@@ -1,71 +1,89 @@
 # Kane CLI GitHub Action
 
-Run plain English browser tests on every pull request. Pass or fail verdict, sealed evidence pack, and a PR comment with proof.
-
-The agent builds it. Kane CLI proves it works.
+Run plain-English browser tests in GitHub Actions. One step sets up Chrome and Kane CLI on the runner, runs your objective or your committed `_test.md` files in a real headless browser, uploads the sealed evidence pack, and posts the verdict on the pull request.
 
 [![Kane verified](https://img.shields.io/badge/Kane%20CLI-verified-2ea44f?logo=github)](https://testmuai.com/kane-cli)
 
 ## What it does
 
-On every PR, this action:
+1. Sets up Node.js and Google Chrome (stable) on the runner
+2. Installs Kane CLI and signs in with your TestMu credentials
+3. Runs an inline objective, or every `_test.md` file matching a glob
+4. Uploads the evidence pack (screenshots, network traces, console logs, the raw run streams) as a build artifact
+5. Writes a results table to the job summary and, on pull requests, posts or updates one PR comment
+6. Fails the check when any test fails, errors, or times out
 
-1. Installs Kane CLI and authenticates
-2. Runs your plain English objective, or every test.md file matching a glob pattern, against a real Chrome browser
-3. Uploads the sealed evidence pack (screenshots, HAR network traces, console logs) as a build artifact
-4. Comments the pass/fail verdict on the PR, with a per-test results table
-5. Fails the check if any test fails, so broken UI never merges
+## Quick start
 
-## Quick start: inline objective
-
-Add two secrets to your repo (`LT_USERNAME`, `LT_ACCESS_KEY`), then create `.github/workflows/kane.yml`:
+Add `LT_USERNAME` and `LT_ACCESS_KEY` as repository secrets (TestMu dashboard, Settings > Keys). Then create `.github/workflows/kane.yml`:
 
 ```yaml
 name: Kane browser check
 on: [pull_request]
+
+permissions:
+  contents: read
+  pull-requests: write   # lets the action post the verdict comment
 
 jobs:
   verify-ui:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: testmuai/kane-action@v1
+      - uses: LambdaTest/kane-cli/integrations/github-action@main
         with:
-          objective: "log in, open the dashboard, assert the revenue widget renders"
-          url: "https://staging.myapp.com"
+          objective: "Go to https://staging.myapp.com/pricing and verify the Pro plan card shows a monthly price"
           username: ${{ secrets.LT_USERNAME }}
           access-key: ${{ secrets.LT_ACCESS_KEY }}
 ```
 
-No selectors. No test framework. One plain English sentence.
+No selectors and no test framework. Name the site in the objective (or pass `url`), and end with a `verify` or `assert` so the run has a pass/fail outcome. Objective-writing guidance: [Writing objectives](../../docs/user-guide/running-tests.md#writing-objectives).
 
-## Run your test.md suite
+## Run your committed tests
 
-Keep Kane tests as plain markdown files in your repo, and run all of them on every PR with a glob pattern:
+Keep Kane tests as Markdown files in your repo and run all of them on every PR:
 
 ```yaml
-      - uses: testmuai/kane-action@v1
+      - uses: LambdaTest/kane-cli/integrations/github-action@main
         with:
           test-files: "tests/**/*_test.md"
-          url: "https://staging.myapp.com"
+          url: "https://staging.myapp.com"     # optional, overrides url: in each file
           username: ${{ secrets.LT_USERNAME }}
           access-key: ${{ secrets.LT_ACCESS_KEY }}
 ```
 
-Every matching file runs, and the PR comment shows a table with each test's pass/fail and duration. The check fails if any test fails.
+Every matching file runs in order with `kane-cli testmd run`. The PR comment and job summary show one row per test with its status, duration, and a link to the run. Commit each test's `output-<name>/` directory alongside it so CI replays the recorded steps instead of re-authoring them. File format and replay rules: [test.md overview](../../docs/user-guide/testmd/overview.md).
+
+## Examples
+
+Copy any of these into `.github/workflows/` and adjust the objective, URL, and secrets.
+
+| Example | Trigger | Shows |
+|---|---|---|
+| [pr-check-objective.yml](examples/pr-check-objective.yml) | `pull_request` | One inline objective on every PR |
+| [pr-check-test-suite.yml](examples/pr-check-test-suite.yml) | `pull_request` | Every committed `_test.md` via a glob |
+| [on-demand.yml](examples/on-demand.yml) | `workflow_dispatch` | Type an objective in the Actions tab and run it |
+| [preview-deployment.yml](examples/preview-deployment.yml) | `deployment_status` | Test the preview URL Vercel, Netlify, or your deploy step reports |
+| [nightly-smoke.yml](examples/nightly-smoke.yml) | `schedule` | Cron smoke suite that uses the action's outputs |
+
+This repository also runs the action on itself. The `Kane action check` workflow ([.github/workflows/kane-action-check.yml](../../.github/workflows/kane-action-check.yml)) runs [tests/latest-release_test.md](tests/latest-release_test.md) on demand: it opens the releases page, calls the GitHub API for the latest release, and asserts the two agree. Trigger it from the Actions tab to verify a clean runner can install Chrome and Kane CLI and complete a run.
 
 ## Inputs
 
 | Input | Required | Default | Description |
 |---|---|---|---|
-| `objective` | one of these two | | Plain English test objective |
-| `test-files` | one of these two | | Glob of test.md files to run, e.g. `tests/**/*_test.md` |
-| `url` | yes | | Base URL of the app under test |
-| `username` | yes | | TestMu username (use secrets) |
-| `access-key` | yes | | TestMu access key (use secrets) |
+| `objective` | one of these two | | Plain-English test objective |
+| `test-files` | one of these two | | Glob of `_test.md` files to run, e.g. `tests/**/*_test.md` |
+| `url` | no | | Start URL. Optional when the objective names the site or the test file sets `url:` in its frontmatter |
+| `username` | yes | | TestMu username (use a secret) |
+| `access-key` | yes | | TestMu access key (use a secret) |
 | `timeout` | no | `300` | Max seconds per test run |
-| `comment-on-pr` | no | `true` | Post verdict comment on the PR |
+| `extra-args` | no | | Extra flags for every run, e.g. `--max-steps 40` or `--variables-file tests/vars.json` |
+| `comment-on-pr` | no | `true` | Post or update the verdict comment on the PR |
 | `kane-version` | no | `latest` | Kane CLI version to install |
+| `node-version` | no | `24` | Node.js version set up before the install |
+| `install-chrome` | no | `true` | Install Chrome with `browser-actions/setup-chrome`. Set `false` when the runner already has it |
+| `artifact-name` | no | `kane-evidence` | Artifact name prefix. Give each matrix leg its own |
 
 ## Outputs
 
@@ -75,19 +93,37 @@ Every matching file runs, and the PR comment shows a table with each test's pass
 | `summary` | e.g. `4/5 tests passed` |
 | `total` | Number of tests executed |
 | `failed` | Number of failed tests |
+| `results-file` | Path to the Markdown results table |
 
-## Badge
+## Browser setup
 
-Add to your README:
+Kane CLI drives Google Chrome through the DevTools Protocol, so the runner needs Chrome. By default the action installs the stable channel with `browser-actions/setup-chrome` and points Kane CLI at that exact binary through `KANE_CLI_CHROME_PATH`. Headless mode and the Linux sandbox flags are handled by Kane CLI itself.
 
-```markdown
-[![Kane verified](https://img.shields.io/badge/Kane%20CLI-verified-2ea44f?logo=github)](https://testmuai.com/kane-cli)
-```
+- **Runner already has Chrome.** Set `install-chrome: false`. Kane CLI then looks in the standard locations (`/usr/bin/google-chrome` on Linux). For a non-standard path, set `KANE_CLI_CHROME_PATH` in the job `env`.
+- **Slow or cold runners.** The action sets `KANE_CLI_CDP_TIMEOUT_MS` to `60000` and `KANE_CLI_CDP_RETRIES` to `2`. Raise either in the job `env` if Chrome is still slow to come up.
+- **No Chrome at all** (minimal containers). Set `install-chrome: false` and pass a remote browser in `extra-args`, for example `--ws-endpoint wss://...` for a TestMu grid session or `--cdp-endpoint http://...`.
+- **Runner OS.** `ubuntu-latest` is the tested path. macOS and Windows runners work with the same Chrome setup.
 
-## Exit codes
+Chrome environment variables are documented in [Configuration](../../docs/user-guide/configuration.md#chrome-environment-variables).
 
-The action fails the check when any test fails or Kane CLI exits non-zero: `1` test failed, `2` auth error, `3` timeout.
+## Evidence artifact
 
-## Pricing
+Every run uploads one artifact named `<artifact-name>-<run id>-<attempt>` with 30-day retention:
 
-Free to start. The Starter plan is $0 with 100 credits, no credit card. [testmuai.com/kane-cli](https://testmuai.com/kane-cli)
+- `evidence/*.evidence`, the sealed pack for each run (screenshots, annotated screenshots, per-step console and network logs, failure records)
+- `stream-<n>.ndjson` and `stderr-<n>.log`, the raw Kane CLI output per test
+- `results.md`, the results table
+
+Open a pack locally with `kane-cli evidence serve <pack>`. What a pack contains and how to read it: [Evidence](../../docs/user-guide/evidence.md).
+
+## PR comment
+
+The comment needs the job to have `pull-requests: write`. Without it the action logs a warning and moves on; the job summary always carries the same table. Pull requests from forks get a read-only token, so the comment is skipped there. Set `comment-on-pr: false` to turn the comment off.
+
+## Exit behaviour
+
+Kane CLI exits `0` passed, `1` failed, `2` auth or setup error, `3` timeout or cancelled. The action fails the check for any non-zero exit and for a run whose final status is not `passed`, so broken UI never merges.
+
+## Versioning
+
+`@main` tracks the latest action. Pin to a release tag of this repository for a fixed version.

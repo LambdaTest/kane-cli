@@ -1,0 +1,26 @@
+# Run every committed Kane test (tests/**/*_test.md) on pull requests.
+# Commit each test's output-<name>/ directory so CI replays recorded steps.
+name: Kane test suite
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  kane-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Kane tests
+        uses: LambdaTest/kane-cli/integrations/github-action@main
+        with:
+          test-files: "tests/**/*_test.md"
+          url: "https://staging.myapp.com"   # optional; overrides url: in each file
+          timeout: "240"
+          extra-args: "--variables-file tests/variables.json"
+          username: ${{ secrets.LT_USERNAME }}
+          access-key: ${{ secrets.LT_ACCESS_KEY }}
