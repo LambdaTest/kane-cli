@@ -1,5 +1,5 @@
 name: "Kane CLI Test"
-description: "Run plain English browser tests with Kane CLI. Pass/fail verdict, sealed evidence, PR comment with screenshots."
+description: "Run plain English browser tests with Kane CLI. Inline objective or test.md suites. Pass/fail verdict, sealed evidence, PR comment."
 author: "TestMu AI"
 branding:
   icon: "check-circle"
@@ -7,8 +7,11 @@ branding:
 
 inputs:
   objective:
-    description: "Plain English test objective, e.g. 'go to /cart, click Checkout, assert page contains Order Summary'"
-    required: true
+    description: "Plain English test objective, e.g. 'go to /cart, click Checkout, assert page contains Order Summary'. Use this OR test-files."
+    required: false
+  test-files:
+    description: "Glob pattern of Kane test.md files to run, e.g. 'tests/**/*_test.md'. Runs every matching file. Use this OR objective."
+    required: false
   url:
     description: "Base URL of the app under test (staging/preview URL)"
     required: true
@@ -19,7 +22,7 @@ inputs:
     description: "TestMu access key (pass from secrets.LT_ACCESS_KEY)"
     required: true
   timeout:
-    description: "Max seconds for the run"
+    description: "Max seconds per test run"
     required: false
     default: "300"
   comment-on-pr:
@@ -33,24 +36,29 @@ inputs:
 
 outputs:
   status:
-    description: "passed | failed | timeout | auth_error"
+    description: "passed | failed"
     value: ${{ steps.run.outputs.status }}
   summary:
-    description: "One-line summary from the run_end event"
+    description: "One-line result summary"
     value: ${{ steps.run.outputs.summary }}
-  duration:
-    description: "Run duration in seconds"
-    value: ${{ steps.run.outputs.duration }}
-  session-dir:
-    description: "Path to the sealed evidence session directory"
-    value: ${{ steps.run.outputs.session_dir }}
-  test-url:
-    description: "Hosted test/evidence URL if returned by the CLI"
-    value: ${{ steps.run.outputs.test_url }}
+  total:
+    description: "Number of tests executed"
+    value: ${{ steps.run.outputs.total }}
+  failed:
+    description: "Number of failed tests"
+    value: ${{ steps.run.outputs.failed }}
 
 runs:
   using: "composite"
   steps:
+    - name: Validate inputs
+      shell: bash
+      run: |
+        if [ -z "${{ inputs.objective }}" ] && [ -z "${{ inputs.test-files }}" ]; then
+          echo "::error::Provide either 'objective' (inline test) or 'test-files' (glob of test.md files)."
+          exit 1
+        fi
+
     - name: Install Kane CLI
       shell: bash
       run: npm install -g @testmuai/kane-cli@${{ inputs.kane-version }}
@@ -59,36 +67,71 @@ runs:
       shell: bash
       run: kane-cli login --username "${{ inputs.username }}" --access-key "${{ inputs.access-key }}"
 
-    - name: Run Kane test
+    - name: Run Kane tests
       id: run
       shell: bash
       run: |
-        set +e
-        kane-cli run "${{ inputs.objective }}" \
-          --url "${{ inputs.url }}" \
-          --headless --agent \
-          --timeout ${{ inputs.timeout }} 2>kane-stderr.log | tee kane-stream.ndjson
-        EXIT_CODE=${PIPESTATUS[0]}
-        set -e
+        run_one() {
+          # $1 = label, $2... = kane-cli run args
+          local label="$1"; shift
+          set +e
+          kane-cli run "$@" \
+            --url "${{ inputs.url }}" \
+            --headless --agent \
+            --timeout ${{ inputs.timeout }} 2>>kane-stderr.log | tee "kane-stream-$TOTAL.ndjson"
+          local rc=${PIPESTATUS[0]}
+          set -e
+          local run_end
+          run_end=$(grep '"type":[[:space:]]*"run_end"' "kane-stream-$TOTAL.ndjson" | tail -1 || echo '{}')
+          local st dur
+          st=$(echo "$run_end" | jq -r '.status // "unknown"')
+          dur=$(echo "$run_end" | jq -r '.duration // 0')
+          if [ $rc -ne 0 ] || [ "$st" != "passed" ]; then
+            FAILED=$((FAILED+1)); ICON="x"
+          else
+            ICON="white_check_mark"
+          fi
+          echo "| \`$label\` | :$ICON: $st | ${dur}s |" >> kane-results.md
+          local sdir
+          sdir=$(echo "$run_end" | jq -r '.session_dir // ""')
+          sdir="${sdir/#\~/$HOME}"
+          if [ -n "$sdir" ] && [ -d "$sdir" ]; then
+            mkdir -p "kane-evidence/$TOTAL" && cp -r "$sdir"/. "kane-evidence/$TOTAL/"
+          fi
+        }
 
-        RUN_END=$(grep '"type":[[:space:]]*"run_end"' kane-stream.ndjson | tail -1 || echo '{}')
-        echo "status=$(echo "$RUN_END" | jq -r '.status // "unknown"')" >> "$GITHUB_OUTPUT"
-        echo "summary=$(echo "$RUN_END" | jq -r '.summary // "No summary returned"')" >> "$GITHUB_OUTPUT"
-        echo "duration=$(echo "$RUN_END" | jq -r '.duration // 0')" >> "$GITHUB_OUTPUT"
-        echo "session_dir=$(echo "$RUN_END" | jq -r '.session_dir // ""')" >> "$GITHUB_OUTPUT"
-        echo "test_url=$(echo "$RUN_END" | jq -r '.test_url // ""')" >> "$GITHUB_OUTPUT"
-        echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
+        TOTAL=0
+        FAILED=0
+        echo "| Test | Status | Duration |" > kane-results.md
+        echo "|---|---|---|" >> kane-results.md
 
-        # Copy evidence pack into workspace so it can be uploaded as an artifact
-        SESSION_DIR=$(echo "$RUN_END" | jq -r '.session_dir // ""')
-        SESSION_DIR="${SESSION_DIR/#\~/$HOME}"
-        if [ -n "$SESSION_DIR" ] && [ -d "$SESSION_DIR" ]; then
-          mkdir -p kane-evidence && cp -r "$SESSION_DIR"/. kane-evidence/
-        elif [ -d ".testmuai/evidence" ]; then
-          mkdir -p kane-evidence && cp -r .testmuai/evidence/. kane-evidence/
+        if [ -n "${{ inputs.test-files }}" ]; then
+          shopt -s globstar nullglob
+          MATCHED=0
+          for f in ${{ inputs.test-files }}; do
+            MATCHED=1
+            TOTAL=$((TOTAL+1))
+            run_one "$f" --file "$f"
+          done
+          if [ "$MATCHED" -eq 0 ]; then
+            echo "::error::No files matched pattern: ${{ inputs.test-files }}"
+            exit 1
+          fi
+        else
+          TOTAL=$((TOTAL+1))
+          run_one "inline objective" "${{ inputs.objective }}"
         fi
 
-        exit $EXIT_CODE
+        PASSED=$((TOTAL-FAILED))
+        if [ "$FAILED" -eq 0 ]; then STATUS="passed"; else STATUS="failed"; fi
+        echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+        echo "summary=$PASSED/$TOTAL tests passed" >> "$GITHUB_OUTPUT"
+        echo "total=$TOTAL" >> "$GITHUB_OUTPUT"
+        echo "failed=$FAILED" >> "$GITHUB_OUTPUT"
+        if [ -d ".testmuai/evidence" ] && [ ! -d "kane-evidence" ]; then
+          mkdir -p kane-evidence && cp -r .testmuai/evidence/. kane-evidence/
+        fi
+        [ "$FAILED" -eq 0 ]
 
     - name: Upload evidence artifact
       if: always()
@@ -97,7 +140,8 @@ runs:
         name: kane-evidence-${{ github.run_id }}
         path: |
           kane-evidence/
-          kane-stream.ndjson
+          kane-stream-*.ndjson
+          kane-results.md
         if-no-files-found: ignore
         retention-days: 30
 
@@ -107,26 +151,24 @@ runs:
       env:
         KANE_STATUS: ${{ steps.run.outputs.status }}
         KANE_SUMMARY: ${{ steps.run.outputs.summary }}
-        KANE_DURATION: ${{ steps.run.outputs.duration }}
-        KANE_TEST_URL: ${{ steps.run.outputs.test_url }}
       with:
         script: |
+          const fs = require('fs');
           const status = process.env.KANE_STATUS;
           const passed = status === 'passed';
-          const icon = passed ? '✅' : '❌';
+          const icon = passed ? ':white_check_mark:' : ':x:';
+          let table = '';
+          try { table = fs.readFileSync('kane-results.md', 'utf8'); } catch (e) {}
           const artifactUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-          const evidenceLine = process.env.KANE_TEST_URL
-            ? `**Evidence:** ${process.env.KANE_TEST_URL}`
-            : `**Evidence:** download the \`kane-evidence\` artifact from [this run](${artifactUrl})`;
           const body = [
             `## ${icon} Kane CLI: ${status}`,
             ``,
             `> ${process.env.KANE_SUMMARY}`,
             ``,
-            `**Duration:** ${process.env.KANE_DURATION}s`,
-            evidenceLine,
+            table,
+            `**Evidence:** download the \`kane-evidence\` artifact from [this run](${artifactUrl})`,
             ``,
-            `<sub>Verified in a real browser by [Kane CLI](https://testmuai.com/kane-cli) · screenshots, network traces, and console logs in the evidence pack</sub>`
+            `<sub>Verified in a real browser by [Kane CLI](https://testmuai.com/kane-cli) - screenshots, network traces, and console logs in the evidence pack</sub>`
           ].join('\n');
           await github.rest.issues.createComment({
             owner: context.repo.owner,
