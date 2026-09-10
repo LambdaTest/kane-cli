@@ -43,7 +43,7 @@ inputs:
   node-version:
     description: "Node.js version set up before installing kane-cli"
     required: false
-    default: "20"
+    default: "24"
   install-chrome:
     description: "Install Google Chrome (stable) on the runner with browser-actions/setup-chrome (true/false). Set false when the runner image already has Chrome, or export KANE_CLI_CHROME_PATH yourself."
     required: false

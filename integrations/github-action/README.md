@@ -81,7 +81,7 @@ This repository also runs the action on itself. The `Kane action check` workflow
 | `extra-args` | no | | Extra flags for every run, e.g. `--max-steps 40` or `--variables-file tests/vars.json` |
 | `comment-on-pr` | no | `true` | Post or update the verdict comment on the PR |
 | `kane-version` | no | `latest` | Kane CLI version to install |
-| `node-version` | no | `20` | Node.js version set up before the install |
+| `node-version` | no | `24` | Node.js version set up before the install |
 | `install-chrome` | no | `true` | Install Chrome with `browser-actions/setup-chrome`. Set `false` when the runner already has it |
 | `artifact-name` | no | `kane-evidence` | Artifact name prefix. Give each matrix leg its own |
 
