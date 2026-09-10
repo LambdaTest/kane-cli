@@ -22,6 +22,7 @@ jobs:
         uses: LambdaTest/kane-cli/integrations/github-action@main
         with:
           test-files: "tests/**/*_test.md"
+          parallel: "3"
           comment-on-pr: "false"
           artifact-name: nightly-smoke
           username: ${{ secrets.LT_USERNAME }}

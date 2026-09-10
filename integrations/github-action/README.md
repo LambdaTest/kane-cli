@@ -8,8 +8,8 @@ Run plain-English browser tests in GitHub Actions. One step sets up Chrome and K
 
 1. Sets up Node.js and Google Chrome (stable) on the runner
 2. Installs Kane CLI and signs in with your TestMu credentials
-3. Runs an inline objective, or every `_test.md` file matching a glob
-4. Uploads the evidence pack (screenshots, network traces, console logs, the raw run streams) as a build artifact
+3. Runs an inline objective, or every `_test.md` file matching a glob as one `testrun` suite with parallel workers
+4. Uploads the sealed evidence pack (screenshots, network traces, console logs, the raw run stream) as a build artifact
 5. Writes a results table to the job summary and, on pull requests, posts or updates one PR comment
 6. Fails the check when any test fails, errors, or times out
 
@@ -47,12 +47,20 @@ Keep Kane tests as Markdown files in your repo and run all of them on every PR:
       - uses: LambdaTest/kane-cli/integrations/github-action@main
         with:
           test-files: "tests/**/*_test.md"
-          url: "https://staging.myapp.com"     # optional, overrides url: in each file
+          parallel: "3"
           username: ${{ secrets.LT_USERNAME }}
           access-key: ${{ secrets.LT_ACCESS_KEY }}
 ```
 
-Every matching file runs in order with `kane-cli testmd run`. The PR comment and job summary show one row per test with its status, duration, and a link to the run. Commit each test's `output-<name>/` directory alongside it so CI replays the recorded steps instead of re-authoring them. File format and replay rules: [test.md overview](../../docs/user-guide/testmd/overview.md).
+Every matching file becomes a member of one `kane-cli testrun run` execution: one exit code, one sealed evidence pack, and up to `parallel` isolated Chrome workers. The PR comment and job summary show one row per test with its status and duration. Set `fail-fast: "true"` to stop dispatching members after the first failure.
+
+Three things to know about suites:
+
+- Each test takes its start URL and step timeouts from its own frontmatter (`url:`, `timeout:`). The `url` and `timeout` inputs apply to inline objectives only. Bound the whole suite with the job's `timeout-minutes`.
+- All members must belong to one Test Manager project. A mixed suite is rejected before anything runs and the rows show why.
+- Commit each test's `output-<name>/` directory alongside it so CI replays the recorded steps instead of re-authoring them. An unauthored test is authored on the first run.
+
+File format and replay rules: [test.md overview](../../docs/user-guide/testmd/overview.md). Suite behaviour: [Batch runs with testrun](../../docs/user-guide/testrun.md).
 
 ## Examples
 
@@ -73,12 +81,14 @@ This repository also runs the action on itself. The `Kane action check` workflow
 | Input | Required | Default | Description |
 |---|---|---|---|
 | `objective` | one of these two | | Plain-English test objective |
-| `test-files` | one of these two | | Glob of `_test.md` files to run, e.g. `tests/**/*_test.md` |
-| `url` | no | | Start URL. Optional when the objective names the site or the test file sets `url:` in its frontmatter |
+| `test-files` | one of these two | | Glob of `_test.md` files, e.g. `tests/**/*_test.md`. Runs as one `testrun` suite |
+| `url` | no | | Start URL for an inline objective. Optional when the objective names the site |
 | `username` | yes | | TestMu username (use a secret) |
 | `access-key` | yes | | TestMu access key (use a secret) |
-| `timeout` | no | `300` | Max seconds per test run |
-| `extra-args` | no | | Extra flags for every run, e.g. `--max-steps 40` or `--variables-file tests/vars.json` |
+| `timeout` | no | `300` | Max seconds for an inline objective |
+| `parallel` | no | `1` | Worker count for a suite |
+| `fail-fast` | no | `false` | Stop dispatching suite members after the first failure |
+| `extra-args` | no | | Extra flags: `run` flags for an objective (e.g. `--max-steps 40`), `testrun` flags for a suite (e.g. `--tags smoke`) |
 | `comment-on-pr` | no | `true` | Post or update the verdict comment on the PR |
 | `kane-version` | no | `latest` | Kane CLI version to install |
 | `node-version` | no | `24` | Node.js version set up before the install |
@@ -110,8 +120,8 @@ Chrome environment variables are documented in [Configuration](../../docs/user-g
 
 Every run uploads one artifact named `<artifact-name>-<run id>-<attempt>` with 30-day retention:
 
-- `evidence/*.evidence`, the sealed pack for each run (screenshots, annotated screenshots, per-step console and network logs, failure records)
-- `stream-<n>.ndjson` and `stderr-<n>.log`, the raw Kane CLI output per test
+- `evidence/*.evidence`, the sealed pack: one for an inline objective, one for the whole suite (screenshots, annotated screenshots, per-step console and network logs, failure records)
+- `stream.ndjson` and `stderr.log`, the raw Kane CLI output
 - `results.md`, the results table
 
 Open a pack locally with `kane-cli evidence serve <pack>`. What a pack contains and how to read it: [Evidence](../../docs/user-guide/evidence.md).
@@ -122,7 +132,7 @@ The comment needs the job to have `pull-requests: write`. Without it the action 
 
 ## Exit behaviour
 
-Kane CLI exits `0` passed, `1` failed, `2` auth or setup error, `3` timeout or cancelled. The action fails the check for any non-zero exit and for a run whose final status is not `passed`, so broken UI never merges.
+Kane CLI exits `0` passed, `1` failed, `2` auth, setup, or invalid suite plan, `3` timeout or cancelled. The action fails the check for any non-zero exit and for a run whose final status is not `passed`, so broken UI never merges.
 
 ## Versioning
 
