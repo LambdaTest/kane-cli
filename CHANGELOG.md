@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.12] - 2026-09-10
+
+### Unresolved variables are caught before the run starts
+- **A run refuses to start on an unresolved variable** — `kane-cli run`, `kane-cli testrun`, and `kane-cli testmd run` scan the resolved test for `{{name}}` references before anything is dispatched. A name with no value stops the run there, instead of failing partway through a session.
+- **The receipt says what to do** — unresolved names are grouped by the action they need, each pool file is named once, and the entry file is the one you gave on the command line. There is no flag to bypass it: fill the value or remove the reference.
+- **What is never gated** — values a test produces while it runs (`store … as 'x'`), replay-only steps, and runs dispatched to the HyperExecute grid go through as before.
+- **Numbers in a pool file count as values** — a numeric value no longer reads as missing; it loads as its string.
+
+### Test design knows your variables
+- **Design sessions declare the variables a test needs** — the design context shows each variable and whether it already has a value, an existing name is reused before a new one is created, and the finalized test carries a normalized variables list.
+- **Stubs are written beside the minted test** — every declared variable gets a slot in the pool file so there is something to fill in, and merging never overwrites a value you already set.
+- **Variables are validated before commit** — a design that references a `{{name}}` it did not declare, or declares one it never uses, is called out before the test is committed.
+
+### Values captured mid-test carry forward
+- **A value stored in one section is available in the next** — a capture like "read the count and store it as 'product_count'" reaches the following section whether you refer to it as `{{product_count}}`, by its quoted name, or in plain English. Previously it was dropped unless the next section used the `{{name}}` syntax.
+- **Replay compares against the live value** — the recorded expectation keeps the `{{product_count}}` token instead of baking in the number seen at authoring time, so the tape does not replay against a stale constant.
+
+### Screenshots from device runs show up again
+- **Device-target runs upload their screenshots** — the upload queue now runs for tests targeting real devices, so every step has its capture instead of "No screenshot available". Only `--local` runs skip the queue, as for web.
+
 ## [0.8.11] - 2026-09-09
 
 ### `--author` re-authors in place
