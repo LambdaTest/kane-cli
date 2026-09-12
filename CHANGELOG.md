@@ -7,9 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-- **`--mode agent` pauses on every question — it no longer answers any question itself.** `context extract`/`context ingest` and `design tests` used to auto-answer low/medium-risk questions with their recommended defaults and pause only on high risk. Now every question batch pauses the run: `session_paused` on the stream with `pending_questions[]` and the verbatim resume command, exit 3. Answer at resume (`--answer`, `--message`) or surface the question to your user. Automation that relied on the silent auto-take should use `--mode override`. `ci` mode and `maintain reconcile` are unchanged.
-
 ## [0.8.12] - 2026-09-10
 
 ### Unresolved variables are caught before the run starts
