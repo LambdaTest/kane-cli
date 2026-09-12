@@ -41,7 +41,7 @@ All members must share one org + project. *(0.8.4+)* Members need **not** be aut
 | `org_mismatch` | Different organisation than the other tests | "Check `kane-cli testmd status <path>` — it belongs to another org" |
 | `project_mismatch` | Different project than the other tests | "Run it separately or per-project" |
 
-If **any** member fails preflight, the plan is invalid: nothing runs, exit `2`. Suggest `--dry-run` to preview the plan cheaply before a big run.
+If **any** member fails preflight, the plan is invalid: nothing runs, exit `2`. Suggest `--dry-run` to preview the plan cheaply before a big run. *(0.8.12+)* Preflight also checks variables: a member whose authored steps reference a `{{name}}` with no value fails with `unresolved_variables` — `testrun run` has no `--variables` flag, so fill the pool file (`.testmuai/variables/*.json`) or the member's own `variables:` frontmatter.
 
 ## NDJSON events (agent mode)
 
@@ -49,7 +49,7 @@ All typed; stdout; one JSON object per line. **Terminal event: `testrun_done` �
 
 | `type` | Payload | Notes |
 |---|---|---|
-| `testrun_plan` | `members: [{path, test_id?, tags, failure?}]`, `valid`, `parallel`, `parallel_clamped?` | If `valid: false`, treat as immediate failure — report each member's `failure` reason and stop expecting more events. |
+| `testrun_plan` | `members: [{path, test_id?, tags, failure?}]`, `valid`, `parallel`, `parallel_clamped?` | If `valid: false`, treat as immediate failure — report each member's `failure` reason and stop expecting more events. *(0.8.12+)* `failure: "unresolved_variables"` means a member references a `{{name}}` with no value; one `error` event with `code: "unresolved_variables"` follows the plan (schema in `references/parsing.md`) and lists every such name across members — surface it, do not retry. |
 | `testrun_start` | `execution_id`, `members` (paths), `parallel` | |
 | `testrun_member_start` | `path`, `test_id?` | |
 | `testrun_member_end` | `path`, `test_id?`, `status`, `duration_s` | `status` ∈ `passed \| failed \| broken \| interrupted` |

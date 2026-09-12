@@ -60,6 +60,8 @@ With `--mode agent`, stdout speaks a versioned NDJSON vocabulary — envelope `{
 | `held` / `update_held` *(0.7.1)* | items were **held** for your review instead of committed (`source_id`, `count`, `reason` / `count`, `targets[]`) — the `--trust hold` and degraded-detection paths |
 | `commit` | what landed: counts + `minted[]` (`cid` + `logical_id`); extract adds `proposal_id` |
 | `receipt` | per-phase commit receipt (design; extract emits one at its commits too) — `commit_n`, `phase`, `committed[]`, `warnings[]`, a human-readable `next` hint, and (design only) `parity` |
+| `variables_declared` *(0.8.12)* | design: the stubs a phase commit wrote — `file` (the pool file) + `variables[]` (`name`, `description`, `secret`). Only names that existed in no variable file; fires after the `commit` that minted the tests |
+| `variables_summary` *(0.8.12)* | design, at the end of the run: every name still needing a value — same shape as `variables_declared` |
 | `message_sent` | your `--message` was delivered: `sid`, `chars` |
 | `panel_resolved` *(0.7.1)* | a pending question was answered by a `--answer` flag: `id`, `by`, `via` |
 | `ask_deferred` *(0.7.1)* | a pending question batch was set aside because `--with-source` landed a new source first: `source_id`, `cid`, `questions` (count) |

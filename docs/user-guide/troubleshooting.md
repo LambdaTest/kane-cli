@@ -144,9 +144,13 @@ You have three options:
 
 ## "Variables not resolving"
 
-If `{{my_var}}` placeholders are appearing literally in actions, the variable isn't being loaded.
+Since 0.8.12 a run **refuses to start** when an authored step references a `{{name}}` that has no value — you get a receipt naming each variable, the file that is waiting for its value (or `Not in any variables file`), and the step that uses it; exit code `2`, nothing dispatched. Read the receipt first: it tells you whether to fill an existing key or add a new one, and which file. See [Before a run](./variables-and-context.md#before-a-run-unresolved-variables).
 
-Check, in order:
+If a `{{my_var}}` placeholder is nevertheless appearing **literally** in a browser action, one of three things is true:
+
+- The step is a **replay** — replayed steps resolve from their tape and from TMS, and a missing value there produces a warning line rather than a refusal. Fill the value and run again.
+- The reference is **escaped** — `\{{my_var}}` is typed as-is on purpose, for pages where the braces are real text.
+- The variable file is not being loaded at all. Check, in order:
 
 1. **JSON syntax.** Variable files are JSON. A missing comma or unquoted key will cause the file to be skipped silently.
 2. **File location.** Variable files have to live in one of the directories kane-cli scans. Confirm yours is in the right place — see [loading order](./variables-and-context.md#loading-order) for the exact precedence.

@@ -21,7 +21,7 @@ Variables are JSON objects keyed by name. Each entry describes a single variable
 
 | Field    | Required | Type    | Default      | Description |
 |----------|----------|---------|--------------|-------------|
-| `value`  | yes      | string  | —            | The variable's value. Entries without `value` are ignored. |
+| `value`  | yes      | string  | —            | The variable's value. A number is accepted and loaded as its string (`8080` → `"8080"`); a boolean, object or array is not a value. Entries without `value` are ignored. |
 | `secret` | no       | boolean | `false`      | When `true`, the value is treated as a secret. Secrets are routed to TestmuAI's secrets store instead of being synced as plain TMS variables. |
 | `syntax` | no       | string  | `{{<name>}}` | Custom placeholder syntax. Defaults to the double-brace form using the variable name. |
 
@@ -116,6 +116,44 @@ Mark a variable as secret by setting `"secret": true`.
 ```
 
 Secret values are masked in displayed output and logs, and are routed to TestmuAI's secrets store instead of being synced to TMS as plain variables. Use this for credentials, tokens, and anything else that should not appear in shareable artifacts.
+
+### Variables declared by `kane-cli design tests`
+
+When a design session needs a value nobody has — a start URL, a test account — it references it as `{{name}}` and declares it. Before choosing a name, design reads every `*.json` in both variable directories and reuses a name you already have rather than inventing a new one. The agent sees only which names exist and whether each has a value, never the values themselves.
+
+For each name it declares, `kane-cli` writes an **empty stub** into `.testmuai/variables/assurance.json` — never a value — and tells you during the round (`⚒ declared 2 new variables — login_email · login_password (values needed)`) and again at the end (`2 variable(s) need values — see .testmuai/variables/assurance.json`):
+
+```json
+{
+  "login_email": { "value": "", "secret": false, "description": "the account the login tests sign in with" }
+}
+```
+
+Fill `value`. `kane-cli` never overwrites a key that already exists in any of your variable files, so a stub cannot replace a value you set. A value you type in chat stays a literal in the step; a variable is created only when the value is unknown.
+
+### Before a run: unresolved variables
+
+`kane-cli run`, `kane-cli testmd run` and `kane-cli testrun run` check every `{{name}}` an authored step references **before anything starts** — no browser, no session. A name with no value stops the run there, with exit code `2`, and the receipt says what each one needs:
+
+```
+✗ 3 variables have no value — nothing was dispatched
+
+  Waiting for a value in .testmuai/variables/assurance.json
+    storefront_sign_in_url     step 1
+    registered_customer_email  step 2
+
+  Not in any variables file
+    checkout_url               step 4
+
+    Add it to .testmuai/variables/assurance.json
+
+  If {{name}} is literal page text, write \{{name}} to keep it as-is.
+  Fill the values and run again.
+```
+
+The pool file is named once per group. A test filename appears only when it is not the file you named — an `@import`ed unit and a testrun member both keep theirs, and a `kane-cli run` objective shows no location at all. A name that is in no file gets `Add it to <file>` when a pool file exists, or the JSON to create when there is none yet.
+
+There is no flag to bypass the check: fill the value or remove the reference. Never checked: `{{smart.*}}`, `{{environment.*}}`, `{{secrets.*}}` and `{{totp.*}}` (resolved at run time); a name an earlier step stored (`store the price as 'price'`); a test's own frontmatter `variables:`; and replayed steps, which resolve from their tape and from TMS — a replay with a missing value gets a warning line, never a refusal. `${x}` is not a variable reference on this path. In agent mode the refusal is one typed `error` event with `code: "unresolved_variables"` — see [Running tests](./running-tests.md#unresolved-variables).
 
 ## Context files
 

@@ -78,7 +78,7 @@ Click submit and verify the confirmation banner.
 | `max_steps` | root + step | Max agent reasoning steps. Default `30`. |
 | `timeout` | root + step | Hard kill per step in seconds. |
 | `headless` | root | No browser window. |
-| `variables` | root + step | `{{name}}` params, same shape as §3, with `secret: true` for credentials |
+| `variables` | root + step | `{{name}}` params, same shape as §3, with `secret: true` for credentials. Counts as a value for the pre-run check (0.8.12+) — a `{{name}}` with no value anywhere refuses the run before it starts |
 | `global_context` / `local_context` | root + step | Inline Markdown or path |
 | `code_export` / `code_language` | root + step | Generate Playwright after the run; language `python` or `javascript` |
 
