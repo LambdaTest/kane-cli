@@ -37,7 +37,7 @@ Extract, design, and reconcile call the KaneAI service and consume credits; ever
 
 **Scope: this rule applies to `context extract`/`context ingest`, `design tests`, and `maintain reconcile` (§11).** (For `run`/`testmd`/`testrun`/`generate`, exit 3 still means timeout/cancelled.)
 
-These commands take **`--mode agent`** — not `--agent`; they reject that flag, and a bare non-TTY invocation exits `2` asking for an explicit mode. In `--mode agent`, low/medium-risk questions are auto-answered with their recommended defaults (each reported on the stream); a **high-risk** question pauses the run:
+These commands take **`--mode agent`** — not `--agent`; they reject that flag, and a bare non-TTY invocation exits `2` asking for an explicit mode. In `--mode agent`, **every question pauses the run** (0.8.8+ — earlier CLIs auto-answered low/medium-risk questions with their recommended defaults and paused only on high risk):
 
 - The run exits `3`, emits `session_paused` with the session id, the questions in full (text, options, the recommended one, risk, rationale), and the verbatim resume command.
 - **Never drop a pause** (same rule as generate clarifications). Answer it: if your own context clearly resolves the question, answer it yourself; otherwise surface the question — with its options and recommendation — to your user and get their answer.
@@ -57,7 +57,7 @@ kane-cli context extract --resume <sid> --mode agent --answer q1=1 --answer q2="
 kane-cli context extract --resume <sid> --mode agent --with-source ./addendum.md
 ```
 
-- If the answer leaves a high-risk ambiguity standing, the run pauses again with refreshed questions — repeat.
+- If the answer leaves any question standing, the run pauses again with refreshed questions — repeat.
 - Sessions live 24 hours. Inspect without contending a live run: `kane-cli context sessions --json` (all resumable sessions + their resume commands) and `kane-cli context sessions show <sid> --json` (the pending questions in wire shape). A session written by a NEWER kane-cli than the installed one lists as unknown with no resume command (0.7.1+) — that means "upgrade to resume it", not corruption. If you abandon a session deliberately, remove it with `kane-cli context sessions clean <sid>` — bare `clean` only collects *expired* sessions, and `--all` is a purge that needs explicit user authorization.
 
 Full event schema: `references/assurance-parsing.md`.

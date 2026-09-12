@@ -30,7 +30,7 @@ A stream that ends **without** `done` means the process crashed — outcome unkn
 | `corpus` | extract: `sources[]` this run covers + already-extracted `skipped[]` | fold into one line |
 | `source_start` / `source_skipped` | `source_id`, `index`/`total`, `resumed` / `reason` | progress |
 | `plan` | the `--plan` transcription payload | present as the preview |
-| `assumed_default` | a question auto-answered with its recommended default: `id`, `selected_index`, `risk` | mention that defaults were assumed (they are flagged in the commit) |
+| `assumed_default` | a question auto-answered with its recommended default: `id`, `selected_index`, `risk` — 0.8.8+ agent mode never emits it (every question pauses instead); seen only on older CLIs' streams | mention that defaults were assumed (they are flagged in the commit) |
 | `agent_activity` | `kind` (`tool`/`decision`/`progress`/`thinking_done`) + display `label` | noise — fold; **never script against labels** |
 | `agent_message` *(0.7.2+)* | the agent's narrative `text` — the lead-in before a question batch, the closing statement | the story around the structured events; quote or fold, never script against it |
 | `warning` *(0.7.2+)* | actionable non-fatal condition: `code` (`ZERO_USE_CASES`, `SAVE_FAILED`) + `message` | surface it — non-fatal but user-relevant |
