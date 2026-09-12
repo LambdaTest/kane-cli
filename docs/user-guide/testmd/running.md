@@ -70,6 +70,8 @@ Every flag accepted by `kane-cli testmd run`:
 
 Most flags have a frontmatter counterpart with the same name (with underscores). Where both are set, the CLI flag wins — except for `variables`, which the file owns; see [overview.md](./overview.md#variables).
 
+Before any step runs, every `{{name}}` the authored steps reference must have a value — from the file's own `variables:` frontmatter, a variable file, `--variables-file` or `--variables`. A name with no value stops the run before the browser starts, with exit `2` and a receipt naming the variable, the file waiting for its value, and the step. Replayed steps are not checked. See [Before a run](../variables-and-context.md#before-a-run-unresolved-variables).
+
 ## How a run works
 
 A run proceeds in four phases:

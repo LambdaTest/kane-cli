@@ -194,6 +194,16 @@ The customer-facing flags accepted by `kane-cli run`:
 | `--skip-code-validation` | Skip post-codegen worker-side validation. | On |
 | `--no-skip-code-validation` | Force post-codegen worker-side validation. | Off |
 
+### Unresolved variables
+
+Every `{{name}}` in the objective must have a value before the run starts. A name with no value stops the run there — no browser, no session — with exit code `2` and a receipt naming each variable and what it needs. There is no flag to bypass it: fill the value or remove the reference. With `--agent`, the refusal is a single typed event:
+
+```json
+{"type":"error","code":"unresolved_variables","message":"2 variable(s) have no value — nothing was dispatched","suggested_file":".testmuai/variables/variables.json","variables":[{"name":"checkout_url","reason":"not_declared","used_by":[{"file":"objective","step":1}]},{"name":"login_password","reason":"value_missing","file":".testmuai/variables/variables.json","used_by":[{"file":"objective","step":1}]}]}
+```
+
+`reason` is `value_missing` (the key exists in `file`, with no value) or `not_declared` (the key is in no file; `suggested_file` is where to add it). Names an earlier step stores, and the `{{smart.*}}` / `{{environment.*}}` / `{{secrets.*}}` / `{{totp.*}}` namespaces, are never checked.
+
 For variables and context file behavior, see [./variables-and-context.md](./variables-and-context.md). For code export and the run mode toggle, see [./configuration.md](./configuration.md).
 
 ### Mobile runs

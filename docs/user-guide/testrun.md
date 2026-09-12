@@ -36,6 +36,7 @@ A member can fail preflight for these reasons:
 |---|---|---|
 | `org_mismatch` | Belongs to a different organisation than the rest | Check with `kane-cli testmd status <path>` |
 | `project_mismatch` | Belongs to a different project than the rest | Check with `kane-cli testmd status <path>`; run project-by-project |
+| `unresolved_variables` *(0.8.12)* | An authored step references a `{{name}}` that has no value in any variable file or in the member's own `variables:` frontmatter | Fill the value in `.testmuai/variables/*.json` (the receipt names the file) or remove the reference. `testrun run` has no `--variables` flag |
 
 If any member fails preflight, the plan is invalid and **nothing runs** (exit `2`). The offenders print to stderr:
 
@@ -44,6 +45,23 @@ error: plan invalid — 2 offending test(s):
   tests/other_org_test.md: org_mismatch
   tests/other_project_test.md: project_mismatch
 ```
+
+Variable offenders get the full receipt instead of a one-line code — every unresolved name across the members, each with the test files and steps that use it:
+
+```
+✗ 2 variables have no value — nothing was dispatched
+
+  Not in any variables file
+    other_key   b_test.md step 1
+    shared_url  a_test.md step 1 · b_test.md step 1
+
+    Add them to .testmuai/variables/variables.json
+
+  If {{name}} is literal page text, write \{{name}} to keep it as-is.
+  Fill the values and run again.
+```
+
+In agent mode (stdin not a TTY) the same information arrives as one `error` event with `code: "unresolved_variables"` right after `testrun_plan` — see [Running tests](./running-tests.md#unresolved-variables) for the shape.
 
 > **Mobile is not supported in a batch run.** A `_test.md` with a mobile [`target:`](./testmd/overview.md#mobile-target) (`emulator` / `simulator`) is rejected up front, before the suite runs. Run mobile tests one at a time with `kane-cli testmd run <path>`.
 
