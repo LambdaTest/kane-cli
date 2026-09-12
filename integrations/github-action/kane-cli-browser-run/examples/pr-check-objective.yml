@@ -1,0 +1,23 @@
+# One plain-English objective on every pull request.
+# Save as .github/workflows/kane.yml and add the LT_USERNAME / LT_ACCESS_KEY secrets.
+name: Kane browser check
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write   # lets the action post the verdict comment
+
+jobs:
+  verify-ui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify the pricing page
+        uses: LambdaTest/kane-cli/integrations/github-action/kane-cli-browser-run@main
+        with:
+          objective: "Go to https://staging.myapp.com/pricing and verify the Pro plan card shows a monthly price"
+          username: ${{ secrets.LT_USERNAME }}
+          access-key: ${{ secrets.LT_ACCESS_KEY }}

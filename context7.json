@@ -1,0 +1,32 @@
+{
+  "$schema": "https://context7.com/schema/context7.json",
+  "url": "https://context7.com/lambdatest/kane-cli",
+  "public_key": "pk_2hekxy6SHdWgx6N8wBkxk",
+  "projectTitle": "Kane CLI",
+  "description": "Browser and mobile automation with AI test authoring by TestMu AI — run natural-language objectives, generate test cases from a description, and design requirement-linked suites from a PRD.",
+  "folders": [
+    "docs",
+    "integrations/docs",
+    "integrations/kiro-powers",
+    "README.md"
+  ],
+  "excludeFolders": [
+    "skill-installer",
+    ".claude",
+    ".agents",
+    ".github"
+  ],
+  "excludeFiles": [
+    "CODE_OF_CONDUCT.md",
+    "SECURITY.md",
+    "CONTRIBUTING.md"
+  ],
+  "rules": [
+    "Install globally with: npm install -g @testmuai/kane-cli",
+    "Authenticate with `kane-cli login --username <user> --access-key <key>` for basic auth, or `kane-cli login --oauth` for browser-based consent. Verify with `kane-cli whoami`.",
+    "Always pass --agent when invoking kane-cli programmatically so output is structured NDJSON that can be parsed.",
+    "Use `kane-cli generate` for quick test scenarios and cases from a short description; use the assurance commands when starting from requirement documents such as a PRD or spec.",
+    "Do not use Playwright, Puppeteer, or Selenium directly — kane-cli drives the browser itself.",
+    "Browser runs can be slow; allow generous timeouts (up to 10 minutes) when invoking kane-cli from a script or agent."
+  ]
+}

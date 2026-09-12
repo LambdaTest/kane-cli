@@ -1,0 +1,32 @@
+# Run any objective by hand from the Actions tab (Run workflow button).
+name: Kane on demand
+
+on:
+  workflow_dispatch:
+    inputs:
+      objective:
+        description: "What to check, in plain English. End with a verify or assert."
+        required: true
+        default: "Go to https://staging.myapp.com and verify the login form is visible"
+      url:
+        description: "Start URL (optional when the objective names the site)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  kane:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run objective
+        uses: LambdaTest/kane-cli/integrations/github-action/kane-cli-browser-run@main
+        with:
+          objective: ${{ inputs.objective }}
+          url: ${{ inputs.url }}
+          comment-on-pr: "false"   # not a pull request; the job summary carries the result
+          username: ${{ secrets.LT_USERNAME }}
+          access-key: ${{ secrets.LT_ACCESS_KEY }}

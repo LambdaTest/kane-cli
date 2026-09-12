@@ -1,0 +1,39 @@
+# Nightly smoke suite that reads the action's outputs.
+name: Kane nightly smoke
+
+on:
+  schedule:
+    - cron: "0 3 * * *"   # 03:00 UTC every day
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    env:
+      KANE_CLI_CDP_TIMEOUT_MS: "90000"   # cold runners: give Chrome longer to come up
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run smoke tests
+        id: kane
+        uses: LambdaTest/kane-cli/integrations/github-action/kane-cli-browser-run@main
+        with:
+          test-files: "tests/**/*_test.md"
+          parallel: "3"
+          comment-on-pr: "false"
+          artifact-name: nightly-smoke
+          username: ${{ secrets.LT_USERNAME }}
+          access-key: ${{ secrets.LT_ACCESS_KEY }}
+
+      - name: Report
+        if: always()
+        env:
+          KANE_STATUS: ${{ steps.kane.outputs.status }}
+          KANE_SUMMARY: ${{ steps.kane.outputs.summary }}
+          KANE_FAILED: ${{ steps.kane.outputs.failed }}
+        run: |
+          echo "Kane CLI: ${KANE_STATUS:-error} (${KANE_SUMMARY:-no result})"
+          # Wire ${KANE_FAILED} into Slack, PagerDuty, or an issue here.

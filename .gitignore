@@ -23,3 +23,6 @@ node_modules/
 
 # Superpowers (local design/plan docs)
 docs/superpowers/
+
+# kane-cli run artifacts (evidence packs are never committed)
+.testmuai/

@@ -10,6 +10,102 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **`--mode agent` pauses on every question — it no longer answers any question itself.** `context extract`/`context ingest` and `design tests` used to auto-answer low/medium-risk questions with their recommended defaults and pause only on high risk. Now every question batch pauses the run: `session_paused` on the stream with `pending_questions[]` and the verbatim resume command, exit 3. Answer at resume (`--answer`, `--message`) or surface the question to your user. Automation that relied on the silent auto-take should use `--mode override`. `ci` mode and `maintain reconcile` are unchanged.
 
+## [0.8.12] - 2026-09-10
+
+### Unresolved variables are caught before the run starts
+- **A run refuses to start on an unresolved variable** — `kane-cli run`, `kane-cli testrun`, and `kane-cli testmd run` scan the resolved test for `{{name}}` references before anything is dispatched. A name with no value stops the run there, instead of failing partway through a session.
+- **The receipt says what to do** — unresolved names are grouped by the action they need, each pool file is named once, and the entry file is the one you gave on the command line. There is no flag to bypass it: fill the value or remove the reference.
+- **What is never gated** — values a test produces while it runs (`store … as 'x'`), replay-only steps, and runs dispatched to the HyperExecute grid go through as before.
+- **Numbers in a pool file count as values** — a numeric value no longer reads as missing; it loads as its string.
+
+### Test design knows your variables
+- **Design sessions declare the variables a test needs** — the design context shows each variable and whether it already has a value, an existing name is reused before a new one is created, and the finalized test carries a normalized variables list.
+- **Stubs are written beside the minted test** — every declared variable gets a slot in the pool file so there is something to fill in, and merging never overwrites a value you already set.
+- **Variables are validated before commit** — a design that references a `{{name}}` it did not declare, or declares one it never uses, is called out before the test is committed.
+
+### Values captured mid-test carry forward
+- **A value stored in one section is available in the next** — a capture like "read the count and store it as 'product_count'" reaches the following section whether you refer to it as `{{product_count}}`, by its quoted name, or in plain English. Previously it was dropped unless the next section used the `{{name}}` syntax.
+- **Replay compares against the live value** — the recorded expectation keeps the `{{product_count}}` token instead of baking in the number seen at authoring time, so the tape does not replay against a stale constant.
+
+### Screenshots from device runs show up again
+- **Device-target runs upload their screenshots** — the upload queue now runs for tests targeting real devices, so every step has its capture instead of "No screenshot available". Only `--local` runs skip the queue, as for web.
+
+## [0.8.11] - 2026-09-09
+
+### `--author` re-authors in place
+- **`--author` keeps the test's identity** — every step is re-authored on the existing test and the run commits a new version on the same test case, instead of minting a brand-new test on each `--author` run. To fork a test on purpose, delete its `output-<stem>/` directory and run again.
+- **`testrun run --author` reaches every member** — the flag is forwarded to members locally and on `--remote`, where the grid now installs the same kane-cli version you dispatched from. `--no-adaptive-heal` is forwarded on `--remote` too; it was silently dropped before.
+- **A mid-run lock conflict no longer abandons a heal** — under the readonly policy the heal keeps shrinking and re-authoring locally, the result is not committed, and stderr points at `--push`. The readonly state sticks for the rest of the run instead of re-entering the lock API on every shrink.
+- **Locks are released on every early exit** — a bad `--name`, a tenant mismatch, a Chrome or device launch failure, or a missing runner used to leave the test's lock held for up to 15 minutes, degrading every later run on that test to readonly. An imported unit whose commit fails after the root committed releases its lock as well.
+- **Evolve commits report correctly** — the `test_md_summary` event and the TTY box now agree on whether a commit landed (the event said `not_committed` for a commit that had landed), the box says "commit did not land" when a scheduled commit fails, and the evidence pack keeps the known test case id so cloud ingest of a `--author` run no longer fails.
+- **`result.yaml` describes the heal** — the `adaptive_heal` block gains `shrink_count`, `complete_reauthor`, `author_boundary`, `total_steps`, `reauthored_steps` and `credits_consumed`, is emitted for a forced `--author` run too, and `external_id` carries the HyperExecute test-instance, job and task ids.
+
+### Cloud modules as import units
+- **`*_module.md` is a third import kind** — it runs like a helper (import-only, never committed, no lock) but carries the cloud module's identity from its `meta.json`, and the bundle ships that identity beside the module's tape so a grid rebuild keeps it. Step events and the summary's imports rollup report `unit_kind: "module"`.
+- **Each `@import` of a module becomes a module block in the uploaded execution** — importing a module twice yields two occurrences, a module inside a module nests, and an occurrence is flagged dirty only when its tape existed before the run and a step inside it was authored this run. A test with no modules uploads exactly what it did before.
+- **A `*_module.md` without a cloud identity never folds** — it still runs as a module, warns once on stderr, and is no longer uploaded under an empty shared module id.
+- **Module-importing pure replays keep their skipped tail** — a module block is treated as a linear container, so a pure replay of a test that imports a module no longer withholds the skipped tail.
+
+### Replay-only steps survive adaptive heal
+- **Heading markers pin a step to its tape** — `## Step 3 @db` (also `@api`, `@js`, `@smartui`, `@network_query`, `@network_assertion`) marks a cloud-generated step the agent cannot author. It always replays from its recording, even inside a re-authored tail, and adaptive heal never promotes it to author. The marker composes with `@verifies` in either order and can be added to an already-recorded step without invalidating its tape.
+- **A marked step that cannot replay refuses the run up front** — the run exits 2 naming every such step before anything spawns; a marked step that breaks during replay ends the run with a `🩹 step N … broke on replay` notice instead of spending heal budget or stopping silently.
+- **A heal commit keeps the original instruction** — the regenerated execution re-emits the cloud's DB query, API request, script, SmartUI and network instructions verbatim, refreshing only status, timestamps and this run's result, so those steps no longer render as junk in the evidence viewer.
+
+### Variables resolve through paths
+- **`{{var.path}}` and `{{rows[0].id}}` reach the analyzer with their value** — a variable consumed only through a dotted or bracketed path (in `{{x}}` or `${x}` form) was dropped before the agent saw it and reported as unknown; `assert {{api_var.status}} equals 200` after a replayed API step now passes. A longer name that merely shares the prefix is not treated as a reference.
+- **JS snippets see API and DB results as objects** — `return api_var.status` after a replayed `@api` step returned null because the runner re-seeded the value as a JSON string; it now keeps the typed object, and parses a string-only value on grid retries and `--remote`.
+- **One row per variable in Test Manager's Variables panel** — a re-assignment (`set X = a`, then `X = b`) updates the persisted row in place instead of adding a row per store; the instructions, the tape and the code export still carry every store.
+
+### Cloud sync for inline and TUI runs
+- **`kane-cli run … --name x` and TUI sessions push their testmd bundle** — a persisted test now syncs its `{commit_id}-testmd.zip` after upload (exit and `/new` included), the same as `testmd run` already did; a skipped sync logs its reason in the session log.
+- **The bundle is pushed before every commit** — a committed version whose bundle never uploaded could not be rebuilt on the grid; a failed root push now stops the commit and releases the lock, and a failed unit push skips only that unit's commit.
+
+### Reliability on Windows, macOS and the grid
+- **The runner is UTF-8 on every platform** — stdin, stdout and stderr are forced to UTF-8 and the frozen binary is built in UTF-8 mode, so a macOS grid host without a UTF-8 locale no longer fails every step with `'utf-8' codec can't encode characters … surrogates not allowed` once a prior flow's summary carries a non-ASCII character.
+- **A passing heal no longer keeps the failed attempt in `execution.json`** — Windows refused to archive a failed attempt's `logs/` while the runner still held the tape open, and the error was swallowed. The runner now releases its tape and run-log handles when an author run ends, and a refused rename is logged and falls back to copy-and-truncate, so the archived attempt and the canonical pack are both complete.
+- **Healed selectors on repeated rows are unique** — a heal on a list whose rows share one `data-testid` now yields a locator that resolves to a single element instead of failing Playwright's strict mode on the very element the heal found (testmuai-playwright-bindings 0.1.37).
+
+## [0.8.10] - 2026-09-04
+
+### Mobile code export is here (Python only)
+- **Code export now works on mobile runs** — test runs against mobile targets generate exportable Python automation code, the same way web runs do.
+- **JavaScript export is blocked on mobile** — passing `--language javascript` on a mobile export now fails immediately with a clear message instead of silently producing broken output.
+- **The Python-only constraint is visible** — the export UI surfaces the mobile limitation so you know what to expect before you run.
+
+### More accurate mobile exports
+- **Drag gestures now export correctly** — a mobile drag's end point and timing values were missing from the export blob; they're now persisted and show up in generated code.
+- **Typed text no longer has trailing garbage** — the mobile text schema was appending junk characters at the end of typed strings; generated scripts now reproduce exactly what was typed.
+
+### Scroll and until-loop fixes
+- **Until-loop scroll behavior is consistent** — the scroll unit is now honored by default inside until-loops, so recorded scroll-until steps replay the way they were captured.
+- **Scroll unit is only set when it makes sense** — the unit key is now stamped only on distance-based scroll events, avoiding ambiguity on other scroll kinds.
+
+### Mobile replay reliability
+- **If/else branches replay correctly on mobile** — same-tape literal analyzers inside mobile if/else blocks now resolve properly during replay instead of failing or skipping.
+
+## [0.8.9] - 2026-09-02
+
+### Changed
+
+- Maintenance release — packaging/pipeline fixes only, no user-facing changes.
+
+## [0.8.8] - 2026-09-01
+
+### Full control in agent mode
+- **`--mode agent` now pauses on every question** — kane-cli no longer auto-accepts recommended actions; every decision waits for your explicit input, so nothing runs without your approval.
+
+### Typing variables works correctly
+- **Variable placeholders no longer produce trailing garbage** — typing into a `{{var}}` field no longer appends stray characters after the substituted value.
+
+### Conditional branches that actually run
+- **`if_else` steps with no sub-checks are now anchored correctly** — branches authored without nested checks previously could be skipped or mis-executed; they now behave as expected.
+
+### Fatal exits deliver complete logs
+- **Logs are fully flushed before kane-cli exits on a fatal error** — the remote log buffer is now drained and spooled so nothing is lost when the process terminates unexpectedly.
+
+### Cleaner installs
+- **`package.json` engines field removed** — a stale version constraint was causing npm to silently install an older release of kane-cli instead of the latest; that trap is gone.
+
 ## [0.8.7] - 2026-08-27
 
 ### Mobile testing is now fully wired in
