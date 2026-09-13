@@ -9,6 +9,8 @@ Load this file when the user wants to run **several** saved `_test.md` tests as 
 - The user has **two or more saved `_test.md` tests** to run → `kane-cli testrun run`. Do NOT hand-roll a bash loop or spawn parallel `testmd run` processes — testrun does isolation, pooling, and a single rollup for you.
 - One test → `kane-cli testmd run` (load `kane-cli-testmd.md`).
 - Multiple ad-hoc `run` objectives (not saved tests) → the parallel-execution section of `kane-cli-run.md` still applies.
+- **Mobile** `_test.md` members (`target: emulator|simulator`) are normal members (0.8.7+): locally on mac-arm64 with `--device-name`/`--os-version`; on the **cloud grid from any machine** with `--remote` (section below and `kane-cli-mobile.md`).
+- The user wants the suite on the **cloud grid** (no local Chrome, or a mobile suite from a non-Mac) → `kane-cli testrun run … --remote`.
 
 # Command
 
@@ -29,6 +31,9 @@ kane-cli testrun run [paths...] [flags]     # NDJSON is automatic when stdout is
 | `--retry` / `--retry-count <n>` | Replay-failure restart with shrinking replay window / max attempts | off / `3` |
 | `--bug-detection <mode>` | `off`\|`stop`\|`continue`, passed through to authoring members | config (`off`) |
 | `--headless` | Headless Chrome — use in CI | off |
+| `--remote [backend]` | Dispatch the suite to the HyperExecute grid (default backend `hyper`); needs `kane-cli plugin install remote-execution` — see "Remote" below | off |
+| `--device-name <name>` | Device for the mobile members: as `kane-cli devices list --target <kind>` prints it locally, or a grid catalog device (`devices list … --remote`) with `--remote` | members' `device_name:` |
+| `--os-version <version>` | OS version for the mobile members (`14`, `17.5`); alone = any device on that version | members' `os_version:` |
 | `--env <name>` / `--username` / `--access-key` | Environment / basic auth | active profile |
 
 # Preflight (why members get rejected)
@@ -41,6 +46,25 @@ All members must share one org + project. *(0.8.4+)* Members need **not** be aut
 | `project_mismatch` | Different project than the other tests | "Run it separately or per-project" |
 
 If **any** member fails preflight, the plan is invalid: nothing runs, exit `2`. Suggest `--dry-run` to preview the plan cheaply before a big run.
+
+# Remote: the suite as one HyperExecute job (`--remote`)
+
+`kane-cli testrun run <selection> --remote` ships the cwd as the job payload, provisions a grid runtime — a browser for web members, a **virtual Android emulator or iOS simulator on a macOS host** for mobile members — runs every member there, and brings the recordings and the sealed evidence pack back into the project. Works **from any machine**; the account needs a HyperExecute plan (macOS runners for mobile) and the plugin (`kane-cli plugin install remote-execution`; `kane-cli plugin doctor remote-execution` checks it). Auth is a LambdaTest username + access key — an OAuth profile is exchanged automatically.
+
+```bash
+kane-cli testrun run --tags smoke --remote --dry-run                                        # validate + resolve, dispatch nothing
+kane-cli testrun run tests/app/ --remote --device-name "Pixel 7" --os-version 14            # Android suite on the grid
+kane-cli testrun run tests/ios/ --remote --device-name "iPhone 15" --os-version 17.5        # iOS suite on the grid
+```
+
+- **Always `--dry-run` first** — it runs the remote preflight and resolves the device against the grid catalog (`kane-cli devices list --target emulator|simulator --remote --agent`) without creating a job.
+- **One job = one runtime**: a selection mixing web and device members, emulator and simulator members, or several Android versions is refused with a split suggestion.
+- **Mobile app rules on the grid**: emulator = a local `.apk` inside the project or an `APP…` id; simulator = an `APP…` id only (`kane-cli apps list --target simulator --agent`, same env/org). Details in `kane-cli-mobile.md`.
+- `--author`, `--no-adaptive-heal`, `--bug-detection`, `--name` are forwarded. Allow several minutes.
+
+Remote preflight refusals arrive as one `remote_error` per reason (then `testrun_done` failed, exit 2): `mobile_remote_mixed`, `mobile_remote_mixed_platform`, `mobile_os_version_split`, `mobile_remote_unsupported`, `mobile_app_not_cloud`, `mobile_app_not_shippable`, `member_outside_payload`, `gitignored_inputs`, `on_grid`, `invalid_plan`, `project_authority_conflict` — each `detail` names the paths and the fix; relay it in plain language.
+
+Extra events with `--remote` (stdout, typed): `remote_start {backend, env}` → `remote_device {platform, slug, name, os_version, avd_id?, pool?}` (present as the device line) → `remote_device_hint {reason, detail}` (informational) → `remote_dispatched {job_id, job_url}` (give the user the link) → the normal `testrun_*` stream → `remote_done {status, exit, job_id, sessions_path}`. `testrun_summary` carries `remote: {backend, jobId, jobUrl, sessionsPath}`. A member `broken` with `execution: null` means the grid-side run refused before launching — send the user to `job_url` for the scenario log.
 
 # NDJSON events
 

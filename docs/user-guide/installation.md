@@ -14,7 +14,7 @@ kane-cli ships native binaries for the following platforms. Installing the main 
 | Linux | arm64 (aarch64) |
 | Windows | x64 |
 
-**Mobile testing** (iOS Simulator and Android Emulator) is supported on macOS Apple Silicon (arm64) only for the initial release. See [Mobile testing](./mobile/overview.md) for the simulator and emulator prerequisites.
+**Mobile testing** (iOS Simulator and Android Emulator) runs locally on macOS Apple Silicon (arm64) only — see [Mobile testing](./mobile/overview.md) for the simulator and emulator prerequisites. On every other platform, mobile suites run on the cloud grid with [`testrun run --remote`](./remote-execution.md), which needs no local mobile tooling.
 
 ## Install with npm
 

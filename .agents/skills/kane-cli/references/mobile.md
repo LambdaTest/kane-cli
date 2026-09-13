@@ -1,15 +1,18 @@
-<!-- Read this when the user wants to run or author a test against a mobile app (Android emulator or iOS simulator) instead of the browser. Owns mobile availability, the target axis, target/device/app selection on `run`, the app-under-test requirement, mobile setup (login + doctor --install), doctor flags, the testmd flat `target:` + `app:` frontmatter keys, the testrun exclusion, and what objective grammar carries over to mobile. Desktop (browser) stays the default; this is the scoped mobile branch. -->
+<!-- Read this when the user wants to run or author a test against a mobile app (Android emulator or iOS simulator) instead of the browser. Owns mobile availability (local = macOS Apple Silicon; remote grid = any machine), the target axis, target/device/app selection on `run`, the app-under-test requirement, mobile setup (login + doctor --install), doctor flags, the testmd flat `target:` + `app:` (+ `device_name:`/`os_version:`) frontmatter keys, mobile members in testrun (local and `--remote`), and what objective grammar carries over to mobile. Desktop (browser) stays the default; this is the scoped mobile branch. -->
 
-# Mobile testing (macOS Apple Silicon)
+# Mobile testing (local on macOS Apple Silicon, or on the cloud grid from any machine)
 
-Desktop (the browser) is the **default** target and the primary use of kane-cli. Mobile is a **scoped addition**: kane-cli can also drive a native app on a virtual Android or iOS device on the same machine. Nothing about web runs changes. A run with no mobile flags still drives Chrome exactly as before.
+Desktop (the browser) is the **default** target and the primary use of kane-cli. Mobile is a **scoped addition**: kane-cli can also drive a native app on a virtual Android or iOS device — on this machine, or on a LambdaTest HyperExecute macOS host via `testrun run --remote`. Nothing about web runs changes. A run with no mobile flags still drives Chrome exactly as before.
 
 ## Availability (read first)
 
-- **macOS on Apple Silicon (arm64) only.** Mobile is not available on Intel Macs, Linux, or Windows. On those hosts, only desktop (browser) runs work.
-- **Desktop stays the default.** The `--target` axis is what selects mobile. Leave it off and you get the browser.
+| Where the device runs | Host | Commands |
+|---|---|---|
+| **Local** (a simulator/emulator on this machine) | **macOS on Apple Silicon (arm64) only** — not Intel Macs, Linux, or Windows | `run --target …`, `testmd run`, `testrun run` |
+| **Cloud grid** (a virtual device on a HyperExecute macOS host) | **Any machine** — no Xcode / Android Studio needed. The account needs a HyperExecute plan with macOS runners | `testrun run <paths> --remote …` — see §Remote below |
 
-If the user is not on mac-arm64, mobile is not an option. Keep them on desktop runs.
+- **Desktop stays the default.** The `--target` axis is what selects mobile. Leave it off and you get the browser.
+- If the user is not on mac-arm64, local mobile is not an option — **offer the grid**: save the objective as a `_test.md` (`target: emulator|simulator` + `app:`) and run it with `kane-cli testrun run <path> --remote --device-name "<grid device>" --os-version <v>`. Do not tell them mobile is unavailable.
 
 ## The three targets
 
@@ -33,12 +36,13 @@ kane-cli run "<objective>" --agent --target simulator --app ./builds/MyApp.zip
 | Flag | Purpose |
 |---|---|
 | `--target desktop\|emulator\|simulator` | Pick the target. Default is the saved session target, else `desktop`. |
-| `--device <id>` | Choose a specific device by name, serial, `ip:port`, or udid. In a TTY, omitting it opens a one-time picker whose answer is saved; in `--agent`/non-TTY runs a device must already be set (`--device` or `config set-device`) or the run exits 2 naming the fix. |
+| `--device-name <name>` | Which device, as `kane-cli devices list --target emulator\|simulator` prints it. Needs `--os-version`. In a TTY, omitting it opens a one-time picker whose answer is saved; in `--agent`/non-TTY runs a device must already be set (flags, `config set-device-name` + `set-os-version`, or the file's `device_name:`/`os_version:`) or the run exits 2 naming the fix. |
+| `--os-version <version>` | The device's OS version (`14`, `17.5`). Alone = any device on that version. |
 | `--app <path\|APPid>` | The app under test. **Required for every mobile run** (see below). |
 
-On **desktop**, `--device` and `--app` are ignored. They only apply to `emulator`/`simulator`.
+On **desktop**, the device flags and `--app` are ignored. They only apply to `emulator`/`simulator`.
 
-In the interactive TUI, switch with `/mobile` and `/desktop`; `/doctor` runs readiness checks. The first-run chooser offers Desktop / Emulator / Simulator. Persist defaults with `kane-cli config set-target`, `config set-device`, `config set-app`. (The separate `config set-mode action|testing` is an unrelated axis: it controls auth-wall behavior, not the target.)
+In the interactive TUI, switch with `/mobile` and `/desktop`; `/doctor` runs readiness checks. The first-run chooser offers Desktop / Emulator / Simulator. Persist defaults with `kane-cli config set-target`, `config set-device-name`, `config set-os-version`, `config set-app`. (The separate `config set-mode action|testing` is an unrelated axis: it controls auth-wall behavior, not the target.)
 
 ## The app under test: required, and its formats
 
@@ -49,7 +53,7 @@ Every mobile run needs an app. Provide it one of two ways:
    - iOS (`simulator`): a `.zip`
 2. **An uploaded app id** from a previous upload: `APP` followed by 6 or more digits (e.g. `APP123456`).
 
-kane-cli installs that app on the device and runs the objective against it.
+kane-cli installs that app on the device and runs the objective against it. `kane-cli apps list --target emulator|simulator --agent` lists the account's uploads (NDJSON; the `app_id` field is what `--app`/`app:` take). There is no upload subcommand: a **local** run with a local build uploads it to the account and prints the `APP…` id. Uploads are **per environment and org** — an id from `prod` is invisible to `stage`.
 
 **Not accepted:** a package/bundle id (e.g. `com.example.app`), a bare `.ipa`, or a `.app` bundle. There is no default app: a mobile run without a valid build or `APP…` id cannot start.
 
@@ -65,22 +69,22 @@ Two halves, and kane-cli owns the second:
 
    ```bash
    kane-cli login
-   kane-cli doctor --install
+   kane-cli doctor --target emulator --install     # or --target simulator
    ```
 
-   `doctor --install` downloads the test tooling kane-cli manages. From then on kane-cli discovers the device, boots it, installs your app, and runs the test. **You do not boot the simulator or emulator by hand.**
+   `doctor --install` downloads the test tooling kane-cli manages. From then on kane-cli discovers the device, boots it, installs your app, and runs the test. **You do not boot the simulator or emulator by hand.** None of this is needed for `--remote` runs.
 
-## `kane-cli doctor`: readiness
+## `kane-cli doctor` and `kane-cli devices list`: readiness
 
-`kane-cli doctor` prints one line per required check, each failing row carrying its fix. Run it any time to see what is ready and what is missing.
+`kane-cli doctor --target emulator|simulator` (the target is required) prints one line per required check, each failing row carrying its fix. Run it any time to see what is ready and what is missing.
 
-| Flag | Effect |
+| Command | Effect |
 |---|---|
-| `--install` | Install kane-cli's managed test tooling (the one-time setup step above). |
-| `--targets` | List the devices (emulators / simulators) kane-cli can run against. |
-| `--platform <name>` | Scope the checks to one platform. |
-| `--device-class emulator\|simulator` | Scope the checks to one device class. |
-| `--verbose` | More detail per check. |
+| `kane-cli doctor --target <kind>` | Readiness checks for that toolchain. |
+| `kane-cli doctor --target <kind> --install` | Install or repair kane-cli's managed test tooling (the one-time setup step above). |
+| `kane-cli devices list --target <kind> --agent` | The devices on this machine kane-cli can run against (name + OS version — the `--device-name`/`--os-version` vocabulary). |
+| `kane-cli devices list --target <kind> --remote --agent` | The devices the **cloud grid** can provision (needs auth, not a mobile host). Add `--os-version <v>` to filter. |
+| `kane-cli plugin doctor remote-execution` | Readiness for `--remote`: plugin installed, HyperExecute binary present, logged in. |
 
 ## `target:` in a `_test.md`
 
@@ -93,17 +97,49 @@ The `target:` frontmatter key is **one scalar**, sharing the `--target` vocabula
   ---
   target: emulator              # emulator (Android) | simulator (iOS)
   app: ./builds/app-debug.apk   # a build (.apk / .zip) or an APP… id, never a package id
+  device_name: Pixel 7          # optional per-test default (local list or grid catalog vocabulary)
+  os_version: "14"              # optional; --device-name / --os-version override both
   no_reset: false               # optional
   ---
   ```
 
-  `app:` follows the same rule as `--app` and is **required** with a mobile target — and refused with a browser one; `no_reset:` pairs with a mobile target the same way. The platform never appears in the file: `emulator` is Android, `simulator` is iOS. The nested form (`target: {platform, app}`) is not accepted — the parser refuses it and spells out this flat shape.
+  `app:` follows the same rule as `--app` and is **required** with a mobile target — and refused with a browser one; `no_reset:`, `device_name:` and `os_version:` pair with a mobile target the same way. The platform never appears in the file: `emulator` is Android, `simulator` is iOS. The nested form (`target: {platform, app}`) is not accepted — the parser refuses it and spells out this flat shape.
 
 Everything else about `_test.md` (step bodies, replay/cascade, commands) is unchanged. See `references/testmd.md`. Run a mobile test with `kane-cli testmd run <path> --agent`.
 
-## testrun does NOT support mobile
+## Mobile members in testrun (local and remote)
 
-`kane-cli testrun run` (batch execution) rejects a mobile member. To run a mobile `_test.md`, use `kane-cli testmd run <path>` (single-test). Keep mobile tests out of a `testrun` batch.
+`kane-cli testrun run` accepts mobile `_test.md` members (0.8.7+):
+
+- **Locally** (mac-arm64 with the setup above): `kane-cli testrun run <paths> --device-name "<name>" --os-version <v>` — the device as `kane-cli devices list --target <kind>` prints it, or the members' own `device_name:`/`os_version:`.
+- **On the cloud grid, from any machine**: add `--remote` — next section. Full testrun flags, events, and rollup: `references/testrun.md`.
+
+## Remote: mobile suites on the cloud grid (`testrun run --remote`)
+
+One command turns a mobile suite into a HyperExecute job on a macOS host that boots the emulator/simulator, installs the app, runs the members, and returns the recordings (`output-<stem>/`) and the sealed evidence pack to the project. The user's machine needs **no** Xcode, Android Studio, or Chrome.
+
+```bash
+kane-cli plugin install remote-execution                                    # once; then `kane-cli plugin doctor remote-execution`
+kane-cli devices list --target emulator --remote --agent                    # grid catalog: name + os_versions per row
+kane-cli testrun run tests/app/ --remote --device-name "Pixel 7" --os-version 14 --dry-run   # validate + resolve device, no job
+kane-cli testrun run tests/app/ --remote --device-name "Pixel 7" --os-version 14
+kane-cli testrun run tests/ios/ --remote --device-name "iPhone 15" --os-version 17.5
+```
+
+**Always `--dry-run` first** — it runs the remote preflight and resolves the device against the catalog at no cost. Use `Bash` with a long timeout (up to 600000 ms) for the real run: device setup + app install + members take several minutes.
+
+Rules that differ from a local run (each violation is a `remote_error` before dispatch, exit 2, with the offending paths and the fix):
+
+| Rule | Detail | Preflight code |
+|---|---|---|
+| **Device comes from the grid catalog** | `--device-name` must match a `devices list … --remote` row (validated before dispatch); `--os-version` alone = any device on that version; `_test.md` `device_name:`/`os_version:` are the fallback; neither → a catalog default, reported in the `remote_device` event. A local AVD name is ignored (`remote_device_hint` reason `device_name_ignored`). | — |
+| **One job = one platform on one OS version** | Split emulator vs simulator, web vs device, and different Android versions into separate runs (`--match`/`--tags`), or force one version with `--os-version`. | `mobile_remote_mixed_platform`, `mobile_remote_mixed`, `mobile_os_version_split` |
+| **Emulator app** | A local `.apk` **inside the project** (path relative to the test file) ships in the payload; or an `APP…` id the grid downloads. | `mobile_app_not_shippable` |
+| **Simulator app** | **Must be an uploaded `APP…` id** — a local `.zip` cannot be fetched by the grid. Get the id from `kane-cli apps list --target simulator --agent` (same env/org as the run), or run the test locally once to upload it. | `mobile_app_not_cloud` |
+| **Payload** | Members must live under the cwd being dispatched, and recordings/builds must not be gitignored (un-ignore with `!output-*/`). | `member_outside_payload`, `gitignored_inputs` |
+| **Auth** | HyperExecute needs a LambdaTest username + access key; an OAuth profile is exchanged automatically, or pass `--username`/`--access-key`. `--env prod|stage` must match where the `APP…` id was uploaded. | `no_basic_auth` |
+
+What to present after `testrun_done`/`remote_done`: the suite rollup (per `references/testrun.md`), the device line (name + OS from `remote_device`), and the job link (`remote_dispatched.job_url`) for the dashboard's stage logs. If a member comes back `broken` with zero steps, the grid-side run refused before launching — check the app id's environment (`apps list` for the active profile) and the job's scenario log at the job link.
 
 ## What works on mobile
 
