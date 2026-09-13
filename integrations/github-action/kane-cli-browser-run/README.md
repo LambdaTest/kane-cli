@@ -112,7 +112,7 @@ Kane CLI drives Google Chrome through the DevTools Protocol, so the runner needs
 
 - **Runner already has Chrome.** Set `install-chrome: false`. Kane CLI then looks in the standard locations (`/usr/bin/google-chrome` on Linux). For a non-standard path, set `KANE_CLI_CHROME_PATH` in the job `env`.
 - **Slow or cold runners.** The action sets `KANE_CLI_CDP_TIMEOUT_MS` to `60000` and `KANE_CLI_CDP_RETRIES` to `2`. Raise either in the job `env` if Chrome is still slow to come up.
-- **No Chrome at all** (minimal containers). Set `install-chrome: false` and pass a remote browser in `extra-args`, for example `--ws-endpoint wss://...` for a TestMu grid session or `--cdp-endpoint http://...`.
+- **No Chrome at all** (minimal containers). Set `install-chrome: false` and either pass a remote browser in `extra-args` (`--ws-endpoint wss://...` for a TestMu grid session or `--cdp-endpoint http://...` — Kane CLI still runs on the runner and drives that browser), or move a `test-files` suite to the grid entirely with `--remote` in `extra-args`: install the plugin first (`kane-cli plugin install remote-execution` in a step before the action), and the suite runs as one HyperExecute job on a macOS runner — this also lets a Linux runner execute mobile `_test.md` suites. See [Remote runs on the cloud grid](../../../docs/user-guide/remote-execution.md).
 - **Runner OS.** `ubuntu-latest` is the tested path. macOS and Windows runners work with the same Chrome setup.
 
 Chrome environment variables are documented in [Configuration](../../../docs/user-guide/configuration.md#chrome-environment-variables).

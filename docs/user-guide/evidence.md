@@ -78,6 +78,7 @@ What lands in the project store depends on the surface:
 | `kane-cli run` / TUI session | Only when the session is **named** (`--name`, `/name` in the TUI, or the save prompt at exit) |
 | `kane-cli testmd run` | Always |
 | `kane-cli testrun run` | Always (the pack is created directly in the store) |
+| `kane-cli testrun run --remote` | Always — the suite's pack is sealed on the grid and downloaded into the store when the job ends, alongside the members' `output-<stem>/` recordings ([Remote runs](./remote-execution.md)) |
 
 An interactive TUI session maps to one pack: it accumulates every run in the session and seals when you `/exit` or start over with `/new`.
 

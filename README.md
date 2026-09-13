@@ -312,7 +312,7 @@ TUI slash commands (`/run`, `/mobile`, `/desktop`, `/doctor`, `/login`, `/logout
 | `--bug-detection <mode>`    | config value, otherwise `off`         | Detect product bugs while authoring: `off`/`stop`/`continue` (`stop` halts on a confirmed bug; `continue` records it and keeps going). |
 | `--env <name>`              | active profile's env                  | Environment (e.g. `prod`).                                              |
 | `--cdp-endpoint <url>`      | none                                  | Connect to an existing Chrome via the Chrome DevTools Protocol.         |
-| `--ws-endpoint <url>`       | none                                  | Connect to a Playwright WebSocket endpoint (e.g. TestmuAI `wss://`).    |
+| `--ws-endpoint <url>`       | none                                  | Connect to a Playwright WebSocket endpoint (e.g. TestmuAI `wss://`) — a remote browser for a run that still executes here. To move a whole suite to the grid, use `testrun run --remote`. |
 | `--variables '<json>'`      | none                                  | Inline variables for `{{key}}` substitution in objectives.              |
 | `--variables-file <path>`   | none                                  | Load variables from a JSON file.                                        |
 | `--session-context <json>`  | none                                  | Prior runs context JSON.                                                |

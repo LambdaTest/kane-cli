@@ -49,7 +49,7 @@ If **any** member fails preflight, the plan is invalid: nothing runs, exit `2`. 
 
 # Remote: the suite as one HyperExecute job (`--remote`)
 
-`kane-cli testrun run <selection> --remote` ships the cwd as the job payload, provisions a grid runtime — a browser for web members, a **virtual Android emulator or iOS simulator on a macOS host** for mobile members — runs every member there, and brings the recordings and the sealed evidence pack back into the project. Works **from any machine**; the account needs a HyperExecute plan (macOS runners for mobile) and the plugin (`kane-cli plugin install remote-execution`; `kane-cli plugin doctor remote-execution` checks it). Auth is a LambdaTest username + access key — an OAuth profile is exchanged automatically.
+`kane-cli testrun run <selection> --remote` ships the cwd as the job payload, provisions a grid runtime on a **HyperExecute macOS runner** — Chrome for web members, a **virtual Android emulator or iOS simulator** for mobile members — runs every member there as its own headless `testmd run`, and brings the recordings (`output-<stem>/`) and the sealed evidence pack back into the project. Works **from any machine** with nothing local but Node and the plugin (no Chrome needed); the account needs a HyperExecute plan with macOS runners and the plugin (`kane-cli plugin install remote-execution`; `kane-cli plugin doctor remote-execution` checks it). Auth is a LambdaTest username + access key — an OAuth profile is exchanged automatically. Not the same as `--ws-endpoint`, which attaches a remote browser to a run that still executes locally.
 
 ```bash
 kane-cli testrun run --tags smoke --remote --dry-run                                        # validate + resolve, dispatch nothing
@@ -58,6 +58,7 @@ kane-cli testrun run tests/ios/ --remote --device-name "iPhone 15" --os-version 
 ```
 
 - **Always `--dry-run` first** — it runs the remote preflight and resolves the device against the grid catalog (`kane-cli devices list --target emulator|simulator --remote --agent`) without creating a job.
+- **Web suites**: `--parallel N` becomes the job's concurrency (members auto-split across N grid runners); `--headless` is unnecessary; no `remote_device` event. Overhead ~15 s of setup plus the tests' own time (a mobile job adds a minute or more for device boot).
 - **One job = one runtime**: a selection mixing web and device members, emulator and simulator members, or several Android versions is refused with a split suggestion.
 - **Mobile app rules on the grid**: emulator = a local `.apk` inside the project or an `APP…` id; simulator = an `APP…` id only (`kane-cli apps list --target simulator --agent`, same env/org). Details in `kane-cli-mobile.md`.
 - `--author`, `--no-adaptive-heal`, `--bug-detection`, `--name` are forwarded. Allow several minutes.

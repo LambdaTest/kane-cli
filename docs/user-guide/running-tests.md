@@ -177,7 +177,7 @@ The customer-facing flags accepted by `kane-cli run`:
 | `--url <url>` | Start URL for the run. Overrides the configured `default_url`; bare domains are normalized to `https://`. See [Default start URL](./configuration.md#default-start-url). | Config `default_url` |
 | `--allow-missing-url` | Non-TTY only: proceed from the browser's current page instead of failing when no start URL resolves (a provided `--url` is still used). | Off |
 | `--cdp-endpoint <url>` | Connect to an existing Chrome via CDP. | None |
-| `--ws-endpoint <url>` | Connect to a Playwright WebSocket endpoint (e.g. TestmuAI `wss://`). | None |
+| `--ws-endpoint <url>` | Connect to a Playwright WebSocket endpoint (e.g. TestmuAI `wss://`). The run still executes on this machine and drives that browser; to run a whole suite on the grid instead, see [`testrun run --remote`](./remote-execution.md). | None |
 | `--global-context <file>` | Override the global context Markdown file. | `~/.testmuai/kaneai/global-memory.md` |
 | `--local-context <file>` | Override the local context Markdown file. | `<cwd>/.testmuai/context.md` |
 | `--variables <json>` | Inline variables JSON. | None |

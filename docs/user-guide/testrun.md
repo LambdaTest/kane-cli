@@ -115,16 +115,16 @@ In a terminal, kane-cli offers to open the pack in the [evidence viewer](./evide
 
 ## Remote runs
 
-Add `--remote` and the same selection runs as one **HyperExecute** job — a grid browser for web suites, a grid emulator or simulator for mobile suites — with the job link streamed back and the recordings and evidence pack returned to your project. Requires a LambdaTest plan with HyperExecute (macOS runners for mobile) and the `remote-execution` plugin.
+Add `--remote` and the same selection runs as one **HyperExecute** job: Chrome on a grid macOS runner for web suites, a grid emulator or simulator for mobile suites. Each member runs as its own headless `testmd run` on the grid, `--parallel N` spreads the members across N grid runners, and the job link, the recordings, and the evidence pack come back to your project. Requires a LambdaTest plan with HyperExecute (macOS runners) and the `remote-execution` plugin — nothing else locally, not even Chrome.
 
 ```bash
 kane-cli plugin install remote-execution
 kane-cli testrun run --tags smoke --remote --dry-run          # resolve everything, dispatch nothing
-kane-cli testrun run --tags smoke --remote                    # a web suite on the grid
+kane-cli testrun run --tags smoke --remote --parallel 4       # a web suite on 4 grid runners
 kane-cli testrun run tests/ios/ --remote --device-name "iPhone 15" --os-version 17.5
 ```
 
-`--dry-run` runs the remote preflight too, so the selection is validated against the grid before any job exists. The full guide — prerequisites, device catalog, app rules, what one job can hold, and the events — is [Remote runs on the cloud grid](./remote-execution.md).
+`--dry-run` runs the remote preflight too, so the selection is validated against the grid before any job exists. A web selection and a device selection cannot share one job — run them as two suites. This is different from `--ws-endpoint`, which attaches a remote browser to a run that still executes on your machine. The full guide — prerequisites, how a job runs, web suites, device catalog, app rules, what one job can hold, and the events — is [Remote runs on the cloud grid](./remote-execution.md).
 
 ## Using testrun in CI
 
