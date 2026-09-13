@@ -50,7 +50,7 @@ error: plan invalid — 2 offending test(s):
 A `_test.md` with a mobile [`target:`](./testmd/overview.md#mobile-target) (`emulator` / `simulator`) is a normal member *(0.8.7)*:
 
 - **Locally**, the suite drives the emulators and simulators on this machine, so the host must be macOS Apple Silicon with the [mobile setup](./mobile/overview.md) done. Pick the device with `--device-name` / `--os-version` as `kane-cli devices list --target emulator|simulator` prints it, or set `device_name:` / `os_version:` in the file.
-- **On the cloud grid** (`--remote`), the suite runs on a virtual device on a HyperExecute macOS host, so it works **from any machine** — Linux, Windows, or a Mac with no Xcode or Android Studio. Pick the device from `kane-cli devices list --target emulator|simulator --remote`. One grid job runs one platform on one OS version, and a simulator member must reference an uploaded `APP…` id. Everything else is in [Remote runs](./remote-execution.md).
+- **On the cloud grid** (`--remote`), the suite runs on a virtual device on a HyperExecute macOS host, so it works **from any machine** — Linux, Windows, or a Mac with no Xcode or Android Studio. Pick the device from `kane-cli devices list --target emulator|simulator --remote`. One grid job runs one platform (emulator members on one Android version, simulator members on one HyperExecute pool), and a member's local build is uploaded from your machine before dispatch and handed to the grid as an `APP…` id. Everything else is in [Remote runs](./remote-execution.md).
 
 ```bash
 kane-cli testrun run tests/app/ --device-name "Pixel 7 API 35" --os-version 15            # local emulators

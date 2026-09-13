@@ -58,9 +58,9 @@ kane-cli testrun run tests/ios/ --remote --device-name "iPhone 15" --os-version 
 ```
 
 - **Always `--dry-run` first.** It runs the normal preflight plus the **remote preflight** and resolves the device against the grid catalog (`kane-cli devices list --target emulator|simulator --remote --agent`) without creating a job.
-- **Web suites**: `--parallel N` becomes the job's concurrency (members auto-split across N grid runners); `--headless` is unnecessary (always headless on the grid); there is no `remote_device` event. Overhead is ~15 s of setup plus the tests' own time; a mobile job adds a minute or more for device boot.
-- **One job = one runtime.** A selection that mixes web and device members, emulator and simulator members, or several Android versions is refused with a split suggestion (`--match`/`--tags`).
-- **Mobile app rules on the grid**: emulator = a local `.apk` inside the project or an `APP…` id; simulator = an `APP…` id only (`kane-cli apps list --target simulator --agent`, same env/org as the run). Details and the preflight codes: `references/mobile.md` §Remote.
+- **`--parallel N`** becomes the job's concurrency for web and device suites alike (members auto-split across N grid tasks; a device task gets its own VM and device). **Web suites**: `--headless` is unnecessary (always headless on the grid); there is no `remote_device` event. Overhead is ~15 s of setup plus the tests' own time; a mobile job adds a minute or more for device boot.
+- **One job = one runtime.** A selection that mixes web and device members, emulator and simulator members, or emulator members on several Android versions is refused with a split suggestion (`--match`/`--tags`). Simulator members may differ in iOS version as long as they land on one HyperExecute pool (`mobile_pool_split` otherwise).
+- **Mobile app on the grid**: a member's local build (`.apk` for emulator, `.zip` for simulator, anywhere on disk) is uploaded from the laptop at preflight and handed to the grid as `--app <id>` (one `remote_app` event per distinct build); an `APP…` id is used as-is. Nothing has to be inside the project or un-gitignored; `--dry-run` uploads nothing. Details and the preflight codes: `references/mobile.md` §Remote.
 - `--author`, `--no-adaptive-heal`, `--bug-detection`, `--name`, `--on-failure` are forwarded to the grid. Use a long Bash timeout (up to 600000 ms).
 - The dispatch writes `.hyperexecute/`, `hyperexecute-cli.log`, and `.updatedhyperexecute.yaml` into the cwd — suggest gitignoring them; they are not inputs.
 
@@ -70,12 +70,14 @@ Remote preflight refusals arrive as one `remote_error` per reason (then `testrun
 |---|---|---|
 | `mobile_remote_mixed` | web + device members in one selection | two runs |
 | `mobile_remote_mixed_platform` | emulator + simulator members | one run per platform |
-| `mobile_os_version_split` | different Android versions | one run per version, or `--os-version` |
+| `mobile_os_version_split` | emulator members on different Android versions | one run per version, or `--os-version` |
+| `mobile_pool_split` | simulator members whose iOS versions need different HyperExecute pools | one run per pool, or `--os-version` |
 | `mobile_remote_unsupported` | a device target the grid can't provide | run locally or deselect |
-| `mobile_app_not_cloud` | simulator member with a local `.zip` | set `app:` to an `APP…` id |
-| `mobile_app_not_shippable` | emulator `.apk` outside the project | move it inside, or use an `APP…` id |
+| `mobile_app_missing` | a member's local build is not on this machine | fix the path, or use an `APP…` id |
+| `mobile_app_not_uploadable` | the build is not one the cloud takes (`.ipa`, or the wrong extension for the platform) | `.apk` for emulator, `.zip` of the `.app` for simulator, or an `APP…` id |
+| `mobile_app_upload_failed` | the laptop-side upload failed | fix the upload (network/auth), or use an `APP…` id |
 | `member_outside_payload` | a member outside the dispatched cwd | run from a directory that contains it |
-| `gitignored_inputs` | recordings/builds gitignored | un-ignore (`!output-*/`) or commit |
+| `gitignored_inputs` | recordings gitignored | un-ignore (`!output-*/`) or commit |
 | `on_grid` | already on a HyperExecute grid | drop `--remote` |
 | `invalid_plan` / `project_authority_conflict` | normal preflight failed / project mismatch with the configured one | fix the plan / `kane-cli config project` |
 
@@ -100,7 +102,8 @@ With `--remote`, the stream is wrapped in typed `remote_*` events (all on stdout
 |---|---|---|
 | `remote_start` | `backend`, `env` | Dispatch begins |
 | `remote_device` | `platform`, `slug`, `name`, `os_version`, `avd_id?`, `pool?` | The resolved grid device (mobile). Present it as the device line. |
-| `remote_device_hint` | `reason: device_name_ignored\|catalog_stale`, `detail` | Informational |
+| `remote_device_hint` | `reason: device_name_ignored\|catalog_stale`, `detail` | Informational; `device_name_ignored` is emulator-only |
+| `remote_app` | `path`, `app_id`, `source: uploaded\|cache\|dry-run` | One per distinct local build uploaded from the laptop (mobile); `app_id` is empty on a dry run |
 | `remote_dispatched` | `job_id`, `job_url` | The HyperExecute job exists — give the user `job_url` |
 | `remote_error` | `code`, `detail` | Remote preflight refused (table above); expect `testrun_done` failed + exit 2 |
 | `remote_import_tape`, `remote_exec_sync`, `remote_coverage` | `status`, `reason`, `detail?` | Informational; sync/coverage are `skipped` when the project has no `.context` store |
