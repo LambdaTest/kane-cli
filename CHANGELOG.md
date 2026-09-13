@@ -7,15 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Mobile suites on the cloud grid, from any machine
-- **`testrun run --remote` now takes mobile members** — a suite of `target: emulator` / `target: simulator` tests dispatches to LambdaTest HyperExecute, which boots a virtual Android emulator or iOS simulator on a macOS host, installs the app, runs the members, and returns the recordings and the sealed evidence pack to your project. Local mobile runs still need macOS Apple Silicon; remote runs work from Linux, Windows, and any Mac with no Xcode or Android Studio installed. Your LambdaTest plan must include HyperExecute with macOS runners.
-- **Pick the device from the grid catalog** — `kane-cli devices list --target emulator|simulator --remote` lists the devices and OS versions the grid can provision (`--os-version <v>` filters it); `testrun run --remote --device-name "<name>" --os-version <v>` selects one and validates it before dispatch. A `_test.md` can carry `device_name:` and `os_version:` as per-test defaults. A local AVD name in a member is ignored on the grid with a `device_name_ignored` note.
-- **The app has to be reachable from the grid** — an emulator member may keep a local `.apk` inside the project (it ships in the payload) or use an uploaded `APP…` id; a simulator member must use an uploaded `APP…` id (`mobile_app_not_cloud` refuses a local `.zip` up front). `kane-cli apps list --target emulator|simulator` lists the uploads the current profile can use; uploads are per environment and organisation.
-- **One job, one runtime** — the remote preflight refuses, with the paths and the fix, a selection that mixes web and device tests (`mobile_remote_mixed`), emulator and simulator tests (`mobile_remote_mixed_platform`), or several Android versions (`mobile_os_version_split`), plus builds outside the project (`mobile_app_not_shippable`), members outside the dispatched directory (`member_outside_payload`), and gitignored inputs (`gitignored_inputs`). `--dry-run` runs the same preflight and resolves the device without creating a job.
-- **Typed events for agents** — a remote run wraps the `testrun_*` stream in `remote_start`, `remote_device` (the resolved device, with its pool), `remote_device_hint`, `remote_dispatched` (job id + dashboard link), `remote_error` (preflight refusal, exit 2), and `remote_done`; `testrun_summary` carries a `remote` object with the job id, link, and sessions path.
-- **Docs** — new [Remote runs on the cloud grid](docs/user-guide/remote-execution.md) guide covering web suites (Chrome on a grid macOS runner, headless, `--parallel` as grid concurrency, `--remote` vs `--ws-endpoint`) and mobile suites; the testrun, mobile, test.md, CI/CD, configuration, installation (plugins), evidence, and troubleshooting pages, the GitHub Action README, the agent skill, and the Kiro steering files no longer say `testrun` excludes mobile and now document `--remote`.
-
-
 ## [0.8.12] - 2026-09-10
 
 ### Unresolved variables are caught before the run starts
