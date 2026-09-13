@@ -152,7 +152,7 @@ kane-cli devices list --target emulator --remote --agent    # grid device catalo
 kane-cli apps list --target simulator --agent               # the account's uploaded builds (app_id is what app:/--app take)
 ```
 
-Requirements: a LambdaTest plan with HyperExecute (macOS runners for mobile members); a LambdaTest username + access key (an OAuth profile is exchanged automatically; or `--username`/`--access-key`); `--env prod|stage` matching where any `APP…` id was uploaded. Runs are dispatched from the **cwd** (it becomes the payload; `.gitignore` is respected). Full flags, events, and refusal codes: `references/testrun.md` §Remote; mobile rules: `references/mobile.md` §Remote.
+Requirements: a LambdaTest plan with HyperExecute (macOS runners for mobile members); a LambdaTest username + access key (an OAuth profile is exchanged automatically; or `--username`/`--access-key`); any `APP…` id must belong to the same organisation. Runs are dispatched from the **cwd** (it becomes the payload; `.gitignore` is respected). Full flags, events, and refusal codes: `references/testrun.md` §Remote; mobile rules: `references/mobile.md` §Remote.
 
 ## Chrome management
 

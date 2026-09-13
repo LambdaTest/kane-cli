@@ -71,7 +71,7 @@ A browser run navigates to a URL. A mobile run drives an **app**. Every `emulato
    - iOS (`simulator`): a `.zip`
 2. **An uploaded app id** from a previous upload: the literal `APP` followed by **6 or more digits** (e.g. `APP123456`).
 
-kane-cli installs that app on the device and runs the objective against it. `kane-cli apps list --target emulator|simulator --agent` lists the account's uploads (the `app_id` field is what `--app`/`app:` take). There is no upload subcommand: a **local** run with a local build uploads it and prints the `APP…` id. Uploads are per environment and org.
+kane-cli installs that app on the device and runs the objective against it. `kane-cli apps list --target emulator|simulator --agent` lists the account's uploads (the `app_id` field is what `--app`/`app:` take). There is no upload subcommand: a **local** run with a local build uploads it and prints the `APP…` id. Uploads belong to an organisation; `apps list` for the active profile is the authority.
 
 **Not accepted:** a package / bundle id (e.g. `com.example.app`), a bare `.ipa`, or a `.app` bundle. There is **no default app**: a mobile run without a valid build or `APP…` id cannot start.
 

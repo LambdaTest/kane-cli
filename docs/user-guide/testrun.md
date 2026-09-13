@@ -74,7 +74,6 @@ kane-cli testrun run tests/app/ --remote --device-name "Pixel 7" --os-version 14
 | `--remote [backend]` | Dispatch the suite to the cloud grid instead of local Chrome / local devices (default backend: `hyper`). Needs `kane-cli plugin install remote-execution`. See [Remote runs](./remote-execution.md) | off |
 | `--device-name <name>` | Device for the suite's mobile members: as `kane-cli devices list` prints it locally, or a grid catalog device with `--remote` | member's `device_name:` |
 | `--os-version <version>` | OS version for the mobile members (`14`, `17.5`); alone = any device on that version | member's `os_version:` |
-| `--env <name>` | Environment (`prod` or `stage`) | active env |
 | `--username <user>` / `--access-key <key>` | Basic auth (skips OAuth) | — |
 
 Each worker gets its **own isolated Chrome** with a fresh temporary profile, so parallel members never share cookies, logins, or tabs — and never fight over your real browser profile.

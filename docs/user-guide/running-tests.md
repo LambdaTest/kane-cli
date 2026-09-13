@@ -185,7 +185,6 @@ The customer-facing flags accepted by `kane-cli run`:
 | `--session-context <json>` | Prior runs context JSON. | None |
 | `--username <user>` | Basic auth username (skip OAuth). | None |
 | `--access-key <key>` | Basic auth access key (skip OAuth). | None |
-| `--env <name>` | Environment (`prod`). | Active profile's env |
 | `--mode <name>` | Run mode: `action` (strict) or `testing` (lenient). | Config value, otherwise `testing` |
 | `--bug-detection <mode>` | Detect product bugs while authoring: `off`, `stop` (halt the run on a confirmed bug), or `continue` (record it and keep going). Overrides `config set-bug-detection`. See [Configuration](./configuration.md#bug-detection). | Config value, otherwise `off` |
 | `--agent` | Plain NDJSON output, no colors or UI. | Off |

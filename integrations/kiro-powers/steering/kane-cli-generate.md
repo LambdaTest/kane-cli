@@ -60,7 +60,7 @@ There is **no interactive session**. Each invocation runs exactly one generation
 | `--memory` | Use the memory layer — reuse relevant existing cases, reduce duplicates. |
 | `--files <paths>` | Comma-separated local files to attach as context (new / refine only — see "Attaching files"). |
 | `--project <id>` / `--folder <id>` | Test Manager project / folder. |
-| `--env prod\|stage` · `--username` / `--access-key` | Environment / auth (same as `run`). |
+| `--username` / `--access-key` | Auth (same as `run`). |
 
 If neither `--project`/`--folder` nor a saved project/folder is set when generation starts, Kane CLI auto-resolves one headlessly and emits a `project_folder_auto_defaulted` event before `generate_start` — surface as a one-line note and continue parsing.
 

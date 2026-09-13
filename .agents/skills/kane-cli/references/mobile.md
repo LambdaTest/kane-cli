@@ -53,7 +53,7 @@ Every mobile run needs an app. Provide it one of two ways:
    - iOS (`simulator`): a `.zip`
 2. **An uploaded app id** from a previous upload: `APP` followed by 6 or more digits (e.g. `APP123456`).
 
-kane-cli installs that app on the device and runs the objective against it. `kane-cli apps list --target emulator|simulator --agent` lists the account's uploads (NDJSON; the `app_id` field is what `--app`/`app:` take). There is no upload subcommand: a **local** run with a local build uploads it to the account and prints the `APP…` id. Uploads are **per environment and org** — an id from `prod` is invisible to `stage`.
+kane-cli installs that app on the device and runs the objective against it. `kane-cli apps list --target emulator|simulator --agent` lists the account's uploads (NDJSON; the `app_id` field is what `--app`/`app:` take). There is no upload subcommand: a **local** run with a local build uploads it to the account and prints the `APP…` id. Uploads belong to an organisation — `apps list` for the active profile is the authority.
 
 **Not accepted:** a package/bundle id (e.g. `com.example.app`), a bare `.ipa`, or a `.app` bundle. There is no default app: a mobile run without a valid build or `APP…` id cannot start.
 
@@ -137,9 +137,9 @@ Rules that differ from a local run (each violation is a `remote_error` before di
 | **Emulator app** | A local `.apk` **inside the project** (path relative to the test file) ships in the payload; or an `APP…` id the grid downloads. | `mobile_app_not_shippable` |
 | **Simulator app** | **Must be an uploaded `APP…` id** — a local `.zip` cannot be fetched by the grid. Get the id from `kane-cli apps list --target simulator --agent` (same env/org as the run), or run the test locally once to upload it. | `mobile_app_not_cloud` |
 | **Payload** | Members must live under the cwd being dispatched, and recordings/builds must not be gitignored (un-ignore with `!output-*/`). | `member_outside_payload`, `gitignored_inputs` |
-| **Auth** | HyperExecute needs a LambdaTest username + access key; an OAuth profile is exchanged automatically, or pass `--username`/`--access-key`. `--env prod|stage` must match where the `APP…` id was uploaded. | `no_basic_auth` |
+| **Auth** | HyperExecute needs a LambdaTest username + access key; an OAuth profile is exchanged automatically, or pass `--username`/`--access-key`. Any `APP…` id must belong to the same organisation. | `no_basic_auth` |
 
-What to present after `testrun_done`/`remote_done`: the suite rollup (per `references/testrun.md`), the device line (name + OS from `remote_device`), and the job link (`remote_dispatched.job_url`) for the dashboard's stage logs. If a member comes back `broken` with zero steps, the grid-side run refused before launching — check the app id's environment (`apps list` for the active profile) and the job's scenario log at the job link.
+What to present after `testrun_done`/`remote_done`: the suite rollup (per `references/testrun.md`), the device line (name + OS from `remote_device`), and the job link (`remote_dispatched.job_url`) for the dashboard's stage logs. If a member comes back `broken` with zero steps, the grid-side run refused before launching — check the app id belongs to this account (`apps list` for the active profile) and the job's scenario log at the job link.
 
 ## What works on mobile
 

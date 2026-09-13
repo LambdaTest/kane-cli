@@ -122,7 +122,6 @@ Open the `viewer` URL in your browser. The server binds to `127.0.0.1` only and 
 |---|---|---|
 | `--port <n>` | Pin the local port | ephemeral |
 | `--viewer-url <base>` | Override the hosted viewer base URL | environment's viewer |
-| `--env <name>` | Environment (`prod` or `stage`) | active profile's env |
 
 `serve` accepts sealed `.evidence` files only — a live (unsealed) pack directory is rejected. Exit codes: `0` after a clean Ctrl-C shutdown, `2` for any bad input or a port that cannot be bound.
 
@@ -172,7 +171,6 @@ Targets are execution ids or pack paths, and **order matters** (earlier targets 
 | `--title <title>` | Title for the merged run | first eligible pack's |
 | `--no-finalize` | Keep the merged pack live instead of sealing it | seals by default |
 | `--json` | Machine-readable merge report | off |
-| `--env <name>` | Environment (`prod` or `stage`) | active env |
 
 `--rules` and `--on-collision` are mutually exclusive. The default policy requires inputs to be sealed and valid, skips duplicate run ids, and refuses to merge packs from different projects or organisations.
 

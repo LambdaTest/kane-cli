@@ -34,7 +34,7 @@ kane-cli testrun run [paths...] [flags]     # NDJSON is automatic when stdout is
 | `--remote [backend]` | Dispatch the suite to the HyperExecute grid (default backend `hyper`); needs `kane-cli plugin install remote-execution` — see "Remote" below | off |
 | `--device-name <name>` | Device for the mobile members: as `kane-cli devices list --target <kind>` prints it locally, or a grid catalog device (`devices list … --remote`) with `--remote` | members' `device_name:` |
 | `--os-version <version>` | OS version for the mobile members (`14`, `17.5`); alone = any device on that version | members' `os_version:` |
-| `--env <name>` / `--username` / `--access-key` | Environment / basic auth | active profile |
+| `--username` / `--access-key` | Basic auth | active profile |
 
 # Preflight (why members get rejected)
 

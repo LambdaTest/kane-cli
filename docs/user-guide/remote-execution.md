@@ -26,7 +26,7 @@ kane-cli testrun run tests/ios/ --remote --device-name "iPhone 15" --os-version 
 | A project directory that **contains the tests** | The current directory is zipped and shipped as the job payload | Run from the repo root (or any parent of the tests) |
 | Recordings and builds **not gitignored** | The payload respects `.gitignore`; an ignored `output-<stem>/` or `.apk` never reaches the grid | `--dry-run` reports `gitignored_inputs`; un-ignore with e.g. `!output-*/` |
 
-`--env` picks the environment (`prod` or `stage`) for both the login on the grid and the Test Manager upload. The project and folder the run uploads to are the ones configured on your profile (`kane-cli config project` / `folder`); they are passed to the grid's login.
+The project and folder the run uploads to are the ones configured on your profile (`kane-cli config project` / `folder`); they are passed to the grid's login.
 
 ## How a remote run works
 
@@ -59,7 +59,7 @@ job 24fc58b2-… dispatched → https://hyperexecute.lambdatest.com/hyperexecute
 | `--parallel <n>` | Becomes the job's concurrency: the members are auto-split across `n` grid runners, each running its share one member at a time |
 | `--headless` | Not needed — every member runs headless on the grid |
 | `--on-failure`, `--name`, `--bug-detection`, `--author`, `--no-adaptive-heal` | Forwarded to the members on the grid |
-| `--env`, `--username`, `--access-key` | Used for the grid login and the Test Manager upload |
+| `--username`, `--access-key` | Used for the grid login and the Test Manager upload |
 
 ## Web suites on the grid
 
@@ -67,7 +67,7 @@ A web suite needs nothing beyond the prerequisites: the grid runner has Chrome, 
 
 ```bash
 kane-cli plugin install remote-execution
-kane-cli testrun run tests/web/ --remote --env prod --parallel 4 --on-failure fail-fast
+kane-cli testrun run tests/web/ --remote --parallel 4 --on-failure fail-fast
 ```
 
 What you see back is a normal `testrun` summary; the only extra lines are the dispatch and the job link. A member that authors on the grid comes back with its `output-<stem>/` recordings, so the next run — local or remote — replays them. Commit those recordings as you would after a local run.
@@ -104,7 +104,7 @@ The grid machine has to *obtain* the app, which changes the rules slightly from 
 | `emulator` | An uploaded `APP…` id | Downloaded by the grid |
 | `simulator` | An uploaded `APP…` id | Downloaded by the grid — **required**. A local `.zip` is refused up front (`mobile_app_not_cloud`) because the grid cannot fetch it |
 
-`kane-cli apps list --target emulator|simulator` shows the uploaded builds your account can use; the **APP ID** column is what `app:` takes. There is no upload subcommand: running a test **locally once** with a local build (`kane-cli testmd run <path>` or `kane-cli run … --app ./MyApp.zip`) uploads the build to your account and prints the `APP…` id — set `app:` to that id afterwards. Uploads are **per environment and organisation**: an id uploaded on `prod` is not visible to a `stage` run, and `apps list` for the current profile is the authority.
+`kane-cli apps list --target emulator|simulator` shows the uploaded builds your account can use; the **APP ID** column is what `app:` takes. There is no upload subcommand: running a test **locally once** with a local build (`kane-cli testmd run <path>` or `kane-cli run … --app ./MyApp.zip`) uploads the build to your account and prints the `APP…` id — set `app:` to that id afterwards. Uploads belong to an organisation: `apps list` for the current profile is the authority on which ids a run can use.
 
 ## What one job can hold
 
@@ -134,7 +134,7 @@ Every reason arrives with the offending paths, both in the terminal and as a `re
 ## When a remote run fails
 
 - **A member failed or broke** (exit `1`): read it like a local failure — `output-<stem>/Result.md` names the failing step and reason, and the evidence pack has the screenshots and logs ([Debugging with a pack](./troubleshooting.md#debugging-a-failed-run-with-its-evidence-pack)).
-- **A member is `broken` with no steps** and nothing was published: the grid-side kane-cli refused before launching. Open the job link and read the scenario stage log; for mobile, the usual cause is an `APP…` id from a different environment or organisation than `--env`.
+- **A member is `broken` with no steps** and nothing was published: the grid-side kane-cli refused before launching. Open the job link and read the scenario stage log; for mobile, the usual cause is an `APP…` id that belongs to a different organisation than the account running the job.
 - **Nothing was dispatched** (exit `2`): the printed reason is one of the preflight codes above, or `kane-cli plugin doctor remote-execution` shows what is missing (plugin, binary, login).
 
 ## In CI
@@ -146,11 +146,11 @@ npm install -g @testmuai/kane-cli
 kane-cli plugin install remote-execution
 
 # a web suite
-kane-cli testrun run tests/web/ --remote --env prod --parallel 4 \
+kane-cli testrun run tests/web/ --remote --parallel 4 \
   --username "$LT_USERNAME" --access-key "$LT_ACCESS_KEY" --on-failure fail-fast
 
 # a mobile suite
-kane-cli testrun run tests/app/ --remote --env prod \
+kane-cli testrun run tests/app/ --remote \
   --device-name "Pixel 7" --os-version 14 \
   --username "$LT_USERNAME" --access-key "$LT_ACCESS_KEY" --on-failure fail-fast
 ```

@@ -27,12 +27,12 @@ These patterns apply to every CI system; the recipes below differ only in how th
   kane-cli plugin install remote-execution
 
   # a web suite on 4 grid runners
-  kane-cli testrun run tests/web/ --remote --env prod --parallel 4 \
+  kane-cli testrun run tests/web/ --remote --parallel 4 \
     --username "$LT_USERNAME" --access-key "$LT_ACCESS_KEY" \
     --on-failure fail-fast
 
   # a mobile suite, from a Linux runner
-  kane-cli testrun run tests/app/ --remote --env prod \
+  kane-cli testrun run tests/app/ --remote \
     --device-name "Pixel 7" --os-version 14 \
     --username "$LT_USERNAME" --access-key "$LT_ACCESS_KEY" \
     --on-failure fail-fast

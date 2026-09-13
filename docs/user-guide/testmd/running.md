@@ -320,7 +320,6 @@ kane-cli testmd sync ./tests/checkout_test.md
 
 | Flag | Description |
 |---|---|
-| `--env <name>` | Environment (`prod` or `stage`) |
 | `--username <user>` | Basic-auth username (skips OAuth) |
 | `--access-key <key>` | Basic-auth access key |
 
