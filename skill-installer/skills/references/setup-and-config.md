@@ -74,6 +74,12 @@ Variables parameterize objectives with reusable values and secrets. Use `{{key}}
 3. `--variables-file <path>`
 4. `--variables '{...}'` (inline JSON)
 
+**Values (0.8.12+):** a string is a value when non-empty; a number is accepted and loaded as its string; a boolean, object or array is not a value. An empty `value` is a declared-but-unfilled key.
+
+**Before a run (0.8.12+):** every `{{name}}` an authored step references must have a value — `run`, `testmd run` and `testrun run` refuse before launching anything otherwise (exit `2`; with `--agent`, one `error` event with `code: "unresolved_variables"` — SKILL.md §3). No bypass flag.
+
+**`assurance.json`:** `kane-cli design tests` writes empty stubs (`{"name":{"value":"","secret":false,"description":"…"}}`) into `{cwd}/.testmuai/variables/assurance.json` for every variable it declares, never a value, and never over a key that already exists in any pool file. Fill those before authoring the designed tests.
+
 **Always parameterize:** credentials, API keys, tokens, environment-specific URLs.
 **OK to hardcode:** one-off URLs, static UI text, navigation paths.
 

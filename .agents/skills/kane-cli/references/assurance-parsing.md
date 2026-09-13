@@ -30,7 +30,7 @@ A stream that ends **without** `done` means the process crashed — outcome unkn
 | `corpus` | extract: `sources[]` this run covers + already-extracted `skipped[]` | fold into one line |
 | `source_start` / `source_skipped` | `source_id`, `index`/`total`, `resumed` / `reason` | progress |
 | `plan` | the `--plan` transcription payload | present as the preview |
-| `assumed_default` | a question auto-answered with its recommended default: `id`, `selected_index`, `risk` | mention that defaults were assumed (they are flagged in the commit) |
+| `assumed_default` | a question auto-answered with its recommended default: `id`, `selected_index`, `risk` — 0.8.8+ agent mode never emits it (every question pauses instead); seen only on older CLIs' streams | mention that defaults were assumed (they are flagged in the commit) |
 | `agent_activity` | `kind` (`tool`/`decision`/`progress`/`thinking_done`) + display `label` | noise — fold; **never script against labels** |
 | `agent_message` *(0.7.2+)* | the agent's narrative `text` — the lead-in before a question batch, the closing statement | the story around the structured events; quote or fold, never script against it |
 | `warning` *(0.7.2+)* | actionable non-fatal condition: `code` (`ZERO_USE_CASES`, `SAVE_FAILED`) + `message` | surface it — non-fatal but user-relevant |
@@ -41,6 +41,8 @@ A stream that ends **without** `done` means the process crashed — outcome unkn
 | `held` / `update_held` *(0.7.1+)* | items held for the user's review instead of committed: `source_id` + `count` + `reason` / `count` + `targets[]` | surface the count and that review happens at resume/`context review` |
 | `commit` | what landed: counts + `minted[]` (`cid` + `logical_id`); extract adds `proposal_id` | translate ("5 use-cases extracted"); `logical_id` slugs are how you reference nodes later |
 | `receipt` | per-phase commit receipt (design; extract also emits one at its commits): `commit_n`, `phase`, `committed[]`, `reused`, `rejected[]`, `warnings[]`, `next`, and (design only) `parity` | surface non-empty `rejected[]` and `warnings[]` in plain language; meaningful reuse is worth one line |
+| `variables_declared` *(0.8.12+)* | design: stubs written by a phase commit — `file` (pool file) + `variables[]` (`name`, `description`, `secret`); only names that existed in no variable file | surface as a to-do ("N variables need values — in <file>") |
+| `variables_summary` *(0.8.12+)* | design, end of run: every declared name still needing a value — same shape | repeat the to-do in the closing summary; fills gate authoring |
 | `message_sent` | `--message` delivered: `sid`, `chars` | confirmation only |
 | `panel_resolved` *(0.7.1+)* | a `--answer` flag landed on a pending question: `id`, `by`, `via` | confirmation only |
 | `ask_deferred` *(0.7.1+)* | `--with-source` set the pending batch aside: `source_id`, `cid`, `questions` (count) | tell the user the questions were deferred while the agent reads the new source |

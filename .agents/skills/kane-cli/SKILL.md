@@ -62,7 +62,7 @@ Progress events have `step`/`status`/`remark` fields and **no `type` field**.
 |------|-------------|-----|
 | **Failures** | Any step with `status: "failed"` | `Step <n> failed: <remark>` |
 | **Flow changes** | `bifurcation`, `child_agent_start`, `child_agent_end` | Plain-language one-liner (e.g. "The agent split the objective into 2 sub-tasks") |
-| **Errors** | `error` typed events | `Error: <message>` |
+| **Errors** | `error` typed events | `Error: <message>` — except `code: "unresolved_variables"`, which is a pre-run refusal, not a failure: see §3 **Unresolved variables** |
 | **Overall progress** | All passing steps | One summary line: `<total> steps completed — <2–4 key actions from remarks>` |
 
 #### What to skip
@@ -191,6 +191,8 @@ Other flags (`--global-context`, `--local-context`, `--cdp-endpoint`, `--allow-m
 
 **Exit codes:** `0` passed · `1` failed · `2` auth/infra error · `3` timeout/cancelled.
 
+**Unresolved variables (0.8.12+):** every `{{name}}` in the objective must have a value before the run starts. If one does not, the run **refuses before anything launches** — exit `2`, and with `--agent` a single `{"type":"error","code":"unresolved_variables", ...}` event carrying `variables[]` (`name`, `reason`: `value_missing` = the key exists in `file` with no value · `not_declared` = the key is in no file, add it to `suggested_file`; `used_by[]`). **This is terminal — do not retry the same command.** Either ask the user for the values, or write them yourself (`--variables '{"name":{"value":"…"}}'`, or `{"name":{"value":""}}` stubs into `suggested_file` for the user to fill), then run again. There is no bypass flag. Never checked: `{{smart.*}}`/`{{environment.*}}`/`{{secrets.*}}`/`{{totp.*}}`, and names an earlier step stores (`store … as 'x'`). Numbers in a variable file count as values (loaded as strings); booleans do not.
+
 ### Examples
 
 ```bash
@@ -277,7 +279,7 @@ Action → extraction → assertion in one objective:
 Stdout is NDJSON, one event per line. There are two shapes:
 
 - **Progress events** (most events) have `step` (1-based), `status` (`passed`/`failed`), `remark` — and **no `type` field**.
-- **Typed events** have a `type` field: `project_folder_auto_defaulted` (run-startup gate, fires before any progress when no project/folder is configured), `bifurcation`, `child_agent_start`, `child_agent_end`, `ask_user`, `error`, and finally `run_end`.
+- **Typed events** have a `type` field: `project_folder_auto_defaulted` (run-startup gate, fires before any progress when no project/folder is configured), `bifurcation`, `child_agent_start`, `child_agent_end`, `ask_user`, `error` (an `error` with `code: "unresolved_variables"` is a pre-run refusal and the **only** line — no `run_end` follows; handle per §3), and finally `run_end`.
 
 Parsing strategy:
 

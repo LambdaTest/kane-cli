@@ -33,12 +33,34 @@ These are **untyped** — they have no `type` field. Do **not** key on `event.ty
 | `child_agent_start` | `child_id`, `objective`, `parent_step` | Child agent spawned |
 | `child_agent_end` | `child_id`, `success`, `steps_taken`, `summary` | Child agent finished |
 | `ask_user` | `question`, `step_index`, `options?` | Agent needs user input |
-| `error` | `message` | Error occurred |
+| `error` | `message`, `code?` | Error occurred. With `code: "unresolved_variables"` it is the pre-run refusal — the only event of the run, no `run_end` follows; schema below. |
 | `test_md_evidence_ingest` | `status: "ok"\|"failed"`, `evidence_id`, `stage?` (failure only) | `testmd run` only: a replay's evidence pack published to the dashboard. Informational. |
 | `test_md_bundle_sync` | `status: "ok"\|"failed"`, `commit_id`, `bytes?` (success) / `stage?` (failure) | `testmd run` / `testmd sync`: test bundle pushed to the cloud after an authored commit. Informational. |
 | `testrun_*` family | see `references/testrun.md` | Emitted only by `kane-cli testrun run`; terminal event is `testrun_done`, not `run_end`. |
 
 **Note:** There is no `run_start` event — the first line is either a `bifurcation` or a progress object.
+
+### `error` with `code: "unresolved_variables"` (0.8.12+)
+
+Emitted by `run`, `testmd run` and (after `testrun_plan`) `testrun run` when an authored step references a `{{name}}` that has no value. Nothing was dispatched; exit code `2`; stderr is silent.
+
+```json
+{"type":"error","code":"unresolved_variables","message":"2 variable(s) have no value — nothing was dispatched",
+ "suggested_file":".testmuai/variables/variables.json",
+ "variables":[
+   {"name":"checkout_url","reason":"not_declared","used_by":[{"file":"objective","step":1}]},
+   {"name":"login_password","reason":"value_missing","file":".testmuai/variables/assurance.json","used_by":[{"file":"login_test.md","step":2}]}
+ ]}
+```
+
+| Field | Meaning |
+|---|---|
+| `variables[].reason` | `value_missing` — the key exists in `variables[].file` with an empty value · `not_declared` — the key is in no variable file |
+| `variables[].file` | the pool file that holds the empty key (`value_missing` only); `--variables` when it came inline |
+| `variables[].used_by[]` | `{file, step}` — `file` is `objective` for `kane-cli run`, else the test file (flattened step index) |
+| `suggested_file` | where to add a `not_declared` key: `.testmuai/variables/assurance.json` inside an assurance store, `variables.json` otherwise |
+
+Terminal: do not re-run the same command. Supply values (`--variables`, or fill the file) and run again.
 
 **Note:** `ask_user` is auto-disabled when stdin is not a TTY. Since agents typically run kane-cli as a subprocess, ask_user events will not be emitted. Write objectives that don't require interactive input.
 

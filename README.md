@@ -531,6 +531,7 @@ curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh
 
 ## Documentation, support, contributing
 
+- **Quickstart:** [Kane CLI Quickstart Guide](https://www.testmuai.com/docs/kane-cli-quickstart)
 - **User guide** (humans using the CLI/TUI):
   - [Installation](docs/user-guide/installation.md) · [Getting started](docs/user-guide/getting-started.md) · [Authentication](docs/user-guide/authentication.md)
   - [Running tests](docs/user-guide/running-tests.md) · [Configuration](docs/user-guide/configuration.md) · [Variables & context](docs/user-guide/variables-and-context.md)
