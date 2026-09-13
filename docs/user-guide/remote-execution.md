@@ -24,7 +24,7 @@ kane-cli testrun run tests/ios/ --remote --device-name "iPhone 15" --os-version 
 | The `remote-execution` plugin | It owns the HyperExecute binary kane-cli dispatches with | `kane-cli plugin install remote-execution`, then `kane-cli plugin doctor remote-execution` |
 | A LambdaTest **username + access key** | HyperExecute authenticates with basic auth. An OAuth profile is exchanged for them automatically; otherwise pass `--username` / `--access-key` | `kane-cli whoami` |
 | A project directory that **contains the tests** | The current directory is zipped and shipped as the job payload | Run from the repo root (or any parent of the tests) |
-| Recordings and builds **not gitignored** | The payload respects `.gitignore`; an ignored `output-<stem>/` or `.apk` never reaches the grid | `--dry-run` reports `gitignored_inputs`; un-ignore with e.g. `!output-*/` |
+| Recordings **not gitignored** | The payload respects `.gitignore`; an ignored `output-<stem>/` never reaches the grid. Builds are not payload — see [The app under test](#the-app-under-test-on-the-grid) | `--dry-run` reports `gitignored_inputs`; un-ignore with e.g. `!output-*/` |
 
 The project and folder the run uploads to are the ones configured on your profile (`kane-cli config project` / `folder`); they are passed to the grid's login.
 
@@ -56,7 +56,7 @@ job 24fc58b2-… dispatched → https://hyperexecute.lambdatest.com/hyperexecute
 
 | Flag | On the grid |
 |---|---|
-| `--parallel <n>` | Becomes the job's concurrency: the members are auto-split across `n` grid runners, each running its share one member at a time |
+| `--parallel <n>` | Becomes the job's concurrency: the members are auto-split across `n` grid runners, each running its share one member at a time. Device suites parallelize the same way — every task has its own VM and device |
 | `--headless` | Not needed — every member runs headless on the grid |
 | `--on-failure`, `--name`, `--bug-detection`, `--author`, `--no-adaptive-heal` | Forwarded to the members on the grid |
 | `--username`, `--access-key` | Used for the grid login and the Test Manager upload |
@@ -92,19 +92,25 @@ Each row is a device **name** plus the **OS versions** it ships with. Address on
 | `--os-version <v>` | The OS version (`14`, `17.5`). Alone, it means *any* catalog device on that version. |
 | `device_name:` / `os_version:` in a `_test.md` | Per-test defaults, used when the flags are absent. See [Mobile target](./testmd/overview.md#mobile-target). |
 
-If you pass neither, kane-cli picks a catalog default for the platform and prints it on the device line — read it before relying on it. A local AVD name in a member is ignored on the grid (you get a `device_name_ignored` note), because a remote job's device is named by the catalog.
+If you pass neither, kane-cli picks a catalog default for the platform and prints it on the device line — read it before relying on it.
+
+The two platforms bind the device differently:
+
+- **Emulator**: the job allocates **one device for all its members**, so they must agree on one Android version (`mobile_os_version_split` otherwise, or force one with `--os-version`). A local AVD name in a member is ignored (you get a `device_name_ignored` note), because a remote job's device is named by the catalog.
+- **Simulator**: each task boots a simulator inside its own VM, so **each member binds its own `device_name:` / `os_version:`** (validated against the catalog); `--device-name` / `--os-version`, when passed, apply to every member. Members may ask for different iOS versions as long as their iOS majors map to one HyperExecute pool — the catalog decides (today 17 and 18 share one, 26 is another); otherwise `mobile_pool_split`.
 
 ## The app under test on the grid
 
-The grid machine has to *obtain* the app, which changes the rules slightly from a local run:
+The grid machine has to *obtain* the app. A build never rides the payload — it reaches the grid by id:
 
-| Target | `app:` in the test | What happens |
-|---|---|---|
-| `emulator` | A local `.apk` inside the project (path relative to the test file) | Shipped in the payload and installed on the emulator |
-| `emulator` | An uploaded `APP…` id | Downloaded by the grid |
-| `simulator` | An uploaded `APP…` id | Downloaded by the grid — **required**. A local `.zip` is refused up front (`mobile_app_not_cloud`) because the grid cannot fetch it |
+| `app:` in the test | What happens |
+|---|---|
+| A local build — `.apk` for `emulator`, `.zip` of the `.app` for `simulator` — anywhere on disk | **Uploaded from your machine at preflight**, once per distinct file (a per-machine cache skips a build your account already has), and handed to the grid as `--app <id>`. It may be gitignored or outside the project. `--dry-run` uploads nothing. |
+| An uploaded `APP…` id | Used as-is; the grid downloads it |
 
-`kane-cli apps list --target emulator|simulator` shows the uploaded builds your account can use; the **APP ID** column is what `app:` takes. There is no upload subcommand: running a test **locally once** with a local build (`kane-cli testmd run <path>` or `kane-cli run … --app ./MyApp.zip`) uploads the build to your account and prints the `APP…` id — set `app:` to that id afterwards. Uploads belong to an organisation: `apps list` for the current profile is the authority on which ids a run can use.
+Each member gets its own id, so a run may hold members that name different builds. A `.ipa` is refused up front — it is a device build, and the emulator/simulator upload does not take it. Every upload is reported (`app: <file> → APP… (uploaded)`, or the `remote_app` event for agents).
+
+`kane-cli apps list --target emulator|simulator` shows the uploaded builds your account can use; the **APP ID** column is what `app:` takes. There is no upload subcommand: any run with a local build — local or `--remote` — uploads it and prints the `APP…` id. Uploads belong to an organisation: `apps list` for the current profile is the authority on which ids a run can use.
 
 ## What one job can hold
 
@@ -114,12 +120,14 @@ One remote run is one HyperExecute job, which allocates **one kind of runtime**.
 |---|---|---|
 | `mobile_remote_mixed` | Web and device tests in one selection | Two runs: one for the device tests, one for the rest |
 | `mobile_remote_mixed_platform` | Emulator and simulator tests in one selection | Two runs, one per platform |
-| `mobile_os_version_split` | Device tests asking for different Android versions | One run per version, or `--os-version` to force one |
+| `mobile_os_version_split` | Emulator tests asking for different Android versions | One run per version, or `--os-version` to force one |
+| `mobile_pool_split` | Simulator tests whose iOS versions need different HyperExecute pools | One run per pool, or `--os-version` to force one |
 | `mobile_remote_unsupported` | A device target the grid cannot provide | Run it locally, or deselect it |
-| `mobile_app_not_cloud` | A simulator test references a local `.zip` | Upload the build and set `app:` to the `APP…` id |
-| `mobile_app_not_shippable` | An emulator test names an `.apk` outside the project | Move the build inside the project, or use an `APP…` id |
+| `mobile_app_missing` | A device test names a local build that is not on this machine | Fix the path, or use an `APP…` id |
+| `mobile_app_not_uploadable` | The build is not one the cloud takes (a `.ipa`, or the wrong extension for the platform) | `.apk` for emulator, `.zip` of the `.app` for simulator, or an `APP…` id |
+| `mobile_app_upload_failed` | Uploading the build from your machine failed | Fix the upload (network, auth), or use an `APP…` id |
 | `member_outside_payload` | A test lives outside the dispatched directory | Run from a directory that contains it |
-| `gitignored_inputs` | Required recordings or builds are gitignored | Un-ignore them (e.g. `!output-*/`) or commit them |
+| `gitignored_inputs` | Required recordings are gitignored | Un-ignore them (e.g. `!output-*/`) or commit them |
 | `on_grid` | Already running on a HyperExecute grid | `--remote` cannot re-dispatch from inside a job |
 
 Every reason arrives with the offending paths, both in the terminal and as a `remote_error` event for agents.
@@ -165,7 +173,8 @@ In agent / non-TTY mode a remote run adds typed events around the normal `testru
 |---|---|---|
 | `remote_start` | `backend`, `env` | Dispatch begins |
 | `remote_device` | `platform`, `slug`, `name`, `os_version`, `avd_id?`, `pool?` | The resolved grid device — mobile only; a web run has no device line |
-| `remote_device_hint` | `reason`, `detail` | `device_name_ignored` (a local AVD name was dropped) or `catalog_stale` |
+| `remote_device_hint` | `reason`, `detail` | `device_name_ignored` (emulator only — a local AVD name was dropped) or `catalog_stale` |
+| `remote_app` | `path`, `app_id`, `source` | One per distinct local build uploaded from your machine — mobile only. `source` is `uploaded`, `cache` (already uploaded by this machine) or `dry-run` (`app_id` empty, nothing sent) |
 | `remote_dispatched` | `job_id`, `job_url` | The HyperExecute job exists; the link opens the dashboard |
 | `remote_error` | `code`, `detail` | Remote preflight refused the selection (codes above); followed by `testrun_done` and exit `2` |
 | `remote_exec_sync`, `remote_coverage` | `status`, `reason`, `detail?` | Informational — assurance graph sync and coverage, skipped when the project has no `.context` store |

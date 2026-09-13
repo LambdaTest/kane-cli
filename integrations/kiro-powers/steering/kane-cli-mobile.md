@@ -71,7 +71,7 @@ A browser run navigates to a URL. A mobile run drives an **app**. Every `emulato
    - iOS (`simulator`): a `.zip`
 2. **An uploaded app id** from a previous upload: the literal `APP` followed by **6 or more digits** (e.g. `APP123456`).
 
-kane-cli installs that app on the device and runs the objective against it. `kane-cli apps list --target emulator|simulator --agent` lists the account's uploads (the `app_id` field is what `--app`/`app:` take). There is no upload subcommand: a **local** run with a local build uploads it and prints the `APP…` id. Uploads belong to an organisation; `apps list` for the active profile is the authority.
+kane-cli installs that app on the device and runs the objective against it. `kane-cli apps list --target emulator|simulator --agent` lists the account's uploads (the `app_id` field is what `--app`/`app:` take). There is no upload subcommand: any run with a local build — local or `--remote` — uploads it (once per build; a per-machine cache skips a build the account already has) and prints the `APP…` id. Uploads belong to an organisation; `apps list` for the active profile is the authority.
 
 **Not accepted:** a package / bundle id (e.g. `com.example.app`), a bare `.ipa`, or a `.app` bundle. There is **no default app**: a mobile run without a valid build or `APP…` id cannot start.
 
@@ -151,13 +151,12 @@ Rules that differ from a local run (a violation is a `remote_error` before dispa
 
 | Rule | Detail | Preflight code |
 |---|---|---|
-| **Device comes from the grid catalog** | `--device-name` must match a `devices list … --remote` row; `--os-version` alone = any device on that version; the file's `device_name:`/`os_version:` are the fallback; neither → a catalog default, reported in the `remote_device` event. A local AVD name is ignored (`remote_device_hint`, `device_name_ignored`). | — |
-| **One job = one platform on one OS version** | Split emulator vs simulator, web vs device, and different Android versions into separate runs (`--match`/`--tags`), or force one version with `--os-version`. | `mobile_remote_mixed_platform`, `mobile_remote_mixed`, `mobile_os_version_split` |
-| **Emulator app** | A local `.apk` **inside the project** (relative to the test file) ships in the payload; or an `APP…` id the grid downloads. | `mobile_app_not_shippable` |
-| **Simulator app** | **Must be an uploaded `APP…` id** — the grid cannot fetch a local `.zip`. Get it from `kane-cli apps list --target simulator --agent` (same env/org as the run), or run the test locally once to upload it. | `mobile_app_not_cloud` |
-| **Payload** | Members must live under the cwd being dispatched; recordings/builds must not be gitignored (`!output-*/`). | `member_outside_payload`, `gitignored_inputs` |
+| **Device comes from the grid catalog** | `--device-name` must match a `devices list … --remote` row; `--os-version` alone = any device on that version; the file's `device_name:`/`os_version:` are the fallback; neither → a catalog default, reported in the `remote_device` event. **Emulator**: one device for the whole job; a local AVD name in a file is ignored (`remote_device_hint`, `device_name_ignored`). **Simulator**: each member binds its own `device_name:`/`os_version:` inside its task's VM (validated against the catalog); the flags, when passed, apply to every member. | — |
+| **One job = one platform, one pool** | Split emulator vs simulator and web vs device into separate runs (`--match`/`--tags`). Emulator members must agree on one Android version, or force one with `--os-version`. Simulator members may differ in iOS version as long as their iOS majors map to one HyperExecute pool (the catalog decides; today 17 and 18 share one, 26 is another) — otherwise split, or `--os-version`. | `mobile_remote_mixed_platform`, `mobile_remote_mixed`, `mobile_os_version_split`, `mobile_pool_split` |
+| **App** | A local build anywhere on disk — `.apk` for an emulator, `.zip` of the `.app` for a simulator — is **uploaded from the laptop at preflight** (once per distinct file; per-machine cache) and handed to the grid as `--app <id>`; it never rides the payload, so it may be gitignored or outside the project. An `APP…` id is used as-is. Each member gets its own id, so members naming different builds may share a run. A `.ipa` is refused. `--dry-run` uploads nothing. | `mobile_app_missing`, `mobile_app_not_uploadable`, `mobile_app_upload_failed` |
+| **Payload** | Members must live under the cwd being dispatched; recordings must not be gitignored (`!output-*/`). Builds are not payload. | `member_outside_payload`, `gitignored_inputs` |
 
-Present after `testrun_done`/`remote_done`: the suite rollup, the device line (`remote_device` name + OS), and the job link (`remote_dispatched.job_url`). A member `broken` with zero steps means the grid-side run refused before launching — check the app id's environment and the scenario log at the job link.
+Present after `testrun_done`/`remote_done`: the suite rollup, the device line (`remote_device` name + OS; for simulators the pool and each member's own pair), each uploaded build (`remote_app` path → `app_id`), and the job link (`remote_dispatched.job_url`). A member `broken` with zero steps means the grid-side run refused before launching — check the app id's environment and the scenario log at the job link.
 
 ---
 

@@ -75,7 +75,7 @@ kane-cli testrun run tests/app/ --remote --device-name "Pixel 7" --os-version 14
 kane-cli testrun run tests/app/ --remote --device-name "Pixel 7" --os-version 14
 ```
 
-Three things differ from a local run: the device comes from the **grid catalog** (`devices list … --remote`), one job runs **one platform on one OS version**, and a **simulator** test must reference an uploaded `APP…` id rather than a local `.zip`. The details — prerequisites, the app rules, and what one job can hold — are in [Remote runs on the cloud grid](../remote-execution.md).
+Three things differ from a local run: the device comes from the **grid catalog** (`devices list … --remote`), one job runs **one platform** (emulator members on one Android version; simulator members on one HyperExecute pool), and a **local build** is uploaded from your machine before dispatch and handed to the grid as an `APP…` id. The details — prerequisites, the app rules, and what one job can hold — are in [Remote runs on the cloud grid](../remote-execution.md).
 
 ## Next steps
 
