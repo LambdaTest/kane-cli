@@ -78,6 +78,7 @@ What lands in the project store depends on the surface:
 | `kane-cli run` / TUI session | Only when the session is **named** (`--name`, `/name` in the TUI, or the save prompt at exit) |
 | `kane-cli testmd run` | Always |
 | `kane-cli testrun run` | Always (the pack is created directly in the store) |
+| `kane-cli testrun run --remote` | Always — the suite's pack is sealed on the grid and downloaded into the store when the job ends, alongside the members' `output-<stem>/` recordings ([Remote runs](./remote-execution.md)) |
 
 An interactive TUI session maps to one pack: it accumulates every run in the session and seals when you `/exit` or start over with `/new`.
 
@@ -121,7 +122,6 @@ Open the `viewer` URL in your browser. The server binds to `127.0.0.1` only and 
 |---|---|---|
 | `--port <n>` | Pin the local port | ephemeral |
 | `--viewer-url <base>` | Override the hosted viewer base URL | environment's viewer |
-| `--env <name>` | Environment (`prod` or `stage`) | active profile's env |
 
 `serve` accepts sealed `.evidence` files only — a live (unsealed) pack directory is rejected. Exit codes: `0` after a clean Ctrl-C shutdown, `2` for any bad input or a port that cannot be bound.
 
@@ -171,7 +171,6 @@ Targets are execution ids or pack paths, and **order matters** (earlier targets 
 | `--title <title>` | Title for the merged run | first eligible pack's |
 | `--no-finalize` | Keep the merged pack live instead of sealing it | seals by default |
 | `--json` | Machine-readable merge report | off |
-| `--env <name>` | Environment (`prod` or `stage`) | active env |
 
 `--rules` and `--on-collision` are mutually exclusive. The default policy requires inputs to be sealed and valid, skips duplicate run ids, and refuses to merge packs from different projects or organisations.
 

@@ -252,6 +252,8 @@ kane-cli testmd run ./tests/checkout_test.md \
 
 In a non-interactive run (stdin is not a TTY), there is no one to answer an interactive `ask_user` prompt, so kane-cli disables it: a step that would otherwise wait for input fails cleanly instead of blocking forever. Write test steps that do not depend on mid-run prompts when running in CI.
 
+If the runner cannot have Chrome at all, run the tests as a suite on the cloud grid instead: `kane-cli testrun run tests/ --remote` executes every `testmd run` on a HyperExecute macOS runner and returns the recordings and evidence pack. See [Remote runs on the cloud grid](../remote-execution.md).
+
 Capture exit code in a shell script:
 
 ```bash
@@ -320,7 +322,6 @@ kane-cli testmd sync ./tests/checkout_test.md
 
 | Flag | Description |
 |---|---|
-| `--env <name>` | Environment (`prod` or `stage`) |
 | `--username <user>` | Basic-auth username (skips OAuth) |
 | `--access-key <key>` | Basic-auth access key |
 

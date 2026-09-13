@@ -63,7 +63,17 @@ Variable offenders get the full receipt instead of a one-line code — every unr
 
 In agent mode (stdin not a TTY) the same information arrives as one `error` event with `code: "unresolved_variables"` right after `testrun_plan` — see [Running tests](./running-tests.md#unresolved-variables) for the shape.
 
-> **Mobile is not supported in a batch run.** A `_test.md` with a mobile [`target:`](./testmd/overview.md#mobile-target) (`emulator` / `simulator`) is rejected up front, before the suite runs. Run mobile tests one at a time with `kane-cli testmd run <path>`.
+## Mobile members
+
+A `_test.md` with a mobile [`target:`](./testmd/overview.md#mobile-target) (`emulator` / `simulator`) is a normal member *(0.8.7)*:
+
+- **Locally**, the suite drives the emulators and simulators on this machine, so the host must be macOS Apple Silicon with the [mobile setup](./mobile/overview.md) done. Pick the device with `--device-name` / `--os-version` as `kane-cli devices list --target emulator|simulator` prints it, or set `device_name:` / `os_version:` in the file.
+- **On the cloud grid** (`--remote`), the suite runs on a virtual device on a HyperExecute macOS host, so it works **from any machine** — Linux, Windows, or a Mac with no Xcode or Android Studio. Pick the device from `kane-cli devices list --target emulator|simulator --remote`. One grid job runs one platform (emulator members on one Android version, simulator members on one HyperExecute pool), and a member's local build is uploaded from your machine before dispatch and handed to the grid as an `APP…` id. Everything else is in [Remote runs](./remote-execution.md).
+
+```bash
+kane-cli testrun run tests/app/ --device-name "Pixel 7 API 35" --os-version 15            # local emulators
+kane-cli testrun run tests/app/ --remote --device-name "Pixel 7" --os-version 14           # the grid
+```
 
 ## Running
 
@@ -79,7 +89,9 @@ In agent mode (stdin not a TTY) the same information arrives as one `error` even
 | `--retry-count <n>` | Max replay restart attempts before a full re-author | `3` |
 | `--bug-detection <mode>` | `off` \| `stop` \| `continue` — see [Configuration](./configuration.md#bug-detection) | config value |
 | `--headless` | Run Chrome without a visible window | off |
-| `--env <name>` | Environment (`prod` or `stage`) | active env |
+| `--remote [backend]` | Dispatch the suite to the cloud grid instead of local Chrome / local devices (default backend: `hyper`). Needs `kane-cli plugin install remote-execution`. See [Remote runs](./remote-execution.md) | off |
+| `--device-name <name>` | Device for the suite's mobile members: as `kane-cli devices list` prints it locally, or a grid catalog device with `--remote` | member's `device_name:` |
+| `--os-version <version>` | OS version for the mobile members (`14`, `17.5`); alone = any device on that version | member's `os_version:` |
 | `--username <user>` / `--access-key <key>` | Basic auth (skips OAuth) | — |
 
 Each worker gets its **own isolated Chrome** with a fresh temporary profile, so parallel members never share cookies, logins, or tabs — and never fight over your real browser profile.
@@ -118,20 +130,34 @@ In a terminal, kane-cli offers to open the pack in the [evidence viewer](./evide
 | `2` | Usage error, invalid plan (preflight failures), or auth error. Nothing ran. |
 | `3` | Cancelled (Ctrl-C). |
 
+## Remote runs
+
+Add `--remote` and the same selection runs as one **HyperExecute** job: Chrome on a grid macOS runner for web suites, a grid emulator or simulator for mobile suites. Each member runs as its own headless `testmd run` on the grid, `--parallel N` spreads the members across N grid runners, and the job link, the recordings, and the evidence pack come back to your project. Requires a LambdaTest plan with HyperExecute (macOS runners) and the `remote-execution` plugin — nothing else locally, not even Chrome.
+
+```bash
+kane-cli plugin install remote-execution
+kane-cli testrun run --tags smoke --remote --dry-run          # resolve everything, dispatch nothing
+kane-cli testrun run --tags smoke --remote --parallel 4       # a web suite on 4 grid runners
+kane-cli testrun run tests/ios/ --remote --device-name "iPhone 15" --os-version 17.5
+```
+
+`--dry-run` runs the remote preflight too, so the selection is validated against the grid before any job exists. A web selection and a device selection cannot share one job — run them as two suites. This is different from `--ws-endpoint`, which attaches a remote browser to a run that still executes on your machine. The full guide — prerequisites, how a job runs, web suites, device catalog, app rules, what one job can hold, and the events — is [Remote runs on the cloud grid](./remote-execution.md).
+
 ## Using testrun in CI
 
 ```bash
 kane-cli testrun run --tags smoke --parallel 4 --headless --on-failure fail-fast
 ```
 
-The exit code gates the pipeline, and `.testmuai/evidence/*.evidence` is a natural CI artifact — a single file per suite run that anyone can drop into the viewer. Full recipes: [CI/CD](./cicd.md).
+The exit code gates the pipeline, and `.testmuai/evidence/*.evidence` is a natural CI artifact — a single file per suite run that anyone can drop into the viewer. With `--remote`, the runner needs no Chrome or mobile tooling at all. Full recipes: [CI/CD](./cicd.md).
 
 ## For agents: NDJSON events
 
-In agent / non-TTY mode, `testrun run` emits its own typed NDJSON events on stdout — `testrun_plan`, `testrun_start`, `testrun_member_start`, `testrun_member_end`, `testrun_investigations_wait`, `testrun_evidence_ingest`, `testrun_summary`, and finally the terminal `testrun_done`. Stop parsing at `testrun_done`. The full event schema ships with the [kane-cli agent skill](https://testmuai.com/kane-cli/agents.md).
+In agent / non-TTY mode, `testrun run` emits its own typed NDJSON events on stdout — `testrun_plan`, `testrun_start`, `testrun_member_start`, `testrun_member_end`, `testrun_investigations_wait`, `testrun_evidence_ingest`, `testrun_summary`, and finally the terminal `testrun_done`. Stop parsing at `testrun_done`. A `--remote` run wraps that stream in `remote_*` events (`remote_start`, `remote_device`, `remote_dispatched`, `remote_error`, `remote_done`) — see [Remote runs](./remote-execution.md#for-agents-ndjson-events). The full event schema ships with the [kane-cli agent skill](https://testmuai.com/kane-cli/agents.md).
 
 ## Next steps
 
+- [Remote runs on the cloud grid](./remote-execution.md) — `--remote`, mobile suites from any machine.
 - [Evidence packs](./evidence.md) — what's in the pack and how to view it.
 - [Writing test.md files](./testmd/overview.md) — the file format, including `tags:`.
 - [Running test.md files](./testmd/running.md) — single-test runs, replay, and flags.

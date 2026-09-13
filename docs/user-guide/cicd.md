@@ -21,7 +21,26 @@ These patterns apply to every CI system; the recipes below differ only in how th
 
   The suite becomes one execution with one exit code (`0` all passed, `1` any failure, `2` invalid plan, `3` cancelled) and one sealed [evidence pack](./evidence.md) — archive `.testmuai/evidence/*.evidence` as a CI artifact and anyone can drop it into the viewer. See [Batch runs with testrun](./testrun.md).
 
-The runner spawns Chrome itself, so the CI image must have Chrome available on `PATH`. If your runner image cannot install Chrome, point kane-cli at a remote browser with `--cdp-endpoint <url>` or `--ws-endpoint <url>` (for example, a TestmuAI `wss://` endpoint).
+- Run the suite on the cloud grid when the runner can't run it. `kane-cli testrun run … --remote` turns the suite into one HyperExecute job: the grid supplies Chrome on a macOS runner — or, for mobile `_test.md` members, a virtual Android emulator or iOS simulator — so the runner needs no Chrome, Xcode, or Android Studio, and `--parallel N` spreads the members across N grid runners. The recordings and the evidence pack come back to the checkout as if the suite had run locally.
+
+  ```bash
+  kane-cli plugin install remote-execution
+
+  # a web suite on 4 grid runners
+  kane-cli testrun run tests/web/ --remote --parallel 4 \
+    --username "$LT_USERNAME" --access-key "$LT_ACCESS_KEY" \
+    --on-failure fail-fast
+
+  # a mobile suite, from a Linux runner
+  kane-cli testrun run tests/app/ --remote \
+    --device-name "Pixel 7" --os-version 14 \
+    --username "$LT_USERNAME" --access-key "$LT_ACCESS_KEY" \
+    --on-failure fail-fast
+  ```
+
+  It needs a LambdaTest plan with HyperExecute macOS runners. Web and mobile members go in separate runs. Pick devices with `kane-cli devices list --target emulator|simulator --remote`; allow a timeout of about 10 minutes. See [Remote runs on the cloud grid](./remote-execution.md).
+
+The runner spawns Chrome itself, so the CI image must have Chrome available on `PATH`. If your runner image cannot install Chrome, you have two options: for a single `kane-cli run` or `testmd run`, point kane-cli at a remote browser with `--cdp-endpoint <url>` or `--ws-endpoint <url>` (for example, a TestmuAI `wss://` endpoint) — kane-cli still runs on the runner and drives that browser; for a whole suite, `kane-cli testrun run … --remote` moves the run itself to the grid (above).
 
 On slow or cold CI runners Chrome can be slow to come up over the DevTools Protocol. If you see intermittent "Chrome failed to launch" errors, raise `KANE_CLI_CDP_TIMEOUT_MS` (per-attempt readiness timeout, default `30000`) and/or `KANE_CLI_CDP_RETRIES` (launch retries after the first, default `2`). If Chrome lives at a non-standard path in the image, set `KANE_CLI_CHROME_PATH`. See [Chrome environment variables](./configuration.md#chrome-environment-variables).
 
@@ -143,7 +162,7 @@ kane-cli run "Open the pricing page and verify the Pro plan is listed" \
     --variables-file ./tests/variables.json
 ```
 
-If your CI image cannot install Chrome — for example, a minimal Node Alpine image — point kane-cli at a remote browser instead:
+If your CI image cannot install Chrome — for example, a minimal Node Alpine image — either run a whole suite on the grid with `kane-cli testrun run … --remote` (see [Remote runs](./remote-execution.md)), or point a single run at a remote browser:
 
 ```bash
 kane-cli run "Open the pricing page and verify the Pro plan is listed" \

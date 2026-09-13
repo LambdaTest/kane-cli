@@ -14,7 +14,7 @@ kane-cli ships native binaries for the following platforms. Installing the main 
 | Linux | arm64 (aarch64) |
 | Windows | x64 |
 
-**Mobile testing** (iOS Simulator and Android Emulator) is supported on macOS Apple Silicon (arm64) only for the initial release. See [Mobile testing](./mobile/overview.md) for the simulator and emulator prerequisites.
+**Mobile testing** (iOS Simulator and Android Emulator) runs locally on macOS Apple Silicon (arm64) only — see [Mobile testing](./mobile/overview.md) for the simulator and emulator prerequisites. On every other platform, mobile suites run on the cloud grid with [`testrun run --remote`](./remote-execution.md), which needs no local mobile tooling.
 
 ## Install with npm
 
@@ -84,7 +84,19 @@ rm -rf ~/.testmuai/kaneai
 
 Only do this if you want a clean reset — it logs you out of all profiles and deletes saved configuration, session history, and command history.
 
+## Plugins
+
+Some capabilities ship as plugins that kane-cli installs into a versioned local layout under `~/.testmuai/kaneai/plugins/`. The one you are most likely to need is `remote-execution`, which owns the HyperExecute binary behind [`kane-cli testrun run --remote`](./remote-execution.md):
+
+```bash
+kane-cli plugin install remote-execution      # install (add --version <v> to pin one)
+kane-cli plugin list                          # what is installed, with versions
+kane-cli plugin doctor remote-execution       # readiness: installed, binary present, logged in
+kane-cli plugin remove remote-execution
+```
+
 ## Next steps
 
 - [Getting started](./getting-started.md)
 - [Authentication](./authentication.md)
+- [Remote runs on the cloud grid](./remote-execution.md)

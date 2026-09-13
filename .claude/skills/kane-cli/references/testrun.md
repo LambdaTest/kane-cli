@@ -1,4 +1,4 @@
-<!-- kane-cli skill reference: testrun (batch execution of _test.md files) -->
+<!-- kane-cli skill reference: testrun (batch execution of _test.md files, locally or on the cloud grid with --remote; mobile members included) -->
 
 # Batch Runs with testrun
 
@@ -9,7 +9,8 @@
 - The user has **two or more saved `_test.md` tests** to run → `kane-cli testrun run`. Do NOT hand-roll a bash loop or spawn parallel `testmd run` processes — testrun does isolation, pooling, and a single rollup for you.
 - One test → `kane-cli testmd run` (`references/testmd.md`).
 - Multiple ad-hoc `run` objectives (not saved tests) → `references/parallel.md` still applies.
-- A **mobile** `_test.md` (Android emulator / iOS simulator) → testrun does **not** support mobile; a mobile member is rejected. Run it with `kane-cli testmd run <path>` instead. Read `references/mobile.md`.
+- A **mobile** `_test.md` (Android emulator / iOS simulator) is a normal member (0.8.7+): locally it needs a mac-arm64 host with the mobile setup and `--device-name`/`--os-version` (or the file's `device_name:`/`os_version:`); with `--remote` it runs on a grid emulator/simulator **from any machine**. Read `references/mobile.md` (§Remote) for the device catalog and app rules.
+- The user wants the suite on the **cloud grid** (no local Chrome, or a mobile suite from a non-Mac / a Mac without Xcode or Android Studio) → `kane-cli testrun run … --remote` (§Remote below).
 
 ## Command
 
@@ -30,7 +31,10 @@ kane-cli testrun run [paths...] [flags]     # NDJSON is automatic when stdout is
 | `--retry` / `--retry-count <n>` | Replay-failure restart with shrinking replay window / max attempts | off / `3` |
 | `--bug-detection <mode>` | `off`\|`stop`\|`continue`, passed through to authoring members | config (`off`) |
 | `--headless` | Headless Chrome — use in CI | off |
-| `--env <name>` / `--username` / `--access-key` | Environment / basic auth | active profile |
+| `--remote [backend]` | Dispatch the suite to the HyperExecute grid instead of local Chrome / local devices (default backend `hyper`); needs `kane-cli plugin install remote-execution` — §Remote | off |
+| `--device-name <name>` | Device for the mobile members: as `kane-cli devices list --target <kind>` prints it locally, or a grid catalog device (`devices list … --remote`) with `--remote`; validated before dispatch | members' `device_name:` |
+| `--os-version <version>` | OS version for the mobile members (`14`, `17.5`); alone = any device on that version | members' `os_version:` |
+| `--username` / `--access-key` | Basic auth | active profile |
 
 ## Preflight (why members get rejected)
 
@@ -42,6 +46,40 @@ All members must share one org + project. *(0.8.4+)* Members need **not** be aut
 | `project_mismatch` | Different project than the other tests | "Run it separately or per-project" |
 
 If **any** member fails preflight, the plan is invalid: nothing runs, exit `2`. Suggest `--dry-run` to preview the plan cheaply before a big run. *(0.8.12+)* Preflight also checks variables: a member whose authored steps reference a `{{name}}` with no value fails with `unresolved_variables` — `testrun run` has no `--variables` flag, so fill the pool file (`.testmuai/variables/*.json`) or the member's own `variables:` frontmatter.
+
+## Remote: the suite as one HyperExecute job (`--remote`)
+
+`kane-cli testrun run <selection> --remote` ships the cwd as the job payload, provisions a grid runtime on a **HyperExecute macOS runner** — Chrome for web members, a **virtual Android emulator or iOS simulator** for mobile members — runs every member there as its own headless `testmd run`, and brings the recordings (`output-<stem>/`) and the sealed evidence pack back into the project. It works **from any machine** with nothing local but Node and the plugin (no Chrome needed); the account needs a HyperExecute plan with macOS runners and the plugin (`kane-cli plugin install remote-execution`; check with `kane-cli plugin doctor remote-execution`). Auth is a LambdaTest username + access key — an OAuth profile is exchanged automatically. Not the same as `--ws-endpoint`, which attaches a remote browser to a run that still executes locally.
+
+```bash
+kane-cli testrun run --tags smoke --remote --dry-run                                        # web suite: validate, dispatch nothing
+kane-cli testrun run tests/app/ --remote --device-name "Pixel 7" --os-version 14            # Android suite on the grid
+kane-cli testrun run tests/ios/ --remote --device-name "iPhone 15" --os-version 17.5        # iOS suite on the grid
+```
+
+- **Always `--dry-run` first.** It runs the normal preflight plus the **remote preflight** and resolves the device against the grid catalog (`kane-cli devices list --target emulator|simulator --remote --agent`) without creating a job.
+- **`--parallel N`** becomes the job's concurrency for web and device suites alike (members auto-split across N grid tasks; a device task gets its own VM and device). **Web suites**: `--headless` is unnecessary (always headless on the grid); there is no `remote_device` event. Overhead is ~15 s of setup plus the tests' own time; a mobile job adds a minute or more for device boot.
+- **One job = one runtime.** A selection that mixes web and device members, emulator and simulator members, or emulator members on several Android versions is refused with a split suggestion (`--match`/`--tags`). Simulator members may differ in iOS version as long as they land on one HyperExecute pool (`mobile_pool_split` otherwise).
+- **Mobile app on the grid**: a member's local build (`.apk` for emulator, `.zip` for simulator, anywhere on disk) is uploaded from the laptop at preflight and handed to the grid as `--app <id>` (one `remote_app` event per distinct build); an `APP…` id is used as-is. Nothing has to be inside the project or un-gitignored; `--dry-run` uploads nothing. Details and the preflight codes: `references/mobile.md` §Remote.
+- `--author`, `--no-adaptive-heal`, `--bug-detection`, `--name`, `--on-failure` are forwarded to the grid. Use a long Bash timeout (up to 600000 ms).
+- The dispatch writes `.hyperexecute/`, `hyperexecute-cli.log`, and `.updatedhyperexecute.yaml` into the cwd — suggest gitignoring them; they are not inputs.
+
+Remote preflight refusals arrive as one `remote_error` per reason (then `testrun_done` failed, exit 2):
+
+| `code` | Meaning | Fix to suggest |
+|---|---|---|
+| `mobile_remote_mixed` | web + device members in one selection | two runs |
+| `mobile_remote_mixed_platform` | emulator + simulator members | one run per platform |
+| `mobile_os_version_split` | emulator members on different Android versions | one run per version, or `--os-version` |
+| `mobile_pool_split` | simulator members whose iOS versions need different HyperExecute pools | one run per pool, or `--os-version` |
+| `mobile_remote_unsupported` | a device target the grid can't provide | run locally or deselect |
+| `mobile_app_missing` | a member's local build is not on this machine | fix the path, or use an `APP…` id |
+| `mobile_app_not_uploadable` | the build is not one the cloud takes (`.ipa`, or the wrong extension for the platform) | `.apk` for emulator, `.zip` of the `.app` for simulator, or an `APP…` id |
+| `mobile_app_upload_failed` | the laptop-side upload failed | fix the upload (network/auth), or use an `APP…` id |
+| `member_outside_payload` | a member outside the dispatched cwd | run from a directory that contains it |
+| `gitignored_inputs` | recordings gitignored | un-ignore (`!output-*/`) or commit |
+| `on_grid` | already on a HyperExecute grid | drop `--remote` |
+| `invalid_plan` / `project_authority_conflict` | normal preflight failed / project mismatch with the configured one | fix the plan / `kane-cli config project` |
 
 ## NDJSON events (agent mode)
 
@@ -57,6 +95,21 @@ All typed; stdout; one JSON object per line. **Terminal event: `testrun_done` �
 | `testrun_evidence_ingest` | `status: "ok"\|"failed"`, `evidence_id`, `stage?` | Pack published to the dashboard. Absent when publish is skipped. |
 | `testrun_summary` | `totals: {tests, passed, failed, broken, skipped}`, `duration_s`, `upload`, `cancelled` | Build the rollup table from this. |
 | `testrun_done` | `execution_id`, `overall_status: "passed"\|"failed"\|"cancelled"` | Terminal. |
+
+With `--remote`, the stream is wrapped in typed `remote_*` events (all on stdout):
+
+| `type` | Payload | Notes |
+|---|---|---|
+| `remote_start` | `backend`, `env` | Dispatch begins |
+| `remote_device` | `platform`, `slug`, `name`, `os_version`, `avd_id?`, `pool?` | The resolved grid device (mobile). Present it as the device line. |
+| `remote_device_hint` | `reason: device_name_ignored\|catalog_stale`, `detail` | Informational; `device_name_ignored` is emulator-only |
+| `remote_app` | `path`, `app_id`, `source: uploaded\|cache\|dry-run` | One per distinct local build uploaded from the laptop (mobile); `app_id` is empty on a dry run |
+| `remote_dispatched` | `job_id`, `job_url` | The HyperExecute job exists — give the user `job_url` |
+| `remote_error` | `code`, `detail` | Remote preflight refused (table above); expect `testrun_done` failed + exit 2 |
+| `remote_import_tape`, `remote_exec_sync`, `remote_coverage` | `status`, `reason`, `detail?` | Informational; sync/coverage are `skipped` when the project has no `.context` store |
+| `remote_done` | `status`, `exit`, `job_id`, `sessions_path` | Follows `testrun_done`; `sessions_path` holds the members' grid session logs |
+
+`testrun_summary` additionally carries `remote: {backend, jobId, jobUrl, sessionsPath}`. A member `status: "broken"` with `execution: null` and `upload: "skipped"` means the grid-side kane-cli refused before launching — send the user to `job_url` for the scenario log and check the app id's environment.
 
 Parsing strategy:
 

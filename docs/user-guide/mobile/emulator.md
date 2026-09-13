@@ -1,6 +1,9 @@
 # Android Emulator setup (mac-arm64)
 
-Set up Google's Android Emulator once, and kane-cli can run mobile tests against it. This guide targets **macOS on Apple Silicon (arm64)**, the only supported host for this release. See [Mobile testing](./overview.md) for the full picture.
+Set up Google's Android Emulator once, and kane-cli can run mobile tests against it locally. This guide targets **macOS on Apple Silicon (arm64)**, the only host that can run the emulator locally. See [Mobile testing](./overview.md) for the full picture.
+
+> **Prefer not to set up a local device?** `kane-cli testrun run … --remote` runs the same mobile tests on a virtual device on a HyperExecute macOS host, from any machine and with none of the steps below. See [Remote runs on the cloud grid](../remote-execution.md).
+
 
 > The exact Android API levels and device profiles in the supported matrix are pinned by the product team. The values shown below (API 35, Pixel) are current, working examples. Confirm the officially supported set before you rely on a specific one.
 
@@ -46,7 +49,7 @@ Sign in and let kane-cli install the tooling it manages for the emulator:
 
 ```bash
 kane-cli login
-kane-cli doctor --install
+kane-cli doctor --target emulator --install
 ```
 
 You do not need to boot the emulator or run `adb` yourself. kane-cli discovers the AVD, boots it, installs your app, and runs the test.
@@ -56,11 +59,11 @@ You do not need to boot the emulator or run `adb` yourself. kane-cli discovers t
 Confirm kane-cli sees a ready Android toolchain and, optionally, the AVDs on your machine:
 
 ```bash
-kane-cli doctor              # required checks, each with a fix if it fails
-kane-cli doctor --targets    # also list the emulators kane-cli can run against
+kane-cli doctor --target emulator          # required checks, each with a fix if it fails
+kane-cli devices list --target emulator    # the emulators kane-cli can run against
 ```
 
-When the Android checks pass and your AVD is listed, your emulator setup is complete.
+When the Android checks pass and your AVD is listed, your emulator setup is complete. Address it on a run with `--device-name "<name>" --os-version <v>` as the list prints them.
 
 ## Common failures
 
@@ -74,3 +77,4 @@ When the Android checks pass and your AVD is listed, your emulator setup is comp
 
 - [iOS Simulator setup (mac-arm64)](./simulator.md)
 - [Mobile testing overview](./overview.md)
+- [Remote runs on the cloud grid](../remote-execution.md): run emulator suites from any machine

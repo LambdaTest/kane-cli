@@ -15,6 +15,7 @@ This page lists common problems you may hit while using kane-cli, what causes th
 - [CLI exits with code 2 and no output](#cli-exits-with-code-2-and-no-output)
 - [Update available notice](#update-available-notice)
 - [Debugging a failed run with its evidence pack](#debugging-a-failed-run-with-its-evidence-pack)
+- [A `--remote` run refused, failed, or came back empty](#a---remote-run-refused-failed-or-came-back-empty)
 - [testrun says "plan invalid" or skips members](#testrun-says-plan-invalid-or-skips-members)
 - [Reporting bugs](#reporting-bugs)
 
@@ -204,6 +205,16 @@ Every run seals an [evidence pack](./evidence.md) with everything needed to diag
 The full walkthrough is in [Evidence packs → Debugging a failed run from its pack](./evidence.md#debugging-a-failed-run-from-its-pack), and the pack's file layout is in [Inside the pack](./evidence.md#inside-the-pack). The pack is the only place run logs live — a `.evidence` file is a plain zip, so even without the viewer you can `unzip` it and read the logs directly. If a pack won't open in the viewer, run `kane-cli evidence validate <pack>` — a truncated or unsealed pack reports invalid; the session directory's `tui.log` still has the session narrative.
 
 One more debugging aid for batch runs: `testrun` members normally run silently — set `KANE_TESTRUN_MEMBER_DEBUG=1` to route their per-member output to stderr (prefixed `[member]`).
+
+## A `--remote` run refused, failed, or came back empty
+
+Three different situations, told apart by the exit code and what came back:
+
+- **Exit `2` and no job link** — the remote preflight refused the selection before anything was dispatched. The reason is printed with the offending paths: the plugin is missing (`kane-cli plugin install remote-execution`, then `kane-cli plugin doctor remote-execution`), the selection mixes web and device tests or two mobile platforms (run them as two suites), a device test names a build that is not on this machine or that the cloud cannot take (`mobile_app_missing`, `mobile_app_not_uploadable`), the build's upload from your machine failed (`mobile_app_upload_failed`), or required recordings are gitignored (`gitignored_inputs` — un-ignore with `!output-*/`). `--dry-run` reproduces the check without creating a job.
+- **Exit `1` with recordings and a pack** — the job ran and a member failed. Debug it like a local failure: `output-<stem>/Result.md` names the step and reason, and the pack has the screenshots and logs (next section).
+- **A member reported `broken` with no steps, nothing published** — the grid-side kane-cli refused before launching. Open the printed job link and read the scenario stage's log. For mobile members the usual cause is an `APP…` id that belongs to a different organisation than the account running the job; `kane-cli apps list --target <kind>` for the active profile is the authority. The members' session logs are also under `~/.testmuai/kaneai/sessions/remote/<job-id>/`.
+
+Full reference: [Remote runs on the cloud grid](./remote-execution.md).
 
 ## testrun says "plan invalid" or skips members
 

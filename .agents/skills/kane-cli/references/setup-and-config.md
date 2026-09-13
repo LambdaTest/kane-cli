@@ -6,7 +6,7 @@
 
 Before first use, verify installation and auth.
 
-> **Mobile setup (macOS Apple Silicon)** is separate: install Xcode 16+ (iOS) or Android Studio with one `arm64-v8a` AVD (Android), then `kane-cli login` and `kane-cli doctor --install` (installs kane-cli's managed test tooling); `kane-cli doctor` checks readiness. Read `references/mobile.md`.
+> **Local mobile setup (macOS Apple Silicon)** is separate: install Xcode 16+ (iOS) or Android Studio with one `arm64-v8a` AVD (Android), then `kane-cli login` and `kane-cli doctor --target emulator|simulator --install` (installs kane-cli's managed test tooling); `kane-cli doctor --target <kind>` checks readiness. Not needed for `testrun run --remote`, which runs mobile suites on the cloud grid from any machine (see §Remote execution plugin). Read `references/mobile.md`.
 
 ### Install
 
@@ -145,6 +145,20 @@ kane-cli feedback --test-id <id> --feedback-type <positive|negative> --details "
 ```
 
 Debugging env var: `KANE_TESTRUN_MEMBER_DEBUG=1` routes `testrun` members' otherwise-silent output to stderr (`[member]` prefix).
+
+## Remote execution plugin (`testrun run --remote`)
+
+`--remote` dispatches a `testrun` suite to LambdaTest HyperExecute — a grid browser for web members, a grid Android emulator / iOS simulator (on a macOS host) for mobile members, so mobile suites run **from any machine**. One-time setup, then readiness:
+
+```bash
+kane-cli plugin install remote-execution      # installs the plugin + the HyperExecute binary it owns
+kane-cli plugin doctor remote-execution       # NDJSON checks: installed, binary-present, logged-in
+kane-cli plugin list                          # {"type":"plugin_list","plugins":[{"name":"remote-execution",...}]}
+kane-cli devices list --target emulator --remote --agent    # grid device catalog (name + os_versions); --os-version <v> filters
+kane-cli apps list --target simulator --agent               # the account's uploaded builds (app_id is what app:/--app take)
+```
+
+Requirements: a LambdaTest plan with HyperExecute (macOS runners for mobile members); a LambdaTest username + access key (an OAuth profile is exchanged automatically; or `--username`/`--access-key`); any `APP…` id must belong to the same organisation. Runs are dispatched from the **cwd** (it becomes the payload; `.gitignore` is respected). Full flags, events, and refusal codes: `references/testrun.md` §Remote; mobile rules: `references/mobile.md` §Remote.
 
 ## Chrome management
 

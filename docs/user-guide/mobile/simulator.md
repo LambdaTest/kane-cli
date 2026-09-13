@@ -1,6 +1,9 @@
 # iOS Simulator setup (mac-arm64)
 
-Set up Apple's iOS Simulator once, and kane-cli can run mobile tests against it. This guide targets **macOS on Apple Silicon (arm64)**, the only supported host for this release. See [Mobile testing](./overview.md) for the full picture.
+Set up Apple's iOS Simulator once, and kane-cli can run mobile tests against it locally. This guide targets **macOS on Apple Silicon (arm64)**, the only host that can run the simulator locally. See [Mobile testing](./overview.md) for the full picture.
+
+> **Prefer not to set up a local device?** `kane-cli testrun run … --remote` runs the same mobile tests on a virtual device on a HyperExecute macOS host, from any machine and with none of the steps below. See [Remote runs on the cloud grid](../remote-execution.md).
+
 
 > The exact iOS runtime versions and simulator device models in the supported matrix are pinned by the product team. The versions shown below are current, working examples. Confirm the officially supported set before you rely on a specific one.
 
@@ -34,7 +37,7 @@ Sign in and let kane-cli install the tooling it manages for the simulator:
 
 ```bash
 kane-cli login
-kane-cli doctor --install
+kane-cli doctor --target simulator --install
 ```
 
 You do not need to boot a simulator yourself. kane-cli discovers the simulator, boots it, installs your app, and runs the test.
@@ -44,11 +47,11 @@ You do not need to boot a simulator yourself. kane-cli discovers the simulator, 
 Confirm kane-cli sees a ready iOS toolchain and, optionally, the simulators on your machine:
 
 ```bash
-kane-cli doctor              # required checks, each with a fix if it fails
-kane-cli doctor --targets    # also list the simulators kane-cli can run against
+kane-cli doctor --target simulator          # required checks, each with a fix if it fails
+kane-cli devices list --target simulator    # the simulators kane-cli can run against
 ```
 
-When the iOS checks pass, your simulator setup is complete.
+When the iOS checks pass, your simulator setup is complete. Address a simulator on a run with `--device-name "<name>" --os-version <v>` as the list prints them.
 
 ## Common failures
 
@@ -63,3 +66,4 @@ When the iOS checks pass, your simulator setup is complete.
 
 - [Android Emulator setup (mac-arm64)](./emulator.md)
 - [Mobile testing overview](./overview.md)
+- [Remote runs on the cloud grid](../remote-execution.md): run simulator suites from any machine

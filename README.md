@@ -86,15 +86,14 @@ kane-cli launches your locally installed Google Chrome (stable channel) via the 
 
 > Full install reference (platforms, updates, uninstall): [docs/user-guide/installation.md](docs/user-guide/installation.md). Chrome environment variables: [docs/user-guide/configuration.md](docs/user-guide/configuration.md#chrome-environment-variables).
 
-### Mobile (macOS Apple Silicon only)
+### Mobile (local on macOS Apple Silicon, or on the cloud grid from any machine)
 
-kane-cli can also run tests against a local iOS Simulator or Android Emulator. This is available on **macOS Apple Silicon (arm64)** only, and it is off by default, so your web runs are unaffected.
+kane-cli can also run tests against an iOS Simulator or Android Emulator. It is off by default, so your web runs are unaffected.
 
-- Install the platform tooling you already use: **Xcode** (for iOS), or **Android Studio** with one `arm64-v8a` AVD (for Android).
-- Sign in and install kane-cli's managed test tooling: `kane-cli login && kane-cli doctor --install`.
-- Run against a target: `kane-cli run "<objective>" --target simulator --app ./MyApp.zip`.
+- **Locally** — macOS Apple Silicon (arm64) only. Install the platform tooling you already use: **Xcode** (for iOS), or **Android Studio** with one `arm64-v8a` AVD (for Android); sign in and install kane-cli's managed test tooling: `kane-cli login && kane-cli doctor --target simulator --install`; then `kane-cli run "<objective>" --target simulator --app ./MyApp.zip`.
+- **On the cloud grid** — from Linux, Windows, or any Mac, with no mobile tooling: `kane-cli testrun run tests/app/ --remote --device-name "Pixel 7" --os-version 14` runs a saved mobile suite on a HyperExecute emulator or simulator (needs a LambdaTest plan with HyperExecute macOS runners and `kane-cli plugin install remote-execution`).
 
-> Full setup and prerequisites: [Mobile testing](docs/user-guide/mobile/overview.md).
+> Full setup and prerequisites: [Mobile testing](docs/user-guide/mobile/overview.md) · [Remote runs on the cloud grid](docs/user-guide/remote-execution.md).
 
 ## First run (under 60 seconds)
 
@@ -222,10 +221,12 @@ This installs the skill for Claude Code, Codex CLI, and Gemini CLI in one comman
 kane-cli --tui                         # Open the interactive TUI.
 kane-cli run "<objective>" [flags]     # Run an objective on the browser (default) or a mobile device.
 
-# Mobile testing (macOS Apple Silicon; web stays the default target)
-kane-cli doctor                        # Check the mobile tooling this machine needs, with a fix per row.
-kane-cli doctor --install              # Download or repair kane-cli's managed mobile test tooling.
-kane-cli run "<objective>" --target simulator --app <path|APPid>   # Run against a simulator/emulator.
+# Mobile testing (web stays the default target)
+kane-cli doctor --target <emulator|simulator>            # Check the local mobile tooling, with a fix per row (macOS Apple Silicon).
+kane-cli doctor --target <emulator|simulator> --install  # Download or repair kane-cli's managed mobile test tooling.
+kane-cli devices list --target <emulator|simulator>      # Devices on this machine; add --remote for the cloud grid catalog.
+kane-cli apps list --target <emulator|simulator>         # Uploaded builds (the APP ID column is what --app takes).
+kane-cli run "<objective>" --target simulator --app <path|APPid>   # Run against a local simulator/emulator.
 
 # test.md files (replayable, committable tests)
 kane-cli testmd run <path>             # Run a _test.md file (caches steps; replays from cache after).
@@ -237,6 +238,9 @@ kane-cli testmd sync <path>            # Push the test bundle (test + imports + 
 
 # Batch runs (many _test.md files, one execution, one evidence pack)
 kane-cli testrun run [paths...]        # Select by paths, --match regex, or --tags; --parallel N; --dry-run to preview.
+kane-cli testrun run [paths...] --remote --device-name <name> --os-version <v>
+                                       # Same suite as one HyperExecute job: grid browsers, or grid emulators/simulators from any machine.
+kane-cli plugin install remote-execution                 # One-time setup for --remote.
 
 # Evidence packs
 kane-cli evidence validate <target>    # Validate a pack (execution id or path). Exit 0 valid / 1 invalid / 2 not found.
@@ -272,8 +276,9 @@ kane-cli config set-url <url>          # Default start URL for runs (used when -
 kane-cli config set-mode <action|testing>
                                        # Agent behaviour on auth walls / blocked pages.
 kane-cli config set-target <desktop|emulator|simulator>
-                                       # Default run target (emulator/simulator need macOS Apple Silicon).
-kane-cli config set-device <id>        # Default mobile device (name, serial, or udid).
+                                       # Default run target (local emulator/simulator need macOS Apple Silicon).
+kane-cli config set-device-name <name> # Default mobile device, as `kane-cli devices list` prints it.
+kane-cli config set-os-version <v>     # Its OS version (e.g. 15, 17.5).
 kane-cli config set-app <path|APPid>   # Default app under test for mobile runs.
 kane-cli config set-bug-detection <off|stop|continue>
                                        # Flag suspected product bugs while authoring (default off).
@@ -300,13 +305,13 @@ TUI slash commands (`/run`, `/mobile`, `/desktop`, `/doctor`, `/login`, `/logout
 | `--url <url>`               | config `default_url`                  | Start URL for the run. Overrides the configured default; bare domains get `https://`. |
 | `--allow-missing-url`       | off                                   | Non-TTY only: proceed from the browser's current page instead of failing when no start URL resolves. |
 | `--mode <name>`             | config value, otherwise `testing`     | `action` (strict) or `testing` (lenient) on auth walls / blocked pages. |
-| `--target <name>`           | saved session target, else `desktop`  | Where to run: `desktop` (browser), `emulator` (Android), or `simulator` (iOS). Emulator/simulator require macOS Apple Silicon. |
-| `--device <id>`             | none                                  | Which mobile device to use (name, serial, `ip:port`, or udid). Applies when the target is mobile. |
+| `--target <name>`           | saved session target, else `desktop`  | Where to run: `desktop` (browser), `emulator` (Android), or `simulator` (iOS). Local emulator/simulator require macOS Apple Silicon; see `testrun run --remote` for the grid. |
+| `--device-name <name>`      | none                                  | Which mobile device to use, as `kane-cli devices list --target <kind>` prints it. Needs `--os-version`. |
+| `--os-version <version>`    | none                                  | The device's OS version (`15`, `17.5`); alone = any device on that version. |
 | `--app <path\|APPid>`       | none                                  | App under test for a mobile run: a build (`.apk` for emulator, `.zip` for simulator) or an uploaded `APP…` id. |
 | `--bug-detection <mode>`    | config value, otherwise `off`         | Detect product bugs while authoring: `off`/`stop`/`continue` (`stop` halts on a confirmed bug; `continue` records it and keeps going). |
-| `--env <name>`              | active profile's env                  | Environment (e.g. `prod`).                                              |
 | `--cdp-endpoint <url>`      | none                                  | Connect to an existing Chrome via the Chrome DevTools Protocol.         |
-| `--ws-endpoint <url>`       | none                                  | Connect to a Playwright WebSocket endpoint (e.g. TestmuAI `wss://`).    |
+| `--ws-endpoint <url>`       | none                                  | Connect to a Playwright WebSocket endpoint (e.g. TestmuAI `wss://`) — a remote browser for a run that still executes here. To move a whole suite to the grid, use `testrun run --remote`. |
 | `--variables '<json>'`      | none                                  | Inline variables for `{{key}}` substitution in objectives.              |
 | `--variables-file <path>`   | none                                  | Load variables from a JSON file.                                        |
 | `--session-context <json>`  | none                                  | Prior runs context JSON.                                                |

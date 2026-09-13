@@ -177,7 +177,7 @@ The customer-facing flags accepted by `kane-cli run`:
 | `--url <url>` | Start URL for the run. Overrides the configured `default_url`; bare domains are normalized to `https://`. See [Default start URL](./configuration.md#default-start-url). | Config `default_url` |
 | `--allow-missing-url` | Non-TTY only: proceed from the browser's current page instead of failing when no start URL resolves (a provided `--url` is still used). | Off |
 | `--cdp-endpoint <url>` | Connect to an existing Chrome via CDP. | None |
-| `--ws-endpoint <url>` | Connect to a Playwright WebSocket endpoint (e.g. TestmuAI `wss://`). | None |
+| `--ws-endpoint <url>` | Connect to a Playwright WebSocket endpoint (e.g. TestmuAI `wss://`). The run still executes on this machine and drives that browser; to run a whole suite on the grid instead, see [`testrun run --remote`](./remote-execution.md). | None |
 | `--global-context <file>` | Override the global context Markdown file. | `~/.testmuai/kaneai/global-memory.md` |
 | `--local-context <file>` | Override the local context Markdown file. | `<cwd>/.testmuai/context.md` |
 | `--variables <json>` | Inline variables JSON. | None |
@@ -185,7 +185,6 @@ The customer-facing flags accepted by `kane-cli run`:
 | `--session-context <json>` | Prior runs context JSON. | None |
 | `--username <user>` | Basic auth username (skip OAuth). | None |
 | `--access-key <key>` | Basic auth access key (skip OAuth). | None |
-| `--env <name>` | Environment (`prod`). | Active profile's env |
 | `--mode <name>` | Run mode: `action` (strict) or `testing` (lenient). | Config value, otherwise `testing` |
 | `--bug-detection <mode>` | Detect product bugs while authoring: `off`, `stop` (halt the run on a confirmed bug), or `continue` (record it and keep going). Overrides `config set-bug-detection`. See [Configuration](./configuration.md#bug-detection). | Config value, otherwise `off` |
 | `--agent` | Plain NDJSON output, no colors or UI. | Off |
@@ -208,7 +207,7 @@ For variables and context file behavior, see [./variables-and-context.md](./vari
 
 ### Mobile runs
 
-By default a run targets the **desktop** browser (Chrome), so every example above is unchanged. On macOS Apple Silicon you can instead point a run at a virtual mobile device: an `emulator` (a virtual Android device) or a `simulator` (a virtual iOS device). Every mobile run needs an app under test.
+By default a run targets the **desktop** browser (Chrome), so every example above is unchanged. On macOS Apple Silicon you can instead point a run at a virtual mobile device on this machine: an `emulator` (a virtual Android device) or a `simulator` (a virtual iOS device). Every mobile run needs an app under test. (From any other machine, run a saved mobile suite on the cloud grid with [`testrun run --remote`](./remote-execution.md).)
 
 ```bash
 # desktop (default): nothing changes for web runs
@@ -224,12 +223,12 @@ kane-cli run "Sign in and open the account tab" --target simulator --app ./build
 The mobile run flags:
 
 - `--target desktop|emulator|simulator`: which target to run against. Defaults to the saved session target, otherwise `desktop`.
-- `--device <id>`: pick a device by name, serial, `ip:port`, or udid. In the TUI/TTY, omitting it opens a one-time picker and the choice is saved; in non-interactive runs a device must already be set (via `--device` or `kane-cli config set-device`) or the run exits with the fix spelled out.
-- `--app <path|APPid>`: the app under test, required for every mobile run. Pass a build (emulator: `.apk`, simulator: `.zip`) or an uploaded app id (`APP` followed by six or more digits). On the `desktop` target, `--device` and `--app` are ignored.
+- `--device-name <name>` + `--os-version <version>`: pick a device as `kane-cli devices list --target emulator|simulator` prints it (a name needs a version; a version alone matches any device on it). In the TUI/TTY, omitting them opens a one-time picker and the choice is saved; in non-interactive runs a device must already be set (via the flags or `kane-cli config set-device-name` / `set-os-version`) or the run exits with the fix spelled out.
+- `--app <path|APPid>`: the app under test, required for every mobile run. Pass a build (emulator: `.apk`, simulator: `.zip`) or an uploaded app id (`APP` followed by six or more digits; `kane-cli apps list --target <kind>` lists yours). On the `desktop` target, the device flags and `--app` are ignored.
 
 In the interactive TUI, a first run offers a Desktop / Emulator / Simulator chooser, and you can switch targets at any time with `/mobile` and `/desktop`. Run `/doctor` to check mobile tooling and devices.
 
-For setup (Xcode or Android Studio, `kane-cli login`, and `kane-cli doctor --install`) and the app formats each target accepts, see [Mobile testing](./mobile/overview.md).
+For setup (Xcode or Android Studio, `kane-cli login`, and `kane-cli doctor --target emulator|simulator --install`) and the app formats each target accepts, see [Mobile testing](./mobile/overview.md).
 
 ### Output streams
 

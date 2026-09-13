@@ -32,7 +32,7 @@ There is **no interactive session**. Each invocation runs exactly one generation
 | `--memory` | Use the memory layer — reuse relevant existing cases, reduce duplicates |
 | `--files <paths>` | Comma-separated local files to attach as context (new / refine only — see "Attaching files") |
 | `--project <id>` / `--folder <id>` | Test Manager project / folder |
-| `--env prod\|stage` · `--username` / `--access-key` | Environment / auth (same as `run`) |
+| `--username` / `--access-key` | Auth (same as `run`) |
 
 If neither `--project`/`--folder` nor a saved project/folder is set when generation starts, kane-cli auto-resolves one headlessly and emits a `project_folder_auto_defaulted` event before `generate_start`. Translate it to a one-line note for the user — full handling lives in `references/test-manager.md`.
 
