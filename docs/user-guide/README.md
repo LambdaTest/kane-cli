@@ -41,7 +41,7 @@ Run tests against mobile virtual devices — locally on **macOS Apple Silicon (a
 - [Designing tests](./assurance/design.md) — acceptance criteria, scenarios, and one runnable test per scenario.
 - [Coverage](./assurance/coverage.md) — what execution proved vs what the design still owes.
 - [Maintaining the suite](./assurance/maintain.md) — reconcile the suite when a requirement document changes.
-- [Sharing the context graph with your team](./assurance/sharing.md) — one shared location (GitHub, S3-compatible, or a folder); push, pull, clone, and decisions when two people change the same thing.
+- [Sharing the context graph with your team](./assurance/sharing.md) — one shared location (GitHub, S3-compatible, or a folder); publishing, taking your teammates' records, cloning, and decisions when two people change the same thing.
 - [Automation](./assurance/automation.md) — the headless contract: modes, NDJSON streams, exit codes, CI shapes.
 
 ## Checks and assertions

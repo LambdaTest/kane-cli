@@ -269,6 +269,10 @@ Two different refusals, told apart by the message:
 
   `<descriptor>` in that line is the address of the location. Ask the owner for access, or bind the location again under the same name with the right keys — `kane-cli context sync add` on an existing name replaces its keys, and a pair the location refuses never replaces one that worked. For a GitHub location over HTTPS in CI, check that `KANE_SYNC_GIT_TOKEN` grants Contents read/write on *that* repository.
 
+- **Over SSH.** kane-cli never answers an SSH prompt. A host key this computer has not accepted yet refuses with `this computer has not accepted github.com's SSH host key yet` — run `ssh -T git@github.com` once in a terminal and answer yes. A key that is not loaded, or not on the account, refuses with `github.com did not accept your SSH key` — load it with `ssh-add`, or ask the repository owner to grant your account access. Over HTTPS without a stored login the message is `sign in is needed, or your account has no access to this repository on github.com` — sign in through Git (the GitHub CLI's `gh auth setup-git` is the quickest way).
+
+- **The connection check could not finish.** `The server did not complete the concurrent connection check. Its scratch-ref policy may differ from the storage branch.` (`SYNC_PROBE_INCONCLUSIVE`) means the repository's rules block the scratch reference the check pushes under `refs/kane/probe/`. Nothing was bound; ask the repository owner to allow that reference, then run the command again.
+
 A location you can read but not write is not a refusal: it binds as download-only (`read-only: this location can be cloned and pulled, never pushed`). `kane-cli context push` to it refuses with `SYNC_READ_ONLY`, and so does `kane-cli context sync` — after its pull has already landed, so its exit `2` does not mean nothing happened. Take records from such a location with `kane-cli context pull`. The two refusals above change nothing in your store.
 
 ## Context sync: a Dropbox, OneDrive, Google Drive or iCloud folder is refused
@@ -293,7 +297,7 @@ A `kane-cli context pull origin --rebase` stopped on decisions you have not answ
 2. Answer: `kane-cli context sync origin` walks the cards on a terminal; headless, `kane-cli context sync origin --answer <id>=keep-theirs` (or `apply-mine`), one flag per decision. `keep-theirs` writes nothing, but it is a choice, not a default: the local change stays in the backup unapplied, and a later record that was built on it is looked at again.
 3. Or close it: `kane-cli context sync doctor --abort` keeps what was already reapplied and leaves the unanswered records in the backup. A rebase interrupted before it imported origin's records is undone by the same command — the store is put back as it was. Once the import has landed it can only be finished (`SYNC_RESET_IMPORTED`): run `kane-cli context sync` or `kane-cli context pull` to finish it, then close it if you still want to. `kane-cli context sync doctor --export <dir>` rebuilds the pre-rebase store beside, as its own store.
 
-Never delete files under `.context/` to get past the fence. See [When two people changed the same thing](./assurance/sharing.md#rebase).
+Never delete files under `.context/` to get past the refusal. See [When two people changed the same thing](./assurance/sharing.md#rebase).
 
 ## Context sync: publication could not be confirmed
 

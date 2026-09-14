@@ -65,7 +65,7 @@ If you have a PRD and care about coverage accounting, start with assurance. If y
 The assurance commands work over a local store in your project directory, created on first `ingest`:
 
 - It is **append-only** in everyday use: no command that writes to it deletes or rewrites a record. Edits create new versions; mistakes are reverted with compensation records. `kane-cli context explain` can replay the full history of any node. The one exception is a sync rebase *(0.8.14)*, which replaces your records after the last shared one with the location's and reapplies your own on top — every replaced record is kept in a backup.
-- It is **yours and local**: sources, use-cases, designs, and review verdicts live in your project, and nothing leaves your disk unless you publish it to a location your team shares *(0.8.14)*. The extract and design agents run against the KaneAI service using your login, but the store they commit to is on your disk.
+- It is **yours and local**: sources, use-cases, designs, and review verdicts live in your project. The extract and design agents run against the KaneAI service using your login and send it what they need to read, but the store they commit to is on your disk, and the store itself goes elsewhere only when you publish it to a location your team shares *(0.8.14)*.
 - **Never merge `.context/` with git.** The store is single-writer — two branches appending records will corrupt it on the next read. kane-cli adds `.context/` to your `.gitignore` when it creates the store inside a git repository *(0.8.14)*; set `KANE_CONTEXT_GITIGNORE=0` to keep it out.
 - **Share it through a location** *(0.8.14)*: bind the store to a GitHub repository, an S3-compatible bucket, or a folder on a shared drive, then `kane-cli context push` publishes your records, `kane-cli context pull` takes your teammates', and `kane-cli context clone` gives a new teammate a store of their own. Nothing on a location is ever overwritten or deleted, and when two people change the same thing the disagreement is a decision you answer, never a silent overwrite — see [Sharing the context graph with your team](./sharing.md).
 - `kane-cli context fsck` verifies the whole store; `kane-cli context rebuild` regenerates the read caches from the verified records.
@@ -80,5 +80,5 @@ The assurance commands work over a local store in your project directory, create
 - [Designing tests](./design.md) — from a use-case to runnable `*_test.md` files.
 - [Coverage](./coverage.md) — proven vs owed, and how designed tests join execution.
 - [Maintaining the suite](./maintain.md) — reconcile a changed source.
-- [Sharing the context graph with your team](./sharing.md) — one shared location; push, pull, clone.
+- [Sharing the context graph with your team](./sharing.md) — one shared location; publish, take your teammates' records, clone.
 - [Automation](./automation.md) — running all of this headless in CI or from an agent.
