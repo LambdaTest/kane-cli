@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.13] - 2026-09-14
+
+### Testing a build you just compiled
+- **Upload a local app build straight from your laptop** — point kane-cli at the build sitting on your machine and it gets uploaded for you, no separate upload step or dashboard trip.
+- **The uploaded build is wired into the run automatically** — the resulting app id is forwarded to the test, so the run uses exactly the build you just sent.
+
+### Running mobile tests remotely
+- **`--remote` sends emulator and simulator tests to HyperExecute** — the same command that runs locally can now execute on remote Android emulators and iOS simulators.
+
+### A simulator / emulator list you can trust
+- **Only simulators / emulators that actually exist are offered** — the simulator / emulator catalog is trimmed to the devices and runtimes shipped on the HyperExecute mac images, so you no longer pick a simulator that fails to boot.
+
 ## [0.8.12] - 2026-09-10
 
 ### Unresolved variables are caught before the run starts
