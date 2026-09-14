@@ -17,6 +17,11 @@ This page lists common problems you may hit while using kane-cli, what causes th
 - [Debugging a failed run with its evidence pack](#debugging-a-failed-run-with-its-evidence-pack)
 - [A `--remote` run refused, failed, or came back empty](#a---remote-run-refused-failed-or-came-back-empty)
 - [testrun says "plan invalid" or skips members](#testrun-says-plan-invalid-or-skips-members)
+- [Context sync: Git not found or too old](#context-sync-git-not-found-or-too-old)
+- [Context sync: a location cannot be reached or refuses you](#context-sync-a-location-cannot-be-reached-or-refuses-you)
+- [Context sync: a Dropbox, OneDrive, Google Drive or iCloud folder is refused](#context-sync-a-dropbox-onedrive-google-drive-or-icloud-folder-is-refused)
+- [Context sync: "a rebase is open" — every change refused](#context-sync-a-rebase-is-open--every-change-refused)
+- [Context sync: publication could not be confirmed](#context-sync-publication-could-not-be-confirmed)
 - [Reporting bugs](#reporting-bugs)
 
 ## "Chrome failed to launch"
@@ -228,6 +233,71 @@ Full reference: [Remote runs on the cloud grid](./remote-execution.md).
 | `project_mismatch` | The test belongs to a different project than the other members. | Same check; run project-by-project, or re-home the test. |
 
 Use `kane-cli testrun run --dry-run …` to see the full plan and every offender without executing anything. See [Batch runs with testrun](./testrun.md#preflight).
+
+## Context sync: Git not found or too old
+
+A GitHub location (`kane-cli context sync add`, `clone`, or guided setup) needs Git **2.31 or newer** on the machine that runs kane-cli. Without it the command refuses before touching anything:
+
+```
+$ kane-cli context sync add team git@github.com:example-org/team-context.git
+checking team: read access and safe publishing…
+error: This location needs Git 2.31 or newer.
+next: Install or update Git, then run setup again: https://git-scm.com/downloads
+```
+
+Install Git from the link, or update it (`brew install git`, `apt-get install git`, or the Windows installer), open a new terminal so `git --version` reports 2.31 or newer, and run the same command again. On a CI runner, add a Git install step before kane-cli. Folder and S3-compatible locations do not need Git at all — see [Sharing the context graph](./assurance/sharing.md#locations).
+
+## Context sync: a location cannot be reached or refuses you
+
+Two different refusals, told apart by the message:
+
+- **Nothing answered.** The folder does not exist and cannot be created, the host is down, or no repository answered at that address — a private repository you have not been invited to looks missing:
+
+  ```
+  error: nothing answered at /no/such/parent/team-context: that folder does not exist and cannot be created
+  next: check the path, then run the command again
+  ```
+
+  Check the address (`kane-cli context sync list` shows what the store has), that the drive is mounted, and that the repository exists and is shared with your account.
+
+- **The location answered and refused you.** Keys, a key pair, or an account without read permission:
+
+  ```
+  error: the bucket at https://team-context.s3.eu-west-1.amazonaws.com did not accept origin's access keys, even for reading
+  next: ask the owner of the bucket for access, or bind it again with the right keys: kane-cli context sync add origin <descriptor> --credential-env <VAR>
+  ```
+
+  Ask the owner for access, or bind the location again under the same name with the right keys — `sync add` on an existing name replaces its keys, and a pair the location refuses never replaces one that worked. For a GitHub location over HTTPS in CI, check that `KANE_SYNC_GIT_TOKEN` grants Contents read/write on *that* repository.
+
+A location you can read but not write is not a refusal: it binds as download-only (`read-only: this location can be cloned and pulled, never pushed`), and only `push` refuses. Neither refusal changes anything in your store.
+
+## Context sync: a Dropbox, OneDrive, Google Drive or iCloud folder is refused
+
+```
+$ kane-cli context sync add origin ../Dropbox/ctx
+error: a folder synced by Dropbox, OneDrive, Google Drive or iCloud cannot be a location: these keep both sides of a conflict as duplicate files instead of refusing the second write — use a directory outside the sync client, a git-tracked folder, or an s3:// bucket
+```
+
+Those folders — including `Dropbox (Company)`, anything under `~/Library/CloudStorage`, and a symlink into any of them — keep both versions of a clashing file as "conflicted copies" instead of refusing the second write, so two teammates could both believe a record was published. That is the one thing a location must never do, and kane-cli refuses the folder before any check runs. Use a mounted network share, a GitHub repository, or an S3-compatible bucket instead.
+
+## Context sync: "a rebase is open" — every change refused
+
+```
+error: a rebase (2026-09-14T10-13-45-679Z-reset) is open with 2 decisions unresolved; this store takes no other change until it is finished — run kane-cli context sync or kane-cli context pull to continue, or kane-cli context sync doctor --abort to close it
+next: run kane-cli context sync or kane-cli context pull to continue, or kane-cli context sync doctor --abort to close it
+```
+
+A `pull --rebase` stopped on decisions you have not answered yet (or was interrupted), and until it is finished the store takes writes from the rebase only — exactly like git mid-rebase. Extract, design, review, ingest, `name`, `retire`, a test run recording its result, and `push` all refuse with these two lines. Nothing is lost: a test run's results wait to the side and land on the first run after the rebase closes.
+
+1. See what is open: `kane-cli context sync status origin` lists each decision on one line; `--show <n>` prints one saved record in full.
+2. Answer: `kane-cli context sync origin` walks the cards on a terminal; headless, `kane-cli context sync origin --answer <id>=keep-theirs` (or `apply-mine`), one flag per decision. `keep-theirs` writes nothing and is always safe.
+3. Or close it: `kane-cli context sync doctor --abort` keeps what was already reapplied and leaves the unanswered records in the backup. `kane-cli context sync doctor --export <dir>` rebuilds the pre-rebase store beside, as its own store.
+
+Never delete files under `.context/` to get past the fence. See [When two people changed the same thing](./assurance/sharing.md#rebase).
+
+## Context sync: publication could not be confirmed
+
+A `push` to a GitHub location can lose the server's answer after the upload — a dropped connection, a proxy timeout. kane-cli then refuses with `SYNC_PUBLICATION_UNKNOWN` (exit `2`) rather than guess: the batch may have landed. Your store is unchanged and nothing needs to be redone. Check connectivity and run the **same** command again: it reads the location first and reconciles what actually landed — a batch that arrived is recognised as already there, never published twice; a batch that did not is published now. Only after that should anything else run. If a proxy rejects large uploads, `KANE_SYNC_GIT_HTTP_POST_BUFFER=33554432` raises Git's upload buffer for that command; a very slow link gets more time with `KANE_SYNC_GIT_TRANSFER_TIMEOUT_SECONDS` — see [Context sync environment variables](./configuration.md#context-sync-environment-variables).
 
 ## Reporting bugs
 

@@ -175,3 +175,34 @@ kane-cli run "Open the pricing page and verify the Pro plan is listed" \
 ```
 
 `--cdp-endpoint <url>` works the same way for browsers that expose a Chrome DevTools Protocol URL. With either flag, kane-cli skips its own Chrome launch and connects to the endpoint you provide.
+
+<a name="a-shared-context-store-in-ci"></a>
+## A shared context store in CI *(0.8.14)*
+
+When your team [shares the context graph](./assurance/sharing.md) through a location, a pipeline works on the same store: clone it once, pull before each run, push the facts the run produced after. Nothing here calls the agent or spends credits.
+
+- **Sign in without a person.** For a GitHub location over HTTPS set `KANE_SYNC_GIT_TOKEN` from a CI secret — a repository-scoped personal access token with Contents read/write, or a GitHub App installation token; a workflow's own `GITHUB_TOKEN` only reaches the workflow's repository, so a separate context repository needs its own token. Over SSH, an SSH deploy key on the context repository works with no token. For an S3-compatible location set `KANE_SYNC_S3_ACCESS_KEY_ID` and `KANE_SYNC_S3_SECRET_ACCESS_KEY`. Neither is ever written to disk by kane-cli. See [Context sync environment variables](./configuration.md#context-sync-environment-variables).
+- **Use `--mode agent`** for structured output, and read the exit code: `0` done; `3` a person has to decide — the runner is behind or diverged, or a rebase stopped on decisions; `2` a precondition (the location cannot be reached, keys missing, a rebase still open).
+- **Do not answer decisions blindly.** A rebase that stops on a decision is a job that stops. Save `kane-cli context sync status origin --json` as a build artifact and let a person or an agent answer with `--answer <id>=<choice>` in a follow-up job; `keep-theirs` always writes nothing. The full contract is in [Automation → The sync verbs on the stream](./assurance/automation.md#the-sync-verbs-on-the-stream).
+- **Keep `.context/` out of the checkout.** The store never goes through a git merge; the location is where it is shared.
+
+```bash
+# GitHub Actions step — the secret CONTEXT_REPO_TOKEN grants Contents read/write on the context repository
+export KANE_SYNC_GIT_TOKEN="$CONTEXT_REPO_TOKEN"
+
+# first run on this runner: a store from the team location
+[ -d .context ] || kane-cli context clone https://github.com/example-org/team-context.git . --mode agent
+
+# before the run: take the team's new records; stop the job if a person has to decide
+kane-cli context pull origin --mode agent > pull.ndjson || {
+  code=$?
+  [ "$code" -eq 3 ] && kane-cli context sync status origin --json > decisions.json
+  exit "$code"
+}
+
+# the run itself, never guessing
+kane-cli context extract --mode ci
+
+# after the run: publish what landed
+kane-cli context push origin --mode agent
+```
