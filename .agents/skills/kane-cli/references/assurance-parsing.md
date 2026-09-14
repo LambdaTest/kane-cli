@@ -81,6 +81,10 @@ Use `text` + `options[].label` + `recommended_index` + `rationale` to decide or 
 
 *(0.7.2+)* the stream opens with a minimal `run_start` (`session` only — no `trace`) and the re-extract child rides the SAME stream: extract-vocabulary events (`source_start`, `agent_activity`, `plan`, `commit`, …) interleave between the `reconcile_*` events, all stamped `verb: "reconcile"` — dispatch on `type`, never on position. The reconcile family: `reconcile_plan` `{source_id, plan_path, rows[], archive[]}` → per row `reconcile_row_start` `{kind, ref, stale?, direct?}` + `reconcile_row_end` `{kind, ref, outcome: applied|failed|skipped|plan-only|paused, exit_code?, detail?}` → `reconcile_paused` `{plan_path, pending[]}` when ARCHIVE rows remain (exit 3; a human resumes with `--apply <plan_path>` in a terminal) → `reconcile_summary` `{applied, skipped, deferred, plan_only, failed, paused, stale_created}` on every path → `done` always last. Validation refusals ride the stream as `error` + `done` (exit 2), never stderr alone.
 
+## Sync events (verb `sync`) *(0.8.14+)*
+
+`kane-cli context sync|push|pull|clone --mode agent` (and `sync add|list|remove|status|doctor`) share the envelope with `verb: "sync"` and their own `sync_*` family — `sync_probe_started`/`sync_probe`, `sync_status`, `sync_pull_done`/`sync_push_done`, `sync_rebase_started`/`sync_rebase_decision`/`sync_rebase_done`/`sync_rebase_open`, `sync_error{code, detail, remedy}` — then `done`. Two of them cross into the assurance streams: `sync_behind` (an advisory on `extract`/`design`/`reconcile` streams: the location has records this store has not pulled — one line, not a failure) and `sync_error` code `SYNC_REBASE_PENDING` (the fence: a sync rebase is open, so the write verb refused; `verb` carries that verb's own name). Schema, refusal codes and the `--answer` loop: `references/context-sync.md`.
+
 ## Coverage events (verbs `cover` / `gaps`) *(0.7.1+)*
 
 One payload event carrying the full `--json` document — `coverage` for `cover`, `gaps` for `cover gaps`; with a `<uc-id>` (0.8.2+) the `gaps` document closes over that use-case — then `done` (with the worklist's ready-commands in `next[]`). Refusal = `error` + `done{refused, 2}`.
@@ -92,7 +96,7 @@ One payload event carrying the full `--json` document — `coverage` for `cover`
 | `0` | complete |
 | `1` | runtime failure — incl. an extract sweep where some sources failed (each got one line; they retry next run). Report, don't blindly retry (turns already consumed credits) |
 | `2` | usage/auth/refusal — bad flags, no store, bare non-TTY without `--mode`, gates (unreviewed target, phase order, trust misuse, lock held, release-pair mismatch); nothing mutated |
-| `3` | **paused and resumable** — not a failure; run the pause loop. Includes crash-pauses (0.7.1+) |
+| `3` | **paused and resumable** — not a failure; run the pause loop. Includes crash-pauses (0.7.1+). On the sync verbs (0.8.14+) `done{status: "paused"}` means a rebase is open with decisions waiting (answer with `--answer`), and `done{status: "refused", exit_code: 3}` means a pull or a rebase is needed first — `references/context-sync.md` §4 |
 | `130` | force-interrupted — resumable only if a `session_paused` event arrived |
 
 Reminder: this exit-3 meaning is **specific to these assurance commands**. `run` / `testmd` / `testrun` / `generate` keep their own meanings (3 = timeout/cancelled).

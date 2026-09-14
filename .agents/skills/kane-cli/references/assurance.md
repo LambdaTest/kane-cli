@@ -142,7 +142,7 @@ On 0.8.2+ the default `cover gaps` output is the **coverage ribbon** — a high-
 ## 8. Store rules — don't corrupt the user's graph
 
 - `.context/` is **append-only and single-writer**. Never run two store-mutating commands concurrently (extract, review verdicts, design, ingest, reconcile, retire/revert/rebuild). On a lock error (`EXTRACT_LOCKED`, or reconcile's walk lock), another run is live: report it and wait — never delete lock files; a dead run's lock clears itself.
-- Never hand-edit anything under `.context/`. Suggest the user gitignore it.
+- Never hand-edit anything under `.context/`, and never `git merge` it — two histories merge cleanly in git and brick the store on the next read. Keep it gitignored. To share it with a team, use a **location** (a GitHub repository, an S3-compatible bucket, or a folder) through `kane-cli context sync|push|pull|clone` (0.8.14+) — a Git repository used as a location is not the same as committing `.context/`. While a sync rebase is open the store refuses every other write with `SYNC_REBASE_PENDING` (the fence) — finish it or `kane-cli context sync doctor --abort`, never delete files. Rules, events and decisions: `references/context-sync.md`.
 - Safe inspection any time: `kane-cli context list --json` (nodes with trust + freshness), `kane-cli context explain <ref>` (a node's full recorded history, no AI), `kane-cli context fsck` (integrity check), `kane-cli context view --no-open --out <path>` (writes a self-contained HTML graph snapshot to that path — never opens a browser, never touches the graph).
 - Destructive verbs (`context retire`, `revert`, `rebuild`, `name --backfill`) exist and take `--yes` headless — run them **only on an explicit user request**, never autonomously.
 
@@ -173,6 +173,10 @@ On 0.8.2+ the default `cover gaps` output is the **coverage ribbon** — a high-
 | media refusals (`PDF_*`, `DOCX_*`, `ENCODING_UNSUPPORTED`, `UNSUPPORTED_MEDIA`, `FILE_TOO_LARGE`) | the source file can't be ingested as-is | relay the message — each names its remedy (save-as, split, re-encode) |
 | a remote URL refuses because its id is backed by a different kind of source (0.8.6+) | cross-provider id collision — remote ids share one space | retire the existing source, or adopt the new one with `--as`; never retry blindly |
 | lock held | another assurance run is live | wait for it; never break locks |
+| `sync_error` code `SYNC_REBASE_PENDING` (exit 2, 0.8.14+) | a sync rebase is open on this store — the fence refuses every other write | the user finishes it (`kane-cli context sync`, answering decisions) or closes it (`kane-cli context sync doctor --abort`); never delete files — `references/context-sync.md` §7 |
+| `sync_error` code `SYNC_BEHIND` / `SYNC_DIVERGED` (exit 3, 0.8.14+) | the location has records this store has not pulled / both sides added work — a pull or a rebase is needed, not a failure | relay the `remedy` verbatim (`kane-cli context pull <name>`, or `--rebase` on the user's go-ahead) — `references/context-sync.md` §6 |
+| `sync_behind` event on an extract/design/reconcile stream (0.8.14+) | advisory: the location has moved past this store | one line ("origin has records you have not pulled"); the run continues |
+| `sync_error` code `SYNC_STORE_BUSY` (exit 2, 0.8.14+) | a sync verb met a live session or lock on this store | wait; `kane-cli context sync doctor` when it names an interrupted rebase |
 | `error` + `done` with exit `1` | runtime failure (incl. a sweep where some sources failed) | report the message; **do not blindly re-run a paid command** |
 | auth/credit failure mid-run | token or balance problem | keep the `sid`, have the user fix auth/balance (`kane-cli whoami`, `kane-cli balance`), then resume |
 | stream ends with no `done` event | the process crashed — outcome unknown | check `context sessions --json` and `context list` before any retry, to avoid duplicate paid work |
