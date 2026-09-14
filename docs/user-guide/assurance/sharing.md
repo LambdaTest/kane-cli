@@ -57,18 +57,27 @@ The location is bound under the name `origin`. If this store already has a locat
 | Command | When to use it | What it prints |
 |---|---|---|
 | `kane-cli context sync setup` | the first time, on a terminal | the screens above |
-| `kane-cli context sync add <name> <address> [--credential-env <VAR> \| --credential-file <path>]` | bind a location by hand (scripts, CI, a second location). Re-running with the same name replaces its address and keys — that is how you re-key | `added origin: dir tier 1 (all probes passed)` — the number after the kind says what the check found: `1` means the location can publish, `2` or `3` that it is download only |
-| `kane-cli context sync list [--json]` | which locations this store knows | one line per location: name, kind, whether it can publish, address |
+| `kane-cli context sync add <name> <address> [--credential-env <VAR> \| --credential-file <path>]` | bind a location by hand (scripts, CI, a second location). Re-running with the same name replaces its address and keys — that is how you re-key | `added origin: dir tier 1 (all probes passed)` — the line ends with what the checks found (the table below) |
+| `kane-cli context sync list [--json]` | which locations this store knows | one line per location: `origin  dir  tier 1  …/shared/team-context` — name, kind, what the checks found, address |
 | `kane-cli context sync remove <name>` | forget a location and delete its saved keys | `removed origin` |
 | `kane-cli context sync status [name] [--show <n>] [--json]` | where this store stands against the location; never writes | `up to date` / `behind` / `ahead` / `you and origin both added work after …`, then any open decisions; `--show <n>` prints saved record `n` in full |
 | `kane-cli context sync doctor [--abort] [--export <dir> [--from <rebase-id>]] [--json]` | what the store looks like after an interruption; close an open rebase; rebuild the pre-rebase store beside | the chain state and every rebase with its id |
-| `kane-cli context push [name]` | publish your new records | `pushed 2 records (3..4), 1 blobs, 0 proposals` |
+| `kane-cli context push [name]` | publish your new records | `pushed 2 records (3..4), 1 blobs, 0 proposals`; with nothing new to publish, `up to date` |
 | `kane-cli context pull [name]` | take your teammates' new records | `pulled 1 records (3..3), 0 blobs, 0 proposals` |
 | `kane-cli context pull <name> --rebase [--yes]` | you and the location both added work | the walk below |
 | `kane-cli context sync [name] [--answer <id>=<choice>]` | the everyday verb: finish an open rebase, pull, then push | the pull and push lines |
-| `kane-cli context clone <address> [dir] [--credential-env <VAR> \| --credential-file <path>]` | join: make a new store from a location, bound as `origin`; the two flags pass an S3 key pair the same way `kane-cli context sync add` takes it | `cloned into …/bob: 2 records (1..2), 2 blobs, 0 proposals` |
+| `kane-cli context clone <address> [dir] [--credential-env <VAR> \| --credential-file <path>]` | join: make a new store from a location, bound as `origin`; `dir` defaults to the location's last path segment (`team-context` for `../shared/team-context`); the two flags pass an S3 key pair the same way `kane-cli context sync add` takes it | `cloned into …/bob: 2 records (1..2), 2 blobs, 0 proposals` |
 
-`[name]` defaults to the only location; with several, to the one called `origin`; otherwise the command asks you to name one. Every command takes `--mode agent` for an NDJSON stream — see [Automation](./automation.md#the-sync-verbs-on-the-stream). Joining an S3-compatible location with keys from the environment:
+`[name]` defaults to the only location; with several, to the one called `origin`; otherwise the command asks you to name one. Every command takes `--mode agent` for an NDJSON stream — see [Automation](./automation.md#the-sync-verbs-on-the-stream).
+
+`kane-cli context sync add` and `kane-cli context clone` check a location before binding it: that it can be read, and whether a small test write lands there and reads back. The line they print ends with the result, and so does each line of `kane-cli context sync list`:
+
+| The line ends with | It means |
+|---|---|
+| `dir tier 1 (all probes passed)` | **can publish** — the location could be read, and the test write landed and read back: push, pull and clone all work |
+| `dir tier 3 (P1 exclusive create: …/ro-location cannot be written: this account has no write access)`, then `read-only: this location can be cloned and pulled, never pushed` | **download only** — the location could be read, but the test write was refused (no permission, a read-only mount, a read-only key pair): clone and pull work, push refuses. `tier 2` in place of `tier 3` means a different check failed; it is download only as well |
+
+Joining an S3-compatible location with keys from the environment:
 
 ```bash
 kane-cli context clone "s3://team-context/assurance?region=eu-west-1" team-context --credential-env TEAM_S3
@@ -77,7 +86,16 @@ kane-cli context clone "s3://team-context/assurance?region=eu-west-1" team-conte
 <a name="loop"></a>
 ## The everyday loop
 
-Alice shares a store she already built; Bob joins it. Then each of them works, pulls, and pushes. Bob's commands after the clone run inside the cloned folder.
+Alice shares a store she already built; Bob joins it. Then each of them works, pulls, and pushes. Alice and Bob are normally two machines; here they are two folders side by side, with the location as a third:
+
+```
+team/
+├── alice/                 alice's store (.context/ inside)
+├── bob-home/              bob's machine; his store lands in bob/ after the clone
+└── shared/team-context    the location
+```
+
+Alice runs her commands in `alice/`, Bob in `bob-home/` — and, once the clone exists, inside `bob/`.
 
 ```
 [alice] $ kane-cli context sync add origin ../shared/team-context
@@ -92,7 +110,11 @@ pushed 1 records (1..1), 1 blobs, 0 proposals
 checking origin: read access and safe publishing…
 bound origin: dir tier 1 (all probes passed)
 cloned into …/bob: 1 records (1..1), 1 blobs, 0 proposals
+
+[bob] $ cd bob
 ```
+
+In the push and clone lines, *blobs* are the source-document snapshots the records cite and *proposals* the extraction artifacts behind them; both travel with the records ([What travels](#travels)).
 
 Bob ingests a second document and publishes it. Alice, who has not pulled yet, tries to push. In the output, `position 2` is the second record of the shared history — this page says record 2:
 
@@ -162,6 +184,8 @@ decision 1 of 2  ·  slug on your names from record 3
   ↑↓ select · ⏎ confirm · 1–9 jump · v full record · a decide everything later · ctrl+c pause
 ```
 
+The name after `by` is the login name on the machine where that record was made, as that machine reported it; `someone` means the record carried no author — a re-ingested source, for one.
+
 **Keep origin's version** is always offered and always the default: it writes nothing, and the local change stays in the backup. **Apply the local version** writes the local change as a new record on top of origin's; the row says the consequence. A third row, **add as new**, appears only for a new item whose match origin has since retired. **Decide later** leaves the card open; `kane-cli context sync` or `kane-cli context pull` asks again. `v` shows the full record under the facts, `a` leaves every remaining card for later, and Ctrl+C pauses — none of these is an error. Each answered card leaves one line in the scrollback (`decision h3: kept origin's version`), and the run ends with a summary counting what was reapplied, already there, not reapplied and undecided.
 
 Some saved records cannot be reapplied at all, and their card offers only **keep origin's version**: a record this build cannot read or replay, one that refers to an item origin no longer has, or one the store's own checks refuse. The change stays in the backup, and that piece of work has to be done again once the rebase is finished. Keeping origin's version can also bring a later card back: a saved record that was built on the one you set aside is looked at again.
@@ -210,6 +234,15 @@ rebase summary — complete
 pushed 1 records (5..5), 0 blobs, 0 proposals
 ```
 
+To see what an answer did, ask for the saved record again once the rebase is closed — `kane-cli context sync status --show <n>` names the record it became:
+
+```
+[alice] $ kane-cli context sync status --show 4
+record 4: retire prd
+origin sha256:f972…
+outcome: reapplied → record 5
+```
+
 **While a rebase is open, the store takes no other change** — exactly like git mid-rebase. `kane-cli context extract`, `kane-cli design tests`, `kane-cli maintain reconcile`, `kane-cli context ingest`, `kane-cli context review`, `kane-cli context name`, `kane-cli context retire` and `kane-cli context revert` refuse until the rebase is finished or closed, all with the same code (`SYNC_REBASE_PENDING`) and the same two ways out:
 
 ```
@@ -220,7 +253,18 @@ next: run kane-cli context sync or kane-cli context pull to continue, or kane-cl
 
 `kane-cli context push` refuses with the same code and the same `next:` line; its reason names the rebase, counts the decisions unresolved, and says nothing was pushed. A test run does not refuse: the results it records are kept to the side and land on the first run after the rebase is finished.
 
-`kane-cli context sync doctor` shows every rebase with its id and state, open or closed. `kane-cli context sync doctor --abort` closes the open one, keeping what was already reapplied and leaving the unanswered decisions in the backup (exit `3` when decisions were left). From another run, with one decision open:
+`kane-cli context sync doctor` shows the store's state and every rebase with its id, open or closed. Three of its words come from the mechanics: a rebase id ends in `-reset`; the first line, `no reset in progress`, is about the import step of a rebase — it reads `reset in progress` only when an import was interrupted before it finished — and `sentinel: absent` is the healthy state (the sentinel is the marker a running import leaves in the store). With the two decisions above still open:
+
+```
+[alice] $ kane-cli context sync doctor
+no reset in progress
+sentinel: absent
+chain: ok, tail at position 4
+rebase 2026-09-14T10-45-07-658Z-reset (2026-09-14 10:45:07Z): open, 0 reapplied, 0 already present, 0 not reapplied, 2 decisions open
+next: kane-cli context sync (or kane-cli context pull) to finish rebase 2026-09-14T10-45-07-658Z-reset; kane-cli context sync doctor --abort to close it instead
+```
+
+`kane-cli context sync doctor --abort` closes the open one, keeping what was already reapplied and leaving the unanswered decisions in the backup (exit `3` when decisions were left). From another run, with one decision open:
 
 ```
 [alice] $ kane-cli context sync doctor --abort
@@ -229,7 +273,16 @@ closed rebase 2026-09-14T10-45-52-997Z-reset: 0 reapplied stay, 1 unresolved dec
 
 A rebase that was interrupted before origin's records had been imported is undone by the same `kane-cli context sync doctor --abort`: your records are put back and the store is as it was. Once the import has landed, the rebase can only be finished (`SYNC_RESET_IMPORTED`): `kane-cli context sync` or `kane-cli context pull` finishes it before doing anything else — then close it with `kane-cli context sync doctor --abort` if you still want to.
 
-**The way back.** The live store holds records your teammates published, so it is never rewound in place. `kane-cli context sync doctor --export <dir>` rebuilds your store *as it was before the rebase*, beside it, as its own store — for inspection, or as a fresh start. Without `--from <rebase-id>` it exports the open rebase, or the only one; with several closed rebases, name one. Everything a rebase saves stays under `.context/sync/backups/<rebase id>/` and `.context/sync/replay/`; a receipt there lists every reapplied, skipped and undecided record. Test files that a reapplied record created are written again; a `_test.md` path that now holds other content is left alone and listed by `kane-cli context sync status` until you move that file aside and run `kane-cli context sync` again.
+**The way back.** The live store holds records your teammates published, so it is never rewound in place. `kane-cli context sync doctor --export <dir>` rebuilds your store *as it was before the rebase*, beside it, as its own store — for inspection, or as a fresh start:
+
+```
+[alice] $ kane-cli context sync doctor --export ../alice-before-rebase
+exported rebase 2026-09-14T10-45-52-997Z-reset: 3 records (0 test files, 0 session files) into …/alice-before-rebase/.context; it is its own store
+```
+
+The exported folder is a store like any other: open it and run `kane-cli context list` or `kane-cli context explain`. It has no location bound, so run `kane-cli context sync add` there first if you want to share from it. Without `--from <rebase-id>` the export takes the open rebase, or the only one; with several closed rebases, name one. Everything a rebase saves stays under `.context/sync/backups/<rebase id>/` and `.context/sync/replay/`; a receipt there lists every reapplied, skipped and undecided record.
+
+A `_test.md` that a reapplied record created is **restored** — the summary's `test files … restored` line counts them. If that path now holds someone else's file, kane-cli leaves it alone and `kane-cli context sync status` lists it; rename or move that file, then run `kane-cli context sync` again.
 
 <a name="what-happens-when"></a>
 ## What happens when
@@ -270,7 +323,8 @@ Every sync refusal prints a plain reason; nearly all add a `next:` line with the
 |---|---|---|---|
 | `origin holds 2 records, this store 1: it has records this store has not seen` | `SYNC_BEHIND` | you are behind | `kane-cli context pull origin`, then push again |
 | `you and origin both added work after position 2` | `SYNC_DIVERGED` | you and a teammate both worked from the same record | `kane-cli context pull origin --rebase` (add `--yes` without a terminal) |
-| a push says a teammate's record took the place it was writing to, and names the last record that landed | `SYNC_POSITION_TAKEN` | a teammate's push landed while your push was running; what landed stays. At the very first record there is no shared history at all | `kane-cli context pull origin --rebase`; at the very first record, clone the location into a new folder instead |
+| a push says a teammate's record took the place it was writing to, and names the last record that landed | `SYNC_POSITION_TAKEN` | a teammate's push landed while your push was running; what landed stays | `kane-cli context pull origin --rebase`, then push again |
+| the same message at the very first record | `SYNC_POSITION_TAKEN` | the location was empty when you started and a teammate filled it first; there is no shared history between you | clone the location into a new folder and re-ingest your documents there |
 | a pull says this store changed while it ran | `SYNC_LOCAL_MOVED` | something appended to the store while the pull was being prepared | run the pull again |
 | `nothing answered at /no/such/parent/team-context: that folder does not exist and cannot be created` / `no repository answered at that address, or your account cannot see it; a private repository looks missing until access is granted` | `SYNC_LOCATION_UNREACHABLE` | the address is wrong, the host is down, or a private repository is not shared with you | check the address, then run the command again |
 | `the bucket … did not accept origin's access keys, even for reading` | `SYNC_LOCATION_DENIED` | the location answered and refused you | ask the owner for access, or bind again with the right keys: `kane-cli context sync add origin <address> --credential-env <VAR>` |

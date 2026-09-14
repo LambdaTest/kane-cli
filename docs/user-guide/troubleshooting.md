@@ -267,7 +267,7 @@ Two different refusals, told apart by the message:
   next: ask the owner of the bucket for access, or bind it again with the right keys: kane-cli context sync add origin <descriptor> --credential-env <VAR>
   ```
 
-  Ask the owner for access, or bind the location again under the same name with the right keys — `kane-cli context sync add` on an existing name replaces its keys, and a pair the location refuses never replaces one that worked. For a GitHub location over HTTPS in CI, check that `KANE_SYNC_GIT_TOKEN` grants Contents read/write on *that* repository.
+  `<descriptor>` in that line is the address of the location. Ask the owner for access, or bind the location again under the same name with the right keys — `kane-cli context sync add` on an existing name replaces its keys, and a pair the location refuses never replaces one that worked. For a GitHub location over HTTPS in CI, check that `KANE_SYNC_GIT_TOKEN` grants Contents read/write on *that* repository.
 
 A location you can read but not write is not a refusal: it binds as download-only (`read-only: this location can be cloned and pulled, never pushed`). `kane-cli context push` to it refuses with `SYNC_READ_ONLY`, and so does `kane-cli context sync` — after its pull has already landed, so its exit `2` does not mean nothing happened. Take records from such a location with `kane-cli context pull`. The two refusals above change nothing in your store.
 
