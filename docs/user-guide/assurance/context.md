@@ -255,7 +255,7 @@ Freshness is orthogonal: `fresh` / `stale` (the source snapshot moved) / `orphan
 ```
 .context/
 ├── meta.json            # format version (schema and canonicalizer)
-├── store.json           # this store's own identity ids (0.8.14)
+├── store.json           # this store's own identity ids
 ├── commits/             # append-only records — the truth
 ├── blobs/               # write-once source snapshots
 ├── derived/             # regenerable read caches (delete any time; rebuild restores)

@@ -80,5 +80,5 @@ The assurance commands work over a local store in your project directory, create
 - [Designing tests](./design.md) — from a use-case to runnable `*_test.md` files.
 - [Coverage](./coverage.md) — proven vs owed, and how designed tests join execution.
 - [Maintaining the suite](./maintain.md) — reconcile a changed source.
-- [Sharing the context graph with your team](./sharing.md) — one shared location; publish, take your teammates' records, clone.
+- [Sharing the context graph with your team](./sharing.md) — one shared location; publishing, taking your teammates' records, cloning.
 - [Automation](./automation.md) — running all of this headless in CI or from an agent.
