@@ -142,7 +142,7 @@ On 0.8.2+ the default `cover gaps` output is the **coverage ribbon** — a high-
 ## 8. Store rules — don't corrupt the user's graph
 
 - `.context/` is **append-only and single-writer**. Never run two store-mutating commands concurrently (extract, review verdicts, design, ingest, reconcile, retire/revert/rebuild). On a lock error (`EXTRACT_LOCKED`, or reconcile's walk lock), another run is live: report it and wait — never delete lock files; a dead run's lock clears itself.
-- Never hand-edit anything under `.context/`, and never `git merge` it — two histories merge cleanly in git and brick the store on the next read. Keep it gitignored — kane-cli 0.8.14 adds `.context/` to the folder's `.gitignore` itself when it creates the store inside a git repository (`KANE_CONTEXT_GITIGNORE=0` keeps it out). To share it with a team, use a **location** (a GitHub repository, an S3-compatible bucket, or a folder) through `kane-cli context sync`, `kane-cli context push`, `kane-cli context pull` and `kane-cli context clone` (0.8.14+) — a Git repository used as a location is not the same as committing `.context/`. While a sync rebase is open the store refuses every other write with `SYNC_REBASE_PENDING` (the fence) — finish it or `kane-cli context sync doctor --abort`, never delete files. Rules, events and decisions: `references/context-sync.md`.
+- Never hand-edit anything under `.context/`, and never `git merge` it — two histories merge cleanly in git and brick the store on the next read. Keep it gitignored — kane-cli 0.8.14 adds `.context/` to the folder's `.gitignore` itself when it creates the store inside a git repository — `gitignore_updated` on the stream, or a `warning{message}` when the line could not be written (relay it and add the line yourself); `KANE_CONTEXT_GITIGNORE=0` keeps it out. To share it with a team, use a **location** (a GitHub repository, an S3-compatible bucket, or a folder) through `kane-cli context sync`, `kane-cli context push`, `kane-cli context pull` and `kane-cli context clone` (0.8.14+) — a Git repository used as a location is not the same as committing `.context/`. While a sync rebase is open the store refuses every other write with `SYNC_REBASE_PENDING` (the fence) — finish it or `kane-cli context sync doctor --abort`, never delete files. Rules, events and decisions: `references/context-sync.md`.
 - Safe inspection any time: `kane-cli context list --json` (nodes with trust + freshness), `kane-cli context explain <ref>` (a node's full recorded history, no AI), `kane-cli context fsck` (integrity check), `kane-cli context view --no-open --out <path>` (writes a self-contained HTML graph snapshot to that path — never opens a browser, never touches the graph).
 - Destructive verbs (`context retire`, `revert`, `rebuild`, `name --backfill`) exist and take `--yes` headless — run them **only on an explicit user request**, never autonomously.
 
@@ -151,7 +151,7 @@ On 0.8.2+ the default `cover gaps` output is the **coverage ribbon** — a high-
 | Signal | Meaning | Do |
 |---|---|---|
 | `context`/`design`/`cover` is an *unknown command* (exit 2) | the CLI predates 0.6.1 | `kane-cli --version` to confirm; have the user update; stop |
-| an assurance flag from this reference is *unknown* (exit 2) | the CLI predates 0.7.1 | same: confirm version, update, stop |
+| an assurance flag from this reference is *unknown* (exit 2) | the installed CLI predates the version that flag is marked with here (0.7.1 for most; 0.8.14 for the sync flags), or the flag is misspelled or on the wrong command | check the full command, then `kane-cli --version` against the feature's stated minimum; have the user update; stop |
 | `error` code `NO_STORE` | no `.context/` here | `context ingest` the sources first (confirm the cwd is the project root) |
 | `SOURCE_MISSING` / `BLOB_MISSING` | store references a missing source | re-ingest the source file |
 | `STALE_BASIS` | the graph moved under the session | re-run the extract — it re-grounds |
@@ -179,8 +179,8 @@ On 0.8.2+ the default `cover gaps` output is the **coverage ribbon** — a high-
 | `sync_error` code `SYNC_STORE_BUSY` (exit 2, 0.8.14+) | a sync verb met a live session or lock on this store | wait; `kane-cli context sync doctor` when it names an interrupted rebase |
 | `error` + `done` with exit `1` | runtime failure (incl. a sweep where some sources failed) | report the message; **do not blindly re-run a paid command** |
 | auth/credit failure mid-run | token or balance problem | keep the `sid`, have the user fix auth/balance (`kane-cli whoami`, `kane-cli balance`), then resume |
-| stream ends with no `done` event | the process crashed — outcome unknown | check `context sessions --json` and `context list` before any retry, to avoid duplicate paid work |
-| exit `130` | force-interrupted | resumable only if a `session_paused` event was actually received |
+| stream ends with no `done` event | the process crashed — outcome unknown (the one designed exception: `kane-cli context review --mode agent` keeps its `--json` shape and ends its listings without `done`; read its exit code) | check `context sessions --json` and `context list` before any retry, to avoid duplicate paid work |
+| exit `130` | force-interrupted | extract/design: resumable only if a `session_paused` event was actually received. Sync verbs: the rebase state is on disk — `kane-cli context sync doctor`, then `kane-cli context sync` resumes it |
 
 ## 10. Narration
 
