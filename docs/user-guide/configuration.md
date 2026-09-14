@@ -242,7 +242,7 @@ The CDP timeout and retry settings only affect transient launch failures (Chrome
 <a name="context-sync-environment-variables"></a>
 ## Context sync environment variables *(0.8.14)*
 
-[Sharing the context graph](./assurance/sharing.md) reads a few variables from the process environment — never from `tui-config.json`. Each row stands alone.
+[Sharing the context graph](./assurance/sharing.md) reads a few environment variables — never `tui-config.json`.
 
 | Variable | Effect |
 |----------|--------|
@@ -257,7 +257,7 @@ Two places on disk belong to sharing and are not touched by a settings reset:
 
 | Path | Holds |
 |------|-------|
-| `~/.testmuai/kaneai/context-sync/<name>.json` | the saved S3 key pair for the location named `<name>`, readable by you only (mode `0600`). `kane-cli context sync remove <name>` deletes it. |
+| `~/.testmuai/kaneai/context-sync/<name>.json` | the saved S3 key pair for the location named `<name>`, readable by you only (mode `0600`). `kane-cli context sync remove <name>` deletes it. The file belongs to the name, not to one store: every store on this machine whose location is called `<name>` reads it, and binding another bucket under that name from any store replaces it — give each bucket its own name. |
 | `~/.testmuai/kaneai/context-sync/mirrors/` | kane-cli's own cache of each GitHub location (bare Git objects, no checkout). Safe to delete; the next command fetches again. |
 
 ## Resetting settings

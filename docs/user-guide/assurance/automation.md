@@ -36,7 +36,7 @@ Consistent across extract, design, and the maintain commands that embed them:
 | `2` | Usage / auth / refusal — bad flags, failed input validation, no store, bare non-TTY without `--mode`, missing `--yes` on a destructive command. Nothing was mutated — with two durable exceptions: a merged ingest whose *extraction* refused keeps its landed sources (the run says they're safe), and reconcile's `ci` fail-close keeps its stored plan. |
 | `3` | **Paused and resumable** — the only meaning of 3. A session is saved; resume it within 24 hours. Since 0.7.1 sessions are durable from the first turn, so a crash that left a checkpoint also exits `3` and names the exact resume command (a crash before anything durable — or a failed pause save — still exits `1`). |
 
-The sync verbs *(0.8.14)* keep the same three meanings with one addition: exit `3` is also **a person has to decide something** — a `push` or `pull` refused because you are behind or diverged (the remedy names the command), and a rebase that stopped on open decisions (answer them with `--answer`, or on a terminal). Exit `2` is a precondition (a location that cannot be reached, a rebase still open, missing keys); exit `1` a record that cannot be used. See [the sync verbs on the stream](#the-sync-verbs-on-the-stream).
+The sync verbs *(0.8.14)* keep the same three meanings with one addition: exit `3` is also **a person has to decide something** — a `kane-cli context push` or `kane-cli context pull` refused because you are behind or diverged (the remedy names the command), and a rebase that stopped on open decisions (answer them with `--answer`, or on a terminal). Exit `2` is a precondition (a location that cannot be reached, a rebase still open, missing keys); exit `1` a record that cannot be used. A refusal says what stopped, not that nothing happened. See [the sync verbs on the stream](#the-sync-verbs-on-the-stream).
 
 ## The NDJSON stream (`--mode agent`)
 
@@ -180,65 +180,50 @@ The rule stands: there is no auto-approve. These paths land **your** decisions f
 <a name="the-sync-verbs-on-the-stream"></a>
 ## The sync verbs on the stream *(0.8.14)*
 
-`kane-cli context sync|push|pull|clone` and the `sync` subcommands (`add`, `list`, `remove`, `status`, `doctor`) all take `--mode agent` and speak the same strict envelope with `verb: "sync"` — stdout is NDJSON only, stderr stays empty, `done` is last. Nothing here calls the agent or spends credits. `sync setup` is the one command that needs a terminal: under `--mode agent` it answers `error{code: TTY_REQUIRED}` naming `sync add` and `clone` as the alternatives. The full picture of what these commands do is in [Sharing the context graph with your team](./sharing.md).
+`kane-cli context sync`, `kane-cli context push`, `kane-cli context pull`, `kane-cli context clone` and the subcommands `kane-cli context sync add`, `kane-cli context sync list`, `kane-cli context sync remove`, `kane-cli context sync status` and `kane-cli context sync doctor` all take `--mode agent` and speak the same strict envelope with `verb: "sync"` — stdout is NDJSON only, stderr stays empty, `done` is last. None of them calls the agent or spends credits. `kane-cli context sync setup` is the one command that needs a terminal: under `--mode agent` it answers `error{code: TTY_REQUIRED}` naming `kane-cli context sync add` and `kane-cli context clone` as the alternatives. The full picture of what these commands do is in [Sharing the context graph with your team](./sharing.md).
 
 | type | payload highlights |
 |---|---|
-| `sync_probe_started` / `sync_probe` | `sync add` and `clone`, around the location check (the slow part on a first GitHub fetch): `name`, `kind`; then `tier` (`1` can publish; `2`/`3` download only) and `detail` |
-| `sync_status` | `sync status`: `name`, `relation` — `kind` (`up-to-date`, `behind`, `ahead`, `diverged`, `empty-storage`, `empty-local`, `foreign-lineage`) with the local and the location's positions — `rebase_id` (the open rebase, or null) and `decisions[]` (each in the `sync_rebase_decision` shape) |
-| `sync_locations` / `sync_removed` | `sync list` / `sync remove` |
-| `sync_pull_done` | `pull`, `sync`, `clone`: `name`, `imported`, `from`, `to`, `blobs`, `proposals`; `clone` adds `dir` |
-| `sync_push_done` | `push`, `sync`: `name`, `from`, `to`, `pushed`, `blobs`, `proposals`, `already_there` |
-| `sync_rebase_started` | `pull --rebase --yes`: `rebase_id`, `from`, `backup_path`, `moved[]`, `quarantined_tests[]` |
+| `sync_probe_started` / `sync_probe` | `kane-cli context sync add` and `kane-cli context clone`, around the location check (the slow part on a first GitHub fetch): `name`, `kind`; then `tier` (`1` = the location can publish; `2` or `3` = download only) and `detail` |
+| `sync_status` | `kane-cli context sync status`: `name`, `relation` — `kind` (`up-to-date`, `behind`, `ahead`, `diverged`, `empty-storage`, `empty-local`, `foreign-lineage`), `local` and `storage` (each `{seq, hash}` of that side's last record, or null when that side is empty) and, on `diverged`, `at` (the first record number where the two sides differ; the last shared record is `at - 1`) — then `rebase_id` (the open rebase, or null) and `decisions[]` (each in the `sync_rebase_decision` shape). With `--show <n>`: `record[]` (the saved record in full, one line each) and `decision`; `name` and `relation` are then null |
+| `sync_locations` / `sync_removed` | `kane-cli context sync list` / `kane-cli context sync remove` |
+| `sync_pull_done` | `kane-cli context pull`, `kane-cli context sync`, `kane-cli context clone`: `name`, `imported`, `from`, `to`, `blobs`, `proposals`; `clone` adds `dir` |
+| `sync_push_done` | `kane-cli context push`, `kane-cli context sync`: `name`, `from`, `to`, `pushed`, `blobs`, `proposals`, `already_there` |
+| `sync_rebase_started` | `kane-cli context pull --rebase --yes`: `rebase_id`, `from`, `backup_path`, `moved[]`, `quarantined_tests[]` |
 | `sync_rebase_item` | one per saved record: `seq`, `intent` (`extract`, `review`, `names`, `retire`, …), `outcome` (`reapplied`, `already-present`, `not-reapplied`, `decision`), `reason?` |
 | `sync_rebase_decision` | one per open decision, in dependency order: `decision_id`, `kind`, `intent`, `seq`, `label`, `location`, `mine` and `theirs` (one line per side — the local change and the location's), `answers[]` (only the legal ones, each `{answer, consequence}`) |
-| `sync_rebase_done` | once per walk: the four counts, `decisions_open`, `status` (`complete`, `paused`, `aborted`) |
-| `sync_rebase_open` | `push` or `sync` while a rebase is still open — followed by `sync_error{SYNC_REBASE_PENDING}` |
-| `sync_doctor` / `sync_rebase_exported` | `sync doctor` / `sync doctor --export` |
-| `sync_behind` | the advisory line from `extract`, `design tests` and `maintain reconcile` when a teammate has pushed since you pulled: `name`, `local_seq`, `storage_seq`, `text`; nothing is refused |
-| `sync_error` | any refusal: `code` (`SYNC_BEHIND`, `SYNC_DIVERGED`, `SYNC_REBASE_PENDING`, `SYNC_LOCATION_UNREACHABLE`, `SYNC_LOCATION_DENIED`, `SYNC_LOCATION_EMPTY`, `SYNC_READ_ONLY`, `SYNC_POSITION_TAKEN`, `SYNC_FOREIGN_LINEAGE`, `SYNC_GIT_REQUIRED`, `SYNC_PUBLICATION_UNKNOWN`, …), `detail`, `remedy` — the exact next command in plain words |
-| `error` | a command-level refusal: `USAGE` (a bad flag, an unknown decision id), `MODE_USAGE`, `CREDENTIALS_MISSING`, `TTY_REQUIRED` — with `remedy` |
-| `done` | always last: `status` — `complete` (0), `refused` (2, or 3 when a person has to decide), **`paused` (3): a rebase walk stopped on open decisions, the rebase stays open** — and `exit_code` |
+| `sync_rebase_done` | once per walk, and once on `kane-cli context sync doctor --abort`: the four counts, `decisions_open`, `status` (`complete`, `paused`, `aborted`) |
+| `sync_rebase_open` | `kane-cli context push` or `kane-cli context sync` while a rebase is still open — followed by `sync_error{SYNC_REBASE_PENDING}` |
+| `sync_doctor` / `sync_rebase_exported` | `kane-cli context sync doctor` / `kane-cli context sync doctor --export` |
+| `sync_behind` | the advisory from `kane-cli context extract`, `kane-cli design tests` and `kane-cli maintain reconcile` when a teammate has pushed since you pulled: `name`, `local_seq`, `storage_seq`, `text`; nothing is refused |
+| `sync_error` | a sync refusal: always `code` (`SYNC_BEHIND`, `SYNC_DIVERGED`, `SYNC_REBASE_PENDING`, `SYNC_LOCATION_UNREACHABLE`, `SYNC_LOCATION_DENIED`, `SYNC_LOCATION_EMPTY`, `SYNC_READ_ONLY`, `SYNC_POSITION_TAKEN`, `SYNC_FOREIGN_LINEAGE`, `SYNC_GIT_REQUIRED`, `SYNC_PUBLICATION_UNKNOWN`, …), `detail`, `remedy` — the exact next command in plain words |
+| `error` | a command-level refusal — a bad flag or an unknown decision id (`USAGE`), `MODE_USAGE`, `CREDENTIALS_MISSING`, `TTY_REQUIRED` — with `message`; `code` and `remedy` are usually there but not guaranteed (a missing store, for one, is `error` with `message` alone), so read `message` when either is absent |
+| `done` | always last: `status` — `complete` (0), `refused` (2, or 3 when a person has to decide), `paused` (3) — and `exit_code`. `paused` means decisions are waiting: after a rebase walk the rebase stays open; after `kane-cli context sync doctor --abort` the rebase is closed and the unanswered decisions stayed in the backup — the `sync_rebase_done` before it (`status` `paused` or `aborted`) tells the two apart |
 
-The `done` guarantee holds: every one of these commands ends its stream with exactly one `done`, refusals included. Tolerate unknown types.
+The `done` guarantee holds: every one of these commands ends its stream with exactly one `done`, refusals included. Tolerate unknown types. A refusal says what stopped, not that nothing happened: `kane-cli context sync` finishes its pull before its push can be refused, and a push can land on the server before its confirmation is lost (`SYNC_PUBLICATION_UNKNOWN`) — the events before the `sync_error` say what completed.
 
-**Decisions from an agent.** A rebase that meets a disagreement emits every open `sync_rebase_decision` before it stops with `done{paused, 3}`. Answer one by id — `--answer <decision_id>=<answer>` on `sync` or `pull`, repeatable — using only an `answer` the event listed; each run answers what it was given and stops again while cards remain, and the last answer lets `sync` finish, pull and push in the same run. The two sides are always `local` and the location's name; `mine` describes the local change and `theirs` the location's. Never guess an answer: `keep-theirs` writes nothing and is always legal. A stale or unknown id is `error{USAGE}` and nothing is written. Between runs, `kane-cli context sync status --json` re-lists the open decisions and `--show <n>` prints one saved record in full. A real exchange (paths shortened):
+**Decisions from an agent.** A rebase that meets a disagreement emits every open `sync_rebase_decision` before it stops with `done{paused, 3}`. Answer one by id — `--answer <decision_id>=<answer>` on `kane-cli context sync` or `kane-cli context pull`, repeatable — using only an `answer` the event listed; each run answers what it was given and stops again while cards remain. The last answer lets the rebase finish: `kane-cli context sync` then pulls and pushes in the same run, `kane-cli context pull` only pulls. The two sides are always `local` and the location's name; `mine` describes the local change and `theirs` the location's. Never guess an answer. `keep-theirs` writes nothing and is always offered, but it is a choice: the local change stays in the backup, and a later saved record built on it is looked at again. A stale or unknown id is `error{USAGE}` and nothing is written. Between runs, `kane-cli context sync status --json` re-lists the open decisions and `--show <n>` prints one saved record in full. A real exchange with one decision (the backup path shortened):
 
 ```bash
 $ kane-cli context pull origin --rebase --yes --mode agent
-{"type":"sync_rebase_started","v":1,"verb":"sync","name":"origin","rebase_id":"2026-09-14T10-22-56-790Z-reset","from":3,"backup_path":"…/.context/sync/backups/2026-09-14T10-22-56-790Z-reset","moved":["000003-98b9d5b0c6ec.json","000004-a3d307d151cf.json"],"quarantined_tests":[]}
-{"type":"sync_pull_done","v":1,"verb":"sync","name":"origin","imported":2,"from":2,"to":4,"blobs":1,"proposals":0}
-{"type":"sync_rebase_item","v":1,"verb":"sync","rebase_id":"2026-09-14T10-22-56-790Z-reset","seq":3,"intent":"names","outcome":"decision","reason":"slug: \"spec\" names brief on origin (by bob at 2026-09-14T10:22:43.665Z)"}
-{"type":"sync_rebase_item","v":1,"verb":"sync","rebase_id":"2026-09-14T10-22-56-790Z-reset","seq":4,"intent":"retire","outcome":"decision","reason":"head: prd was re-ingested on origin by someone at 2026-09-14T10:22:45.893Z"}
-{"type":"sync_rebase_decision","v":1,"verb":"sync","rebase_id":"2026-09-14T10-22-56-790Z-reset","decision_id":"h3","kind":"slug","intent":"names","seq":3,"label":"names spec","location":"origin","mine":"named prd \"spec\" at 2026-09-14T10:22:50.615Z","theirs":"\"spec\" names brief on origin (by bob at 2026-09-14T10:22:43.665Z)","answers":[{"answer":"keep-theirs","consequence":"the local change stays in the backup"},{"answer":"apply-mine","consequence":"the name moves to the local node; the node that holds it on origin is reached by its id again"}]}
-{"type":"sync_rebase_decision","v":1,"verb":"sync","rebase_id":"2026-09-14T10-22-56-790Z-reset","decision_id":"h4","kind":"head","intent":"retire","seq":4,"label":"retire prd","location":"origin","mine":"retired prd at sha256:fb3e3e5a6cfa (2026-09-14T10:22:53.672Z)","theirs":"prd was re-ingested on origin by someone at 2026-09-14T10:22:45.893Z","answers":[{"answer":"keep-theirs","consequence":"the local change stays in the backup"},{"answer":"apply-mine","consequence":"retire the source as it is now, origin's version included"}]}
-{"type":"sync_rebase_done","v":1,"verb":"sync","rebase_id":"2026-09-14T10-22-56-790Z-reset","reapplied":0,"already_present":0,"not_reapplied":0,"decisions_open":2,"status":"paused"}
+{"type":"sync_rebase_started","v":1,"verb":"sync","name":"origin","rebase_id":"2026-09-14T10-47-54-074Z-reset","from":3,"backup_path":"…/.context/sync/backups/2026-09-14T10-47-54-074Z-reset","moved":["000003-3551914b01f9.json"],"quarantined_tests":[]}
+{"type":"sync_pull_done","v":1,"verb":"sync","name":"origin","imported":1,"from":2,"to":3,"blobs":0,"proposals":0}
+{"type":"sync_rebase_item","v":1,"verb":"sync","rebase_id":"2026-09-14T10-47-54-074Z-reset","seq":3,"intent":"names","outcome":"decision","reason":"slug: \"spec\" names brief on origin (by bob at 2026-09-14T10:47:47.857Z)"}
+{"type":"sync_rebase_decision","v":1,"verb":"sync","rebase_id":"2026-09-14T10-47-54-074Z-reset","decision_id":"h3","kind":"slug","intent":"names","seq":3,"label":"names spec","location":"origin","mine":"named prd \"spec\" at 2026-09-14T10:47:50.866Z","theirs":"\"spec\" names brief on origin (by bob at 2026-09-14T10:47:47.857Z)","answers":[{"answer":"keep-theirs","consequence":"the local change stays in the backup"},{"answer":"apply-mine","consequence":"the name moves to the local node; the node that holds it on origin is reached by its id again"}]}
+{"type":"sync_rebase_done","v":1,"verb":"sync","rebase_id":"2026-09-14T10-47-54-074Z-reset","reapplied":0,"already_present":0,"not_reapplied":0,"decisions_open":1,"status":"paused"}
 {"type":"done","v":1,"verb":"sync","status":"paused","exit_code":3}
 
-$ kane-cli context sync origin --answer h3=keep-theirs --answer h4=apply-mine --mode agent
-{"type":"sync_rebase_item","v":1,"verb":"sync","rebase_id":"2026-09-14T10-22-56-790Z-reset","seq":3,"intent":"names","outcome":"not-reapplied","reason":"you kept origin's version"}
-{"type":"sync_rebase_item","v":1,"verb":"sync","rebase_id":"2026-09-14T10-22-56-790Z-reset","seq":4,"intent":"retire","outcome":"reapplied"}
-{"type":"sync_rebase_done","v":1,"verb":"sync","rebase_id":"2026-09-14T10-22-56-790Z-reset","reapplied":1,"already_present":0,"not_reapplied":1,"decisions_open":0,"status":"complete"}
-{"type":"sync_pull_done","v":1,"verb":"sync","name":"origin","imported":0,"from":5,"to":5,"blobs":0,"proposals":0}
-{"type":"sync_push_done","v":1,"verb":"sync","name":"origin","from":4,"to":5,"pushed":1,"blobs":0,"proposals":0,"already_there":0}
+$ kane-cli context sync origin --answer h3=keep-theirs --mode agent
+{"type":"sync_rebase_item","v":1,"verb":"sync","rebase_id":"2026-09-14T10-47-54-074Z-reset","seq":3,"intent":"names","outcome":"not-reapplied","reason":"you kept origin's version"}
+{"type":"sync_rebase_done","v":1,"verb":"sync","rebase_id":"2026-09-14T10-47-54-074Z-reset","reapplied":0,"already_present":0,"not_reapplied":1,"decisions_open":0,"status":"complete"}
+{"type":"sync_pull_done","v":1,"verb":"sync","name":"origin","imported":0,"from":3,"to":3,"blobs":0,"proposals":0}
+{"type":"sync_push_done","v":1,"verb":"sync","name":"origin","from":3,"to":3,"pushed":0,"blobs":0,"proposals":0,"already_there":0}
 {"type":"done","v":1,"verb":"sync","status":"complete","exit_code":0}
 ```
 
-**The fence.** While a rebase is open every write verb — extract, design, reconcile, ingest, review, `name`, `retire`, `revert`, a test run recording its facts, and `push` — refuses with `sync_error{code: SYNC_REBASE_PENDING}` on its own stream and exit `2`. Finish the rebase (`sync` or `pull`, with answers) or close it (`sync doctor --abort`); never delete files under `.context/`. `name`, `retire` and `revert` take `--mode agent` too *(0.8.14)*: success is `done` alone, and every refusal is typed.
+**The fence.** While a rebase is open every write verb — `kane-cli context extract`, `kane-cli design tests`, `kane-cli maintain reconcile`, `kane-cli context ingest`, `kane-cli context review`, `kane-cli context name`, `kane-cli context retire`, `kane-cli context revert` and `kane-cli context push` — refuses with `sync_error{code: SYNC_REBASE_PENDING}` on its own stream and exit `2`. A test run is the exception: it does not refuse; the results it would record wait to the side and land on the first run after the rebase closes, and the run logs a warning. Finish the rebase (`kane-cli context sync` or `kane-cli context pull`, with answers) or close it (`kane-cli context sync doctor --abort`); never delete files under `.context/`. `kane-cli context name`, `kane-cli context retire` and `kane-cli context revert` take `--mode agent` too *(0.8.14)*: on success the stream ends with `done`, preceded by a `warning{message}` event for each note the command has (`kane-cli context revert` emits one per note); every refusal is typed.
 
-**A CI shape** — clone once, pull before the run, push the facts after; a decision is a job that stops and hands the card to a person:
-
-```bash
-# first run on this runner: a store from the team location (GitHub over HTTPS with a CI token)
-export KANE_SYNC_GIT_TOKEN="$CONTEXT_REPO_TOKEN"
-[ -d .context ] || kane-cli context clone https://github.com/example-org/team-context.git . --mode agent
-
-kane-cli context pull origin --mode agent > pull.ndjson || {
-  code=$?; [ "$code" -eq 3 ] && kane-cli context sync status origin --json > decisions.json   # a rebase, or a person's call
-  exit "$code"; }
-kane-cli context extract --mode ci
-kane-cli context push origin --mode agent
-```
+**In CI** — clone once, pull before the run, push after, stop the job on exit `3` — the one maintained recipe is in [CI/CD recipes → A shared context store in CI](../cicd.md#a-shared-context-store-in-ci).
 
 ## When releases don't match
 
@@ -246,7 +231,7 @@ Sessions bind to the kane-cli release that created them, and the refusals are lo
 
 ## Machine-readable reads
 
-These read commands have structured forms: `context list --json` and `context sessions --json` (one JSON object per line), `context explain --json`, `context view --json` (the full computed graph payload), `context view --no-open --out graph.html` (render without a browser), `cover --json`, `cover gaps --json` (the nested coverage document — see [Coverage](./coverage.md)), and *(0.8.14)* `context sync status --json` (the relation, the open rebase id and its decisions), `context sync list --json` and `context sync doctor --json`.
+These read commands have structured forms: `context list --json` and `context sessions --json` (one JSON object per line), `context explain --json`, `context view --json` (the full computed graph payload), `context view --no-open --out graph.html` (render without a browser), `cover --json`, `cover gaps --json` (the nested coverage document — see [Coverage](./coverage.md)), and *(0.8.14)* `kane-cli context sync status --json` (the relation, the open rebase id and its decisions), `kane-cli context sync list --json` and `kane-cli context sync doctor --json`.
 
 ## Headless maintain
 

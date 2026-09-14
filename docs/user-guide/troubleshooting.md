@@ -236,7 +236,7 @@ Use `kane-cli testrun run --dry-run …` to see the full plan and every offender
 
 ## Context sync: Git not found or too old
 
-A GitHub location (`kane-cli context sync add`, `clone`, or guided setup) needs Git **2.31 or newer** on the machine that runs kane-cli. Without it the command refuses before touching anything:
+A GitHub location (`kane-cli context sync add`, `kane-cli context clone`, or `kane-cli context sync setup`) needs Git **2.31 or newer** on the machine that runs kane-cli. Without it the command refuses before touching anything:
 
 ```
 $ kane-cli context sync add team git@github.com:example-org/team-context.git
@@ -267,9 +267,9 @@ Two different refusals, told apart by the message:
   next: ask the owner of the bucket for access, or bind it again with the right keys: kane-cli context sync add origin <descriptor> --credential-env <VAR>
   ```
 
-  Ask the owner for access, or bind the location again under the same name with the right keys — `sync add` on an existing name replaces its keys, and a pair the location refuses never replaces one that worked. For a GitHub location over HTTPS in CI, check that `KANE_SYNC_GIT_TOKEN` grants Contents read/write on *that* repository.
+  Ask the owner for access, or bind the location again under the same name with the right keys — `kane-cli context sync add` on an existing name replaces its keys, and a pair the location refuses never replaces one that worked. For a GitHub location over HTTPS in CI, check that `KANE_SYNC_GIT_TOKEN` grants Contents read/write on *that* repository.
 
-A location you can read but not write is not a refusal: it binds as download-only (`read-only: this location can be cloned and pulled, never pushed`), and only `push` refuses. Neither refusal changes anything in your store.
+A location you can read but not write is not a refusal: it binds as download-only (`read-only: this location can be cloned and pulled, never pushed`). `kane-cli context push` to it refuses with `SYNC_READ_ONLY`, and so does `kane-cli context sync` — after its pull has already landed, so its exit `2` does not mean nothing happened. Take records from such a location with `kane-cli context pull`. The two refusals above change nothing in your store.
 
 ## Context sync: a Dropbox, OneDrive, Google Drive or iCloud folder is refused
 
@@ -287,17 +287,17 @@ error: a rebase (2026-09-14T10-13-45-679Z-reset) is open with 2 decisions unreso
 next: run kane-cli context sync or kane-cli context pull to continue, or kane-cli context sync doctor --abort to close it
 ```
 
-A `pull --rebase` stopped on decisions you have not answered yet (or was interrupted), and until it is finished the store takes writes from the rebase only — exactly like git mid-rebase. Extract, design, review, ingest, `name`, `retire`, a test run recording its result, and `push` all refuse with these two lines. Nothing is lost: a test run's results wait to the side and land on the first run after the rebase closes.
+A `kane-cli context pull origin --rebase` stopped on decisions you have not answered yet (or was interrupted), and until it is finished the store takes writes from the rebase only — exactly like git mid-rebase. `kane-cli context extract`, `kane-cli design tests`, `kane-cli maintain reconcile`, `kane-cli context ingest`, `kane-cli context review`, `kane-cli context name`, `kane-cli context retire` and `kane-cli context revert` refuse with these two lines; `kane-cli context push` refuses with the same code (`SYNC_REBASE_PENDING`) and the same `next:` line, its reason naming the rebase and saying nothing was pushed. A test run does not refuse, and nothing is lost: its results wait to the side and land on the first run after the rebase closes.
 
 1. See what is open: `kane-cli context sync status origin` lists each decision on one line; `--show <n>` prints one saved record in full.
-2. Answer: `kane-cli context sync origin` walks the cards on a terminal; headless, `kane-cli context sync origin --answer <id>=keep-theirs` (or `apply-mine`), one flag per decision. `keep-theirs` writes nothing and is always safe.
-3. Or close it: `kane-cli context sync doctor --abort` keeps what was already reapplied and leaves the unanswered records in the backup. `kane-cli context sync doctor --export <dir>` rebuilds the pre-rebase store beside, as its own store.
+2. Answer: `kane-cli context sync origin` walks the cards on a terminal; headless, `kane-cli context sync origin --answer <id>=keep-theirs` (or `apply-mine`), one flag per decision. `keep-theirs` writes nothing, but it is a choice, not a default: the local change stays in the backup unapplied, and a later record that was built on it is looked at again.
+3. Or close it: `kane-cli context sync doctor --abort` keeps what was already reapplied and leaves the unanswered records in the backup. A rebase interrupted before it imported origin's records is undone by the same command — the store is put back as it was. Once the import has landed it can only be finished (`SYNC_RESET_IMPORTED`): run `kane-cli context sync` or `kane-cli context pull` to finish it, then close it if you still want to. `kane-cli context sync doctor --export <dir>` rebuilds the pre-rebase store beside, as its own store.
 
 Never delete files under `.context/` to get past the fence. See [When two people changed the same thing](./assurance/sharing.md#rebase).
 
 ## Context sync: publication could not be confirmed
 
-A `push` to a GitHub location can lose the server's answer after the upload — a dropped connection, a proxy timeout. kane-cli then refuses with `SYNC_PUBLICATION_UNKNOWN` (exit `2`) rather than guess: the batch may have landed. Your store is unchanged and nothing needs to be redone. Check connectivity and run the **same** command again: it reads the location first and reconciles what actually landed — a batch that arrived is recognised as already there, never published twice; a batch that did not is published now. Only after that should anything else run. If a proxy rejects large uploads, `KANE_SYNC_GIT_HTTP_POST_BUFFER=33554432` raises Git's upload buffer for that command; a very slow link gets more time with `KANE_SYNC_GIT_TRANSFER_TIMEOUT_SECONDS` — see [Context sync environment variables](./configuration.md#context-sync-environment-variables).
+A `kane-cli context push` to a GitHub location can lose the server's answer after the upload — a dropped connection, a proxy timeout. kane-cli then refuses with `SYNC_PUBLICATION_UNKNOWN` (exit `2`) rather than guess: the batch may have landed. Your store is unchanged and nothing needs to be redone. Check connectivity and run the **same** command again: it reads the location first and reconciles what actually landed — a batch that arrived is recognised as already there, never published twice; a batch that did not is published now. Only after that should anything else run. If a proxy rejects large uploads, `KANE_SYNC_GIT_HTTP_POST_BUFFER=33554432` raises Git's upload buffer for that command; a very slow link gets more time with `KANE_SYNC_GIT_TRANSFER_TIMEOUT_SECONDS` — see [Context sync environment variables](./configuration.md#context-sync-environment-variables).
 
 ## Reporting bugs
 

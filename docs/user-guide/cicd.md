@@ -179,14 +179,16 @@ kane-cli run "Open the pricing page and verify the Pro plan is listed" \
 <a name="a-shared-context-store-in-ci"></a>
 ## A shared context store in CI *(0.8.14)*
 
-When your team [shares the context graph](./assurance/sharing.md) through a location, a pipeline works on the same store: clone it once, pull before each run, push the facts the run produced after. Nothing here calls the agent or spends credits.
+When your team [shares the context graph](./assurance/sharing.md) through a location, a pipeline works on the same store: clone it once, pull before each run, push the facts the run produced after. The sync commands never call the agent or spend credits; the run between them — `kane-cli context extract` below — is an ordinary extraction and consumes credits like any other.
 
 - **Sign in without a person.** For a GitHub location over HTTPS set `KANE_SYNC_GIT_TOKEN` from a CI secret — a repository-scoped personal access token with Contents read/write, or a GitHub App installation token; a workflow's own `GITHUB_TOKEN` only reaches the workflow's repository, so a separate context repository needs its own token. Over SSH, an SSH deploy key on the context repository works with no token. For an S3-compatible location set `KANE_SYNC_S3_ACCESS_KEY_ID` and `KANE_SYNC_S3_SECRET_ACCESS_KEY`. Neither is ever written to disk by kane-cli. See [Context sync environment variables](./configuration.md#context-sync-environment-variables).
 - **Use `--mode agent`** for structured output, and read the exit code: `0` done; `3` a person has to decide — the runner is behind or diverged, or a rebase stopped on decisions; `2` a precondition (the location cannot be reached, keys missing, a rebase still open).
-- **Do not answer decisions blindly.** A rebase that stops on a decision is a job that stops. Save `kane-cli context sync status origin --json` as a build artifact and let a person or an agent answer with `--answer <id>=<choice>` in a follow-up job; `keep-theirs` always writes nothing. The full contract is in [Automation → The sync verbs on the stream](./assurance/automation.md#the-sync-verbs-on-the-stream).
-- **Keep `.context/` out of the checkout.** The store never goes through a git merge; the location is where it is shared.
+- **Do not answer decisions blindly.** A rebase that stops on a decision is a job that stops. Save `kane-cli context sync status origin --json` as a build artifact — it is a report of what is waiting, not something a later job can replay on its own: answers go to the store that holds the open rebase, so the follow-up job must run on the same persisted `.context/` (a workspace or cache that survives between jobs), where a person or an agent answers with `kane-cli context sync origin --answer <id>=<choice>`. `keep-theirs` writes nothing, but it is a choice: the local change stays in the backup. The full contract is in [Automation → The sync verbs on the stream](./assurance/automation.md#the-sync-verbs-on-the-stream).
+- **Keep `.context/` out of version control.** The store never goes through a git merge; the location is where it is shared.
 
 ```bash
+set -e   # stop at the first failing command, so every exit code below is read
+
 # GitHub Actions step — the secret CONTEXT_REPO_TOKEN grants Contents read/write on the context repository
 export KANE_SYNC_GIT_TOKEN="$CONTEXT_REPO_TOKEN"
 
@@ -200,7 +202,7 @@ kane-cli context pull origin --mode agent > pull.ndjson || {
   exit "$code"
 }
 
-# the run itself, never guessing
+# the run itself, never guessing; a failed or paused extraction (exit 1 or 3) ends the job here, before anything is pushed
 kane-cli context extract --mode ci
 
 # after the run: publish what landed
