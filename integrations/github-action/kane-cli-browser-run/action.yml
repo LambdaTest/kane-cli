@@ -81,6 +81,9 @@ outputs:
   results-file:
     description: "Path to the Markdown results table written by the run"
     value: ${{ steps.run.outputs.results-file }}
+  evidence-url:
+    description: "Link that opens this run's sealed evidence pack in the hosted viewer (https://evidence.lambdatest.com), read straight from the evidence artifact. Empty when no pack was uploaded."
+    value: ${{ steps.evidence-link.outputs.evidence-url }}
 
 runs:
   using: "composite"
@@ -281,6 +284,7 @@ runs:
         [ "$OVERALL" = "passed" ]
 
     - name: Upload evidence pack
+      id: evidence
       if: always()
       uses: actions/upload-artifact@v4
       with:
@@ -288,6 +292,32 @@ runs:
         path: kane-out/evidence/
         if-no-files-found: ignore
         retention-days: 30
+
+    - name: Publish evidence link
+      id: evidence-link
+      if: always()
+      shell: bash
+      env:
+        ARTIFACT_ID: ${{ steps.evidence.outputs.artifact-id }}
+        ARTIFACT_NAME: ${{ inputs.artifact-name }}-${{ github.run_id }}-${{ github.run_attempt }}
+      run: |
+        # The hosted viewer opens a pack straight from a GitHub artifact:
+        # ?pack=gh-artifact:<owner>/<repo>/<artifact id>. The id is empty when
+        # nothing was collected (if-no-files-found: ignore) or the upload failed.
+        if [ -z "$ARTIFACT_ID" ]; then
+          echo "No evidence artifact was uploaded, so there is no viewer link."
+          exit 0
+        fi
+        pack="gh-artifact:${GITHUB_REPOSITORY}/${ARTIFACT_ID}"
+        pack="${pack//:/%3A}"
+        pack="${pack//\//%2F}"
+        url="https://evidence.lambdatest.com/?pack=${pack}"
+        echo "evidence-url=$url" >> "$GITHUB_OUTPUT"
+        echo "::notice title=Kane CLI evidence::$url"
+        {
+          echo
+          echo "[Open the evidence pack]($url) (artifact \`$ARTIFACT_NAME\`, kept 30 days)"
+        } >> "$GITHUB_STEP_SUMMARY"
 
     - name: Upload run logs
       if: always()
@@ -310,6 +340,7 @@ runs:
         KANE_RESULTS_FILE: ${{ steps.run.outputs.results-file }}
         KANE_ARTIFACT: ${{ inputs.artifact-name }}-${{ github.run_id }}-${{ github.run_attempt }}
         KANE_LOGS_ARTIFACT: ${{ inputs.logs-artifact-name }}-${{ github.run_id }}-${{ github.run_attempt }}
+        KANE_EVIDENCE_URL: ${{ steps.evidence-link.outputs.evidence-url }}
       with:
         script: |
           const fs = require('fs');
@@ -320,6 +351,10 @@ runs:
           let table = '';
           try { table = fs.readFileSync(process.env.KANE_RESULTS_FILE || 'kane-out/results.md', 'utf8'); } catch (e) {}
           const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+          const evidenceUrl = process.env.KANE_EVIDENCE_URL || '';
+          const evidence = evidenceUrl
+            ? `**Evidence:** [Open the evidence pack](${evidenceUrl}) (artifact \`${process.env.KANE_ARTIFACT}\` on [this run](${runUrl}), kept 30 days). Raw logs are in \`${process.env.KANE_LOGS_ARTIFACT}\`.`
+            : `**Evidence:** download the \`${process.env.KANE_ARTIFACT}\` artifact from [this run](${runUrl}) and open the pack with \`kane-cli evidence serve <pack>\`. Raw logs are in \`${process.env.KANE_LOGS_ARTIFACT}\`.`;
           const body = [
             marker,
             `## ${icon} Kane CLI: ${status}`,
@@ -327,7 +362,7 @@ runs:
             `> ${summary}`,
             ``,
             table,
-            `**Evidence:** download the \`${process.env.KANE_ARTIFACT}\` artifact from [this run](${runUrl}) and open the pack with \`kane-cli evidence serve <pack>\`. Raw logs are in \`${process.env.KANE_LOGS_ARTIFACT}\`.`,
+            evidence,
             ``,
             `<sub>Verified in a real browser by [Kane CLI](https://testmuai.com/kane-cli). Screenshots, network traces, and console logs are in the evidence pack.</sub>`
           ].join('\n');
