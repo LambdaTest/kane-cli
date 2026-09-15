@@ -9,8 +9,8 @@ Run plain-English browser tests in GitHub Actions. One step sets up Chrome and K
 1. Sets up Node.js and Google Chrome (stable) on the runner
 2. Installs Kane CLI and signs in with your TestMu credentials
 3. Runs an inline objective, or every `_test.md` file matching a glob as one `testrun` suite with parallel workers
-4. Uploads the sealed evidence pack as its own artifact, and the raw run logs as a second one
-5. Writes a results table to the job summary and, on pull requests, posts or updates one PR comment
+4. Uploads the sealed evidence pack as its own artifact and links it to the hosted evidence viewer, with the raw run logs in a second artifact
+5. Writes the results table and the evidence link to the job summary and, on pull requests, posts or updates one PR comment
 6. Fails the check when any test fails, errors, or times out
 
 ## Quick start
@@ -105,6 +105,7 @@ This repository also runs the action on itself. The `kane-cli-browser-run check`
 | `total` | Number of tests executed |
 | `failed` | Number of failed tests |
 | `results-file` | Path to the Markdown results table |
+| `evidence-url` | Link that opens the evidence pack in the hosted viewer, straight from the artifact. Empty when no pack was uploaded |
 
 ## Browser setup
 
@@ -121,8 +122,10 @@ Chrome environment variables are documented in [Configuration](../../../docs/use
 
 Every run uploads two artifacts with 30-day retention, even when the run fails:
 
-- `<artifact-name>-<run id>-<attempt>` (default prefix `kane-evidence`) holds only the sealed `.evidence` pack: one for an inline objective, one execution pack for a whole suite, plus a member's own pack when the suite authored an unrecorded test. Download it and open the pack with `kane-cli evidence serve <pack>`.
+- `<artifact-name>-<run id>-<attempt>` (default prefix `kane-evidence`) holds only the sealed `.evidence` pack: one for an inline objective, one execution pack for a whole suite, plus a member's own pack when the suite authored an unrecorded test. Open it from the viewer link, or download it and run `kane-cli evidence serve <pack>`.
 - `<logs-artifact-name>-<run id>-<attempt>` (default prefix `kane-logs`) holds `results.md`, `stream.ndjson` (the raw Kane CLI event stream), and `stderr.log`.
+
+The job summary, the PR comment, and the `evidence-url` output all carry the same link, of the form `https://evidence.lambdatest.com/?pack=gh-artifact:<owner>/<repo>/<artifact id>`. It opens the pack in the hosted viewer straight from the evidence artifact, so nobody has to download anything. The link lives as long as the artifact does, 30 days.
 
 What a pack contains and how to read it: [Evidence](../../../docs/user-guide/evidence.md).
 

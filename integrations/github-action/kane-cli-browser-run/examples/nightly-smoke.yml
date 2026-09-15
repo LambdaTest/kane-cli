@@ -34,6 +34,8 @@ jobs:
           KANE_STATUS: ${{ steps.kane.outputs.status }}
           KANE_SUMMARY: ${{ steps.kane.outputs.summary }}
           KANE_FAILED: ${{ steps.kane.outputs.failed }}
+          KANE_EVIDENCE_URL: ${{ steps.kane.outputs.evidence-url }}
         run: |
           echo "Kane CLI: ${KANE_STATUS:-error} (${KANE_SUMMARY:-no result})"
-          # Wire ${KANE_FAILED} into Slack, PagerDuty, or an issue here.
+          echo "Evidence: ${KANE_EVIDENCE_URL:-no pack uploaded}"
+          # Wire ${KANE_FAILED} and ${KANE_EVIDENCE_URL} into Slack, PagerDuty, or an issue here.

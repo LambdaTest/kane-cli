@@ -49,5 +49,7 @@ jobs:
         env:
           KANE_STATUS: ${{ steps.kane.outputs.status }}
           KANE_SUMMARY: ${{ steps.kane.outputs.summary }}
+          KANE_EVIDENCE_URL: ${{ steps.kane.outputs.evidence-url }}
         run: |
           echo "Kane CLI: ${KANE_STATUS:-error} (${KANE_SUMMARY:-no result})"
+          echo "Evidence: ${KANE_EVIDENCE_URL:-no pack uploaded}"
