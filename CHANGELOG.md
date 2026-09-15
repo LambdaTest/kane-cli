@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.14] - 2026-09-15
+
+### Share a context store with your team
+- **Set up sharing in one guided flow** — `kane-cli context sync setup` walks you through sharing over GitHub, an S3-compatible bucket, or a plain folder, or joining a team's existing context.
+- **Refusals read like sentences, not stack traces** — an unreachable location, a denied account, or an empty location each come back as a named refusal with the remedy, and bucket or Git output is never echoed back.
+- **Setup keeps what you typed** — after a refusal your address and credentials survive, a changed bucket re-asks only for keys, and the closing line gives you an address you can paste.
+- **Credentials are handled carefully** — key pairs are validated before they are saved, a rejected pair is handed back, files are written `0600`, and a failed clone restores origin's keys.
+- **Conflict?** — status, the behind advisory, and the refusal all name the location and point you at `pull --rebase` (or `clone` for the first position).
+- **Scriptable end to end** — every sync command takes `--mode agent` with typed events, `--json` output, exit code 2 on usage errors, and no echoed option values.
+
+### Deciding what wins during a rebase
+- **A decision panel you can read** — one panel per walk, each side labeled by what actually tells them apart, with field-level diffs for edits.
+- **Answer decisions inline or ahead of time** — `sync` and `pull` finish an open rebase, `status` and `doctor` look without changing anything, and `--answer` resolves a card directly.
+- **Writes are fenced while a rebase is open** — the store only accepts writes from the walk, so nothing lands behind your back mid-decision.
+- **Quieter output** — no notices on context verbs, one line per decision, a summary block at the end, and **Ctrl+C** pauses instead of tearing the walk down.
+
+### Tests can branch and loop
+- **Branches survive export** — local mobile export records the whole if/else structure, not just the branch that happened to run, and picks the taken branch from the recorded run.
+- **Healing keeps your structure** — a block that produced no runs is kept in the healed draft instead of being dropped.
+
+### Attach to existing appium sessions
+- **Attach to an Appium session you already have** — `run --appium-session-id` joins a live session, and an attached session never launches the app, so the opening action stands in for the launch.
+- **Clear refusals on conflicting flags** — a conflict names only the flags you actually passed, in plain language.
+
+### New store housekeeping
+- **`.context/` is gitignored automatically** — creating a store inside a Git repository adds it, and a store exported by `sync doctor --export` gets the entry in its own folder's `.gitignore` too.
+- **First landings report what happened** — a first landing from a URL tells you the `.gitignore` outcome, across every URL provider family.
+
 ## [0.8.13] - 2026-09-14
 
 ### Testing a build you just compiled
