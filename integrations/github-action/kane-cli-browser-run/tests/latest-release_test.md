@@ -12,7 +12,7 @@ Bundled check for the Kane CLI GitHub Action. The `kane-cli-browser-run check` w
 Go to https://github.com/LambdaTest/kane-cli/releases and verify the first release in the list is labelled "Latest".
 
 ## Fetch the latest release from the GitHub API
-Call GET https://api.github.com/repos/LambdaTest/kane-cli/releases/latest, save the response as latest_release, assert {{latest_release.status}} is 200, then store {{latest_release.response_body.tag_name}} as 'api_tag'.
+Call GET https://api.github.com/repos/LambdaTest/kane-cli/releases/latest, assert the response status is 200, then store the tag_name from the response body as 'api_tag'.
 
 ## Latest release on the page matches the API
-Assert the release labelled "Latest" on the page shows the version {{api_tag}}.
+Assert the release labelled "Latest" on the page shows the same version as the stored api_tag value.
