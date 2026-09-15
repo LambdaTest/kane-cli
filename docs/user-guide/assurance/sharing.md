@@ -74,7 +74,7 @@ The location is bound under the name `origin`. If this store already has a locat
 
 | The line says | It means |
 |---|---|
-| `dir tier 1 (all probes passed)`; for a repository, `git tier 1 (Can download and publish; independent reads and concurrent writes verified.)` | **can publish** — the location could be read, and the test write landed and read back: publishing, taking and cloning all work |
+| `dir tier 1 (all probes passed)`; for a bucket, `s3 tier 1 (all probes passed)`; for a repository, `git tier 1 (Can download and publish; independent reads and concurrent writes verified.)` | **can publish** — the location could be read, and the test write landed and read back: publishing, taking and cloning all work |
 | `dir tier 3 (P1 exclusive create: …/ro-location cannot be written: this account has no write access)`; for a repository, `git tier 3 (This location can be downloaded, but publication was refused.)` | **download only** — the location could be read, but the test write was refused (no permission, a read-only mount, a read-only key pair): clone and pull work, push refuses. `kane-cli context sync add` follows with `read-only: this location can be cloned and pulled, never pushed`; `kane-cli context clone` follows with `pull-only: this location can be cloned and pulled, never pushed` |
 | `tier 2` | **download only** as well — the checks did not prove everything safe publishing needs; the detail in the line names the check that failed. `kane-cli context sync add` follows with `pull-only: this storage did not prove atomic create`; `kane-cli context clone` with the same `pull-only:` line as tier 3 |
 
