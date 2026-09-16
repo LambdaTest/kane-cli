@@ -60,19 +60,20 @@ These are **untyped** — they have no `type` field. Do **not** key on `event.ty
 | `child_agent_start` | `child_id`, `objective`, `parent_step` | Child agent spawned |
 | `child_agent_end` | `child_id`, `success`, `steps_taken`, `summary` | Child agent finished |
 | `ask_user` | `question`, `step_index`, `options?` | Agent needs user input |
-| `error` | `message`, `code?` | Error occurred. With `code: "unresolved_variables"` it is the pre-run refusal — the only event of the run, no `run_end` follows; schema below. |
+| `error` | `message` | Error occurred |
+| `warning` | `code`, `message`, … | *(0.8.12+)* Pre-run, before any progress event: `code: "unresolved_variables"` — a `{{name}}` had no value; the run continues. Schema below. |
 | `test_md_evidence_ingest` | `status: "ok"\|"failed"`, `evidence_id`, `stage?` (failure only) | `testmd run` only: a replay's evidence pack published to the dashboard. Informational. |
 | `test_md_bundle_sync` | `status: "ok"\|"failed"`, `commit_id`, `bytes?` (success) / `stage?` (failure) | `testmd run` / `testmd sync`: test bundle pushed to the cloud after an authored commit. Informational. |
 | `testrun_*` family | see `references/testrun.md` | Emitted only by `kane-cli testrun run`; terminal event is `testrun_done`, not `run_end`. |
 
 **Note:** The `run` stream has no `run_start` event; startup metadata or errors can precede progress.
 
-### `error` with `code: "unresolved_variables"` (0.8.12+)
+### `warning` with `code: "unresolved_variables"` (0.8.12+)
 
-Emitted by `run`, `testmd run` and (after `testrun_plan`) `testrun run` when an authored step references a `{{name}}` that has no value. Nothing was dispatched; exit code `2`; stderr is silent.
+Emitted by `run`, `testmd run` and (after `testrun_plan`) `testrun run` when an authored step references a `{{name}}` that has no value. **The run proceeds** — the name is typed as written unless a step sets it first. Exit codes are unaffected.
 
 ```json
-{"type":"error","code":"unresolved_variables","message":"2 variable(s) have no value — nothing was dispatched",
+{"type":"warning","code":"unresolved_variables","message":"2 variable(s) have no value — typed as written unless a step sets them first",
  "suggested_file":".testmuai/variables/variables.json",
  "variables":[
    {"name":"checkout_url","reason":"not_declared","used_by":[{"file":"objective","step":1}]},
@@ -87,9 +88,7 @@ Emitted by `run`, `testmd run` and (after `testrun_plan`) `testrun run` when an 
 | `variables[].used_by[]` | `{file, step}` — `file` is `objective` for `kane-cli run`, else the test file (flattened step index) |
 | `suggested_file` | where to add a `not_declared` key: `.testmuai/variables/assurance.json` inside an assurance store, `variables.json` otherwise |
 
-Terminal: do not re-run the same command. Supply values (`--variables`, or fill the file) and run again.
-
-**Note:** `ask_user` is auto-disabled when stdin is not a TTY. Since agents typically run kane-cli as a subprocess, ask_user events will not be emitted. Write objectives that don't require interactive input.
+Report it alongside the run's outcome; if a later step failed on a literal placeholder, point at this.
 
 ## Parsing Strategy for one-shot `run`
 

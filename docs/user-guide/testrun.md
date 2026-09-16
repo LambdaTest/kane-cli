@@ -36,7 +36,6 @@ A member can fail preflight for these reasons:
 |---|---|---|
 | `org_mismatch` | Belongs to a different organisation than the rest | Check with `kane-cli testmd status <path>` |
 | `project_mismatch` | Belongs to a different project than the rest | Check with `kane-cli testmd status <path>`; run project-by-project |
-| `unresolved_variables` *(0.8.12)* | An authored step references a `{{name}}` that has no value in any variable file or in the member's own `variables:` frontmatter | Fill the value in `.testmuai/variables/*.json` (the receipt names the file) or remove the reference. `testrun run` has no `--variables` flag |
 
 If any member fails preflight, the plan is invalid and **nothing runs** (exit `2`). The offenders print to stderr:
 
@@ -46,10 +45,10 @@ error: plan invalid — 2 offending test(s):
   tests/other_project_test.md: project_mismatch
 ```
 
-Variable offenders get the full receipt instead of a one-line code — every unresolved name across the members, each with the test files and steps that use it:
+A member whose authored steps reference a `{{name}}` with no value does **not** fail preflight. The plan stays valid and prints a warning receipt — every such name across the members, each with the test files and steps that use it — and the run proceeds, typing the name as written unless a step sets it first:
 
 ```
-✗ 2 variables have no value — nothing was dispatched
+warning: 2 variables have no value
 
   Not in any variables file
     other_key   b_test.md step 1
@@ -58,10 +57,10 @@ Variable offenders get the full receipt instead of a one-line code — every unr
     Add them to .testmuai/variables/variables.json
 
   If {{name}} is literal page text, write \{{name}} to keep it as-is.
-  Fill the values and run again.
+  A step that sets a name first binds it; anything else is typed as written. Fill the values to bind them.
 ```
 
-In agent mode (stdin not a TTY) the same information arrives as one `error` event with `code: "unresolved_variables"` right after `testrun_plan` — see [Running tests](./running-tests.md#unresolved-variables) for the shape.
+`testrun run` has no `--variables` flag: fill the pool file or the member's own `variables:` frontmatter. In agent mode (stdin not a TTY) the same content arrives as one `warning` event with `code: "unresolved_variables"` right after `testrun_plan`, whose members carry their rows — see [Running tests](./running-tests.md#unresolved-variables) for the shape.
 
 ## Mobile members
 

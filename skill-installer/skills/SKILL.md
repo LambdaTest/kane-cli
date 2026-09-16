@@ -76,7 +76,8 @@ Progress events have `step`/`status`/`remark` fields and **no `type` field**.
 |------|-------------|-----|
 | **Failures** | Any step with `status: "failed"` | `Step <n> failed: <remark>` |
 | **Flow changes** | `bifurcation`, `child_agent_start`, `child_agent_end` | Plain-language one-liner (e.g. "The agent split the objective into 2 sub-tasks") |
-| **Errors** | `error` typed events | `Error: <message>`. The exception is `code: "unresolved_variables"`, which is a pre-run refusal, not a failure: see §3 **Unresolved variables** |
+| **Errors** | `error` typed events | `Error: <message>` |
+| **Unresolved variables** | `warning` with `code: "unresolved_variables"` | Pre-run, before any progress: list the names and where a value goes (§3 **Unresolved variables**) — the run went ahead |
 | **Overall progress** | All passing steps | One summary line: `<total> steps completed: <2–4 key actions from remarks>` |
 
 #### What to skip
@@ -209,7 +210,7 @@ Other flags (`--global-context`, `--local-context`, `--cdp-endpoint`, `--allow-m
 
 **Exit codes:** `0` passed · `1` failed · `2` auth/infra error · `3` timeout/cancelled.
 
-**Unresolved variables (0.8.12+):** every `{{name}}` in the objective must have a value before the run starts. If one does not, the run **refuses before anything launches** — exit `2`, and with `--agent` a single `{"type":"error","code":"unresolved_variables", ...}` event carrying `variables[]` (`name`, `reason`: `value_missing` = the key exists in `file` with no value · `not_declared` = the key is in no file, add it to `suggested_file`; `used_by[]`). **This is terminal — do not retry the same command.** Either ask the user for the values, or write them yourself (`--variables '{"name":{"value":"…"}}'`, or `{"name":{"value":""}}` stubs into `suggested_file` for the user to fill), then run again. There is no bypass flag. Never checked: an explicit `{{global.*}}` (resolves from Test Manager at run time), `{{smart.*}}`/`{{environment.*}}`/`{{secrets.*}}`/`{{totp.*}}`, and names an earlier step stores or sets (`store … as 'x'`, `save … as {{x}}`, `set {{x}} as …`, `set x = …`). Numbers in a variable file count as values (loaded as strings); booleans do not.
+**Unresolved variables (0.8.12+):** every `{{name}}` in the objective is checked before the run starts. A name with no value is a **warning, never a refusal** — the run proceeds and the name is typed as written unless a step sets it first. With `--agent` it arrives as one `{"type":"warning","code":"unresolved_variables", ...}` event before the first progress frame, carrying `variables[]` (`name`, `reason`: `value_missing` = the key exists in `file` with no value · `not_declared` = the key is in no file, add it to `suggested_file`; `used_by[]`). Surface it: tell the user which names had no value and where a value goes; if the run then failed at a step that typed a placeholder, this is the likely cause. Supply values with `--variables '{"name":{"value":"…"}}'` or in the file and run again. Never checked: an explicit `{{global.*}}` (resolves from Test Manager at run time), `{{smart.*}}`/`{{environment.*}}`/`{{secrets.*}}`/`{{totp.*}}`, and names an earlier step stores (`store … as 'x'`). Numbers in a variable file count as values (loaded as strings); booleans do not.
 
 ### Examples
 
@@ -298,7 +299,7 @@ Action → extraction → assertion in one objective:
 Stdout is NDJSON, one event per line. On kane-cli 0.8.17+ every line also carries `v` (contract version, `1`) and `ts` (when it was emitted), and the first line is `{"type":"stream_start","cli_version":…,"surface":"run"|"testmd"|"testrun"}`. Ignore fields and event types you do not know: new ones can appear in any release. There are two shapes:
 
 - **Progress events** (most events) have `step` (1-based), `status` (`running` at start, `done`/`failed` at completion), `remark` — and **no `type` field**.
-- **Typed events** have a `type` field: `project_folder_auto_defaulted` (run-startup gate, fires before any progress when no project/folder is configured), `bifurcation`, `child_agent_start`, `child_agent_end`, `ask_user`, `error` (an `error` with `code: "unresolved_variables"` is a pre-run refusal and the **only** line — no `run_end` follows; handle per §3), and finally `run_end`.
+- **Typed events** have a `type` field: `project_folder_auto_defaulted` (run-startup gate, fires before any progress when no project/folder is configured), `bifurcation`, `child_agent_start`, `child_agent_end`, `ask_user`, `error`, `warning` (pre-run `code: "unresolved_variables"` — the run continues; handle per §3), and finally `run_end`.
 
 Parsing strategy:
 
