@@ -201,7 +201,7 @@ Every `{{name}}` in the objective must have a value before the run starts. A nam
 {"type":"error","code":"unresolved_variables","message":"2 variable(s) have no value — nothing was dispatched","suggested_file":".testmuai/variables/variables.json","variables":[{"name":"checkout_url","reason":"not_declared","used_by":[{"file":"objective","step":1}]},{"name":"login_password","reason":"value_missing","file":".testmuai/variables/variables.json","used_by":[{"file":"objective","step":1}]}]}
 ```
 
-`reason` is `value_missing` (the key exists in `file`, with no value) or `not_declared` (the key is in no file; `suggested_file` is where to add it). Names an earlier step stores, and the `{{smart.*}}` / `{{environment.*}}` / `{{secrets.*}}` / `{{totp.*}}` namespaces, are never checked.
+`reason` is `value_missing` (the key exists in `file`, with no value) or `not_declared` (the key is in no file; `suggested_file` is where to add it). Never checked: names an earlier step stores or sets (`store … as 'x'`, `save … as {{x}}`, `set {{x}} as …`, `set x = …`), an explicit `{{global.*}}` reference (resolved from Test Manager at run time), and the `{{smart.*}}` / `{{environment.*}}` / `{{secrets.*}}` / `{{totp.*}}` namespaces.
 
 For variables and context file behavior, see [./variables-and-context.md](./variables-and-context.md). For code export and the run mode toggle, see [./configuration.md](./configuration.md).
 
