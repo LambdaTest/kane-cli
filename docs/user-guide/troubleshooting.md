@@ -19,7 +19,6 @@ This page lists common problems you may hit while using kane-cli, what causes th
 - [testrun says "plan invalid" or skips members](#testrun-says-plan-invalid-or-skips-members)
 - [Context sync: Git not found or too old](#context-sync-git-not-found-or-too-old)
 - [Context sync: a location cannot be reached or refuses you](#context-sync-a-location-cannot-be-reached-or-refuses-you)
-- [Context sync: a Dropbox, OneDrive, Google Drive or iCloud folder is refused](#context-sync-a-dropbox-onedrive-google-drive-or-icloud-folder-is-refused)
 - [Context sync: "a rebase is open" — every change refused](#context-sync-a-rebase-is-open--every-change-refused)
 - [Context sync: publication could not be confirmed](#context-sync-publication-could-not-be-confirmed)
 - [Reporting bugs](#reporting-bugs)
@@ -274,15 +273,6 @@ Two different refusals, told apart by the message:
 - **The connection check could not finish.** `The server did not complete the concurrent connection check. Its scratch-ref policy may differ from the storage branch.` (`SYNC_PROBE_INCONCLUSIVE`) means the concurrent connection check did not finish; repository rules that block the scratch reference the check pushes under `refs/kane/probe/` are the usual cause. Nothing was bound; ask the repository owner to check that the reference is allowed, then run the command again.
 
 A location you can read but not write is not a refusal: it binds as download-only (`read-only: this location can be cloned and pulled, never pushed`). `kane-cli context push` to it refuses with `SYNC_READ_ONLY`, and so does `kane-cli context sync` — after its pull has already landed, so its exit `2` does not mean nothing happened. Take records from such a location with `kane-cli context pull`. The two refusals above change nothing in your store.
-
-## Context sync: a Dropbox, OneDrive, Google Drive or iCloud folder is refused
-
-```
-$ kane-cli context sync add origin ../Dropbox/ctx
-error: a folder synced by Dropbox, OneDrive, Google Drive or iCloud cannot be a location: these keep both sides of a conflict as duplicate files instead of refusing the second write — use a directory outside the sync client, a git-tracked folder, or an s3:// bucket
-```
-
-Those folders — including `Dropbox (Company)`, anything under `~/Library/CloudStorage`, and a symlink into any of them — keep both versions of a clashing file as "conflicted copies" instead of refusing the second write, so two teammates could both believe a record was published. That is the one thing a location must never do, and kane-cli refuses the folder before any check runs. Use a mounted network share, a GitHub repository, or an S3-compatible bucket instead.
 
 ## Context sync: "a rebase is open" — every change refused
 

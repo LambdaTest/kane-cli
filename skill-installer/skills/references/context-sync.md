@@ -37,7 +37,7 @@ Every command takes `--mode agent` (NDJSON, stderr byte-empty, `done` last). `[n
 | `kane-cli context clone <location> [dir]` | creates a new store in `dir` (default: the location's last name part) from a location, bound as `origin`; takes the same `--credential-env` / `--credential-file` as `kane-cli context sync add` |
 | `--answer <id>=<choice>` | on `kane-cli context sync` and `kane-cli context pull` only: answers one open decision headless (§5); repeatable |
 
-Location forms: `https://github.com/<owner>/<repo>.git` or `git@github.com:<owner>/<repo>.git` (optional `?prefix=<path>#<branch>`); `s3://<bucket>/<prefix>?endpoint=<https://host:port>&region=<region>` (`endpoint` only for a non-AWS service); a folder path. A folder under Dropbox, Drive, OneDrive or iCloud is refused.
+Location forms: `https://github.com/<owner>/<repo>.git` or `git@github.com:<owner>/<repo>.git` (optional `?prefix=<path>#<branch>`); `s3://<bucket>/<prefix>?endpoint=<https://host:port>&region=<region>` (`endpoint` only for a non-AWS service); a folder path.
 
 ## 3. The stream — the minimum an agent parses
 
