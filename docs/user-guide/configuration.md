@@ -239,6 +239,27 @@ A handful of environment variables control how kane-cli locates and launches Chr
 
 The CDP timeout and retry settings only affect transient launch failures (Chrome started but did not become reachable in time) — a missing or invalid binary fails immediately without retrying. See [Chrome failed to launch](./troubleshooting.md#chrome-failed-to-launch) for the matching troubleshooting steps.
 
+<a name="context-sync-environment-variables"></a>
+## Context sync environment variables *(0.8.14)*
+
+[Sharing the context graph](./assurance/sharing.md) reads a few environment variables — never `tui-config.json`.
+
+| Variable | Effect |
+|----------|--------|
+| `KANE_SYNC_GIT_TOKEN` | A token for a GitHub location over HTTPS in CI: a repository-scoped personal access token with **Contents read/write**, or a GitHub App installation token. Read at use time, never written to disk or put on a command line. A workflow's own `GITHUB_TOKEN` reaches only that workflow's repository, so a separate context repository needs its own token or an SSH deploy key. |
+| `KANE_SYNC_S3_ACCESS_KEY_ID` and `KANE_SYNC_S3_SECRET_ACCESS_KEY` | The access key pair for an S3-compatible location, read at use time; both must be set, and together they win over the saved credential file. Never written to disk — the CI form. |
+| `KANE_SYNC_GUARD` | `0` turns off the advisory line a write command prints when a teammate has pushed past this machine (`origin has moved past this machine — run kane-cli context pull origin`, or `this store and origin have diverged — run kane-cli context pull origin --rebase`). The check writes nothing, refuses nothing, and gives up silently after 1.5 seconds. |
+| `KANE_SYNC_GIT_TRANSFER_TIMEOUT_SECONDS` | How long one Git transfer (fetch, push) may take, `60` to `3600`. Default 15 minutes. Raise it for a slow link or a very large first fetch. |
+| `KANE_SYNC_GIT_HTTP_POST_BUFFER` | Git's HTTP upload buffer in bytes for that command (1 MiB to 512 MiB), for an HTTPS proxy that rejects chunked uploads — `33554432` is 32 MiB. Larger values cost memory; the default is unchanged. |
+| `KANE_CONTEXT_GITIGNORE` | `0` stops kane-cli from adding `.context/` to your `.gitignore` when it creates the store inside a git repository. |
+
+Two places on disk belong to sharing and are not touched by a settings reset:
+
+| Path | Holds |
+|------|-------|
+| `~/.testmuai/kaneai/context-sync/<name>.json` | the saved S3 key pair for the location named `<name>`, readable by you only (mode `0600`). `kane-cli context sync remove <name>` deletes it. The file belongs to the name, not to one store: every store on this machine whose location is called `<name>` reads it, and binding another bucket under that name from any store replaces it — give each bucket its own name. |
+| `~/.testmuai/kaneai/context-sync/mirrors/` | kane-cli's own cache of each GitHub location (bare Git objects, no checkout). Safe to delete; the next command fetches again. |
+
 ## Resetting settings
 
 There is no `kane-cli config reset` subcommand today. To reset persistent settings to defaults, delete the config file:
@@ -253,3 +274,4 @@ kane-cli will recreate the file with defaults the next time it writes a setting.
 - Session history under `~/.testmuai/kaneai/sessions/`.
 - Variables under `~/.testmuai/kaneai/variables/` and `.testmuai/variables/`.
 - Chrome profiles under `~/.testmuai/kaneai/chrome-profiles/`.
+- Context sync credentials and caches under `~/.testmuai/kaneai/context-sync/` (use `kane-cli context sync remove <name>` to delete a location's keys).

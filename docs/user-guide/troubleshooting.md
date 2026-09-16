@@ -17,6 +17,10 @@ This page lists common problems you may hit while using kane-cli, what causes th
 - [Debugging a failed run with its evidence pack](#debugging-a-failed-run-with-its-evidence-pack)
 - [A `--remote` run refused, failed, or came back empty](#a---remote-run-refused-failed-or-came-back-empty)
 - [testrun says "plan invalid" or skips members](#testrun-says-plan-invalid-or-skips-members)
+- [Context sync: Git not found or too old](#context-sync-git-not-found-or-too-old)
+- [Context sync: a location cannot be reached or refuses you](#context-sync-a-location-cannot-be-reached-or-refuses-you)
+- [Context sync: "a rebase is open" — every change refused](#context-sync-a-rebase-is-open--every-change-refused)
+- [Context sync: publication could not be confirmed](#context-sync-publication-could-not-be-confirmed)
 - [Reporting bugs](#reporting-bugs)
 
 ## "Chrome failed to launch"
@@ -228,6 +232,66 @@ Full reference: [Remote runs on the cloud grid](./remote-execution.md).
 | `project_mismatch` | The test belongs to a different project than the other members. | Same check; run project-by-project, or re-home the test. |
 
 Use `kane-cli testrun run --dry-run …` to see the full plan and every offender without executing anything. See [Batch runs with testrun](./testrun.md#preflight).
+
+## Context sync: Git not found or too old
+
+A GitHub location (`kane-cli context sync add`, `kane-cli context clone`, or `kane-cli context sync setup`) needs Git **2.31 or newer** on the machine that runs kane-cli. Without it the command refuses before touching anything:
+
+```
+$ kane-cli context sync add team git@github.com:example-org/team-context.git
+checking team: read access and safe publishing…
+error: This location needs Git 2.31 or newer.
+next: Install or update Git, then run setup again: https://git-scm.com/downloads
+```
+
+Install Git from the link, or update it (`brew install git`, `apt-get install git`, or the Windows installer), open a new terminal so `git --version` reports 2.31 or newer, and run the same command again. On a CI runner, add a Git install step before kane-cli. Folder and S3-compatible locations do not need Git at all — see [Sharing the context graph](./assurance/sharing.md#locations).
+
+## Context sync: a location cannot be reached or refuses you
+
+Two different refusals, told apart by the message:
+
+- **Nothing answered.** The folder does not exist and cannot be created, the host is down, or no repository answered at that address — a private repository you have not been invited to looks missing:
+
+  ```
+  error: nothing answered at /no/such/parent/team-context: that folder does not exist and cannot be created
+  next: check the path, then run the command again
+  ```
+
+  Check the address (`kane-cli context sync list` shows what the store has), that the drive is mounted, and that the repository exists and is shared with your account.
+
+- **The location answered and refused you.** Keys, a key pair, or an account without read permission:
+
+  ```
+  error: the bucket at https://team-context.s3.eu-west-1.amazonaws.com did not accept origin's access keys, even for reading
+  next: ask the owner of the bucket for access, or bind it again with the right keys: kane-cli context sync add origin <descriptor> --credential-env <VAR>
+  ```
+
+  `<descriptor>` in that line is the address of the location. Ask the owner for access, or bind the location again under the same name with the right keys — `kane-cli context sync add` on an existing name replaces its keys, and a pair the location refuses never replaces one that worked. For a GitHub location over HTTPS in CI, check that `KANE_SYNC_GIT_TOKEN` grants Contents read/write on *that* repository.
+
+- **Over SSH.** kane-cli never answers an SSH prompt. A host key this computer has not accepted yet refuses with `this computer has not accepted github.com's SSH host key yet` — run `ssh -T git@github.com` once in a terminal and answer yes. A key that is not loaded, or not on the account, refuses with `github.com did not accept your SSH key` — load it with `ssh-add`, or ask the repository owner to grant your account access. Over HTTPS without a stored login the message is `sign in is needed, or your account has no access to this repository on github.com` — sign in through Git: `gh auth login --hostname github.com --git-protocol https --web`, then `gh auth setup-git --hostname github.com`, and run the command again.
+
+- **The connection check could not finish.** `The server did not complete the concurrent connection check. Its scratch-ref policy may differ from the storage branch.` (`SYNC_PROBE_INCONCLUSIVE`) means the concurrent connection check did not finish; repository rules that block the scratch reference the check pushes under `refs/kane/probe/` are the usual cause. Nothing was bound; ask the repository owner to check that the reference is allowed, then run the command again.
+
+A location you can read but not write is not a refusal: it binds as download-only (`read-only: this location can be cloned and pulled, never pushed`). `kane-cli context push` to it refuses with `SYNC_READ_ONLY`, and so does `kane-cli context sync` — after its pull has already landed, so its exit `2` does not mean nothing happened. Take records from such a location with `kane-cli context pull`. The two refusals above change nothing in your store.
+
+## Context sync: "a rebase is open" — every change refused
+
+```
+error: a rebase (2026-09-14T10-13-45-679Z-reset) is open with 2 decisions unresolved; this store takes no other change until it is finished — run kane-cli context sync or kane-cli context pull to continue, or kane-cli context sync doctor --abort to close it
+next: run kane-cli context sync or kane-cli context pull to continue, or kane-cli context sync doctor --abort to close it
+```
+
+A `kane-cli context pull origin --rebase` stopped on decisions you have not answered yet (or was interrupted), and until it is finished the store takes writes from the rebase only — exactly like git mid-rebase. `kane-cli context extract`, `kane-cli design tests`, `kane-cli maintain reconcile`, `kane-cli context ingest`, `kane-cli context review`, `kane-cli context name`, `kane-cli context retire` and `kane-cli context revert` refuse with these two lines; `kane-cli context push` refuses with the same code (`SYNC_REBASE_PENDING`) and the same `next:` line, its reason naming the rebase and saying nothing was pushed. A test run does not refuse, and nothing is lost: its results wait to the side and land on the first run after the rebase closes.
+
+1. See what is open: `kane-cli context sync status origin` lists each decision on one line; `--show <n>` prints one saved record in full.
+2. Answer: `kane-cli context sync origin` walks the cards on a terminal; headless, `kane-cli context sync origin --answer <id>=keep-theirs` (or `apply-mine`), one flag per decision. `keep-theirs` writes nothing, but it is a choice, not a default: the local change stays in the backup unapplied, and a later record that was built on it is looked at again.
+3. Or close it: `kane-cli context sync doctor --abort` keeps what was already reapplied and leaves the unanswered records in the backup. A rebase interrupted before it imported origin's records is undone by the same command — the store is put back as it was. Once the import has landed it can only be finished (`SYNC_RESET_IMPORTED`): run `kane-cli context sync` or `kane-cli context pull` to finish it, then close it if you still want to. `kane-cli context sync doctor --export <dir>` rebuilds the pre-rebase store beside, as its own store.
+
+Never delete files under `.context/` to get past the refusal. See [When two people changed the same thing](./assurance/sharing.md#rebase).
+
+## Context sync: publication could not be confirmed
+
+A `kane-cli context push` to a GitHub location can lose the server's answer after the upload — a dropped connection, a proxy timeout. kane-cli then refuses with `SYNC_PUBLICATION_UNKNOWN` (exit `2`) rather than guess: the batch may have landed. Your store is unchanged and nothing needs to be redone. Check connectivity and run the **same** command again: it reads the location first and reconciles what actually landed — a batch that arrived is recognised as already there, never published twice; a batch that did not is published now. Only after that should anything else run. If a proxy rejects large uploads, `KANE_SYNC_GIT_HTTP_POST_BUFFER=33554432` raises Git's upload buffer for that command; a very slow link gets more time with `KANE_SYNC_GIT_TRANSFER_TIMEOUT_SECONDS` — see [Context sync environment variables](./configuration.md#context-sync-environment-variables).
 
 ## Reporting bugs
 

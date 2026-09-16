@@ -254,7 +254,8 @@ Freshness is orthogonal: `fresh` / `stale` (the source snapshot moved) / `orphan
 
 ```
 .context/
-├── meta.json            # store identity + format version
+├── meta.json            # format version (schema and canonicalizer)
+├── store.json           # this store's own identity ids
 ├── commits/             # append-only records — the truth
 ├── blobs/               # write-once source snapshots
 ├── derived/             # regenerable read caches (delete any time; rebuild restores)
@@ -267,7 +268,9 @@ Freshness is orthogonal: `fresh` / `stale` (the source snapshot moved) / `orphan
 └── signals.ndjson       # internal review bookkeeping (appears once recorded)
 ```
 
-Two rules worth repeating from the [overview](./overview.md#the-store-context): the store is **single-writer**, and it is **not git-mergeable** — gitignore it and share by re-ingesting sources.
+Two rules worth repeating from the [overview](./overview.md#the-store-context): the store is **single-writer**, and it is **never merged with git**. kane-cli adds `.context/` to your `.gitignore` when it creates the store inside a git repository *(0.8.14)* — `kane-cli context ingest`, `kane-cli context clone` and `kane-cli context sync doctor --export` all do it, and say `added .context/ to .gitignore` once; when the line cannot be written the store is still created and `warning: could not add .context/ to .gitignore: <reason>` says why (then add the line yourself). Set `KANE_CONTEXT_GITIGNORE=0` to keep it out. To share the store with your team, bind it to a **location** — a GitHub repository, an S3-compatible bucket, or a folder on a shared drive — and use `kane-cli context push`, `kane-cli context pull`, `kane-cli context sync` and `kane-cli context clone` *(0.8.14)*: see [Sharing the context graph with your team](./sharing.md). A teammate who has pulled your records has the same use-cases, cited lines and review verdicts you committed; nothing needs to be re-ingested.
+
+`.context/sync/` holds what sharing adds: the location list (no secret in it), a backup and a receipt for every rebase, and the location's on-disk state for this machine.
 
 ### Tracing a run
 
@@ -275,10 +278,11 @@ Every extract and design run prints a `trace: <path>` line naming its log file �
 
 ## For agents and CI
 
-Headless extraction (`--mode agent|ci|override`), the NDJSON event stream, exit codes, and the pause/resume contract are documented in [Automation](./automation.md).
+Headless extraction (`--mode agent|ci|override`), the NDJSON event stream, exit codes, and the pause/resume contract are documented in [Automation](./automation.md). A pipeline that works on a shared store clones it once, pulls before each run and pushes after — the sync verbs speak the same stream ([the sync verbs on the stream](./automation.md#the-sync-verbs-on-the-stream)), and the CI shape is in [CI/CD recipes](../cicd.md#a-shared-context-store-in-ci).
 
 ## Next steps
 
 - [Designing tests](./design.md) — turn a trusted use-case into ACs, scenarios, and runnable tests.
 - [Maintaining the suite](./maintain.md) — what to do when a source changes.
+- [Sharing the context graph with your team](./sharing.md) — one location; publishing, taking your teammates' records, cloning, and what happens when two people change the same thing.
 - [Automation](./automation.md) — the headless contract.
