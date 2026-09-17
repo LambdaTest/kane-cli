@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.15] - 2026-09-17
+
+### Data-driven runs
+- **Feed a test from a Test Manager dataset row** — pass `--dataset-id` and `--dataset-row` and every column in that row becomes a `${col}` parameter inside the run.
+- **Rows are addressed by ID, never by position** — a dataset row is identified by its `_id`, so reordering or inserting rows upstream doesn't silently change which row a run picks up.
+- **Clear errors when the flags don't line up** — the grid runner checks `--dataset-id` / `--dataset-row` before starting instead of failing mid-run.
+
+### Uploads that find the right file
+- **`file_upload` resolves recorded files by alias or name** — a step that referenced an uploaded file during recording now maps to the stored copy at run time, so uploads work on machines that never had the original path.
+- **Media travels with the test** — the media map is carried on every write and sent when a run starts, so a test moved between machines or shared with a teammate still has its attachments.
+
+### Variables that warn instead of blocking
+- **An unresolved name no longer stops a run** — kane-cli emits a single warning per run and continues, rather than refusing to start.
+- **One warning per run, on every run path** — the same message appears whether the run is launched from the CLI, the TUI, or a grid run.
+
+### Replay that heals itself
+- **Scroll steps survive page changes** — a scroll-into-view step is now described by what it scrolls to, so replay can re-find the target when the layout shifts.
+- **Model instructions stick through grounded scrolls** — the instruction is carried along the grounded scroll path, and stale page context is no longer reused mid-run.
+
 ## [0.8.14] - 2026-09-15
 
 ### Share a context store with your team
