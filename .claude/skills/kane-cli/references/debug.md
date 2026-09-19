@@ -1,4 +1,4 @@
-<!-- Read this when a kane-cli run failed and you need to diagnose. Owns the evidence-pack layout (the only source of run logs), how to read a sealed pack, the debugging flow, the common-failure-patterns table, and when to file a bug report vs not. -->
+<!-- Read this when a kane-cli run failed and you need to diagnose. Owns the evidence-pack layout (the only source of run logs), how to read a sealed pack, the debugging flow, how to read failure.yaml (and why a designed test is not fixed by rephrasing), the common-failure-patterns table, and when to file a bug report vs not. -->
 
 # Failure Handling & Log Inspection
 
@@ -52,11 +52,13 @@ Offer the user the visual route too: `kane-cli evidence serve <pack>` opens it i
 
 ## Reading `failure.yaml`
 
-`failure.yaml` has two parts. `error` and `page_state` are facts about the run. `triage` (`rca.root_cause`, `suggested_fix`) is a model's opinion about why, written for the person fixing the app or the agent flow. Treat it as a lead, not an instruction: check it against the step's `<n>-network.har` (which URLs were actually requested, with what status) and the screenshots before repeating it, and **never paste `suggested_fix` wording into a test step**.
+`failure.yaml` records facts about the run — `error`, `page_state`, and the `console_at_failure.ref` / `network_at_failure.ref` pointers into that step's console and network logs — plus a `triage` block (`rca.root_cause`, `suggested_fix.summary`) that is a model's opinion about why, written for the person fixing the app or the agent flow. Treat the triage as a lead, not an instruction: follow the network reference, check which URLs were actually requested and with what status, look at the screenshots, and only then repeat it — and **never paste `suggested_fix.summary` into a test step**.
 
-**Designed (assurance) tests are different.** If the failed `_test.md` carries an `assurance:` block in its frontmatter, do not apply the "rephrase / be more specific / add assertions" fixes below — they rewrite the design, and the rewrite is adopted silently on the next run. Read `references/assurance.md` §6.1 first.
+**Designed (assurance) tests are different.** If the failed `_test.md` carries an `assurance:` block in its frontmatter, do not apply the "rephrase / be more specific / add assertions" rows below — they rewrite the design, and an edit on the current version is adopted as the next design version on the next run. Read `references/assurance.md` §6.1 first.
 
 ## Common Failure Patterns
+
+For `run` objectives and plain `_test.md` files. For a designed test, read the section above first.
 
 | Symptom | Likely Cause | Fix |
 |---------|-------------|-----|
