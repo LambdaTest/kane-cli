@@ -140,6 +140,8 @@ If the /api/auth returned 200 then proceed to dashboard, else show error message
 
 Limits: up to 5,000 requests per step, response bodies capped at 64KB, binary content (images/fonts/videos) skipped.
 
+**Downloads are not pages.** Navigating to a URL that answers with `content-disposition: attachment` starts a file download instead of loading a page, and the navigate step reports that a download started. The request still lands in the capture with its status and headers, so assert those in the step that triggered it — but treat the downloaded body as unavailable: assert status and headers, not a hash or a byte count. Prefer triggering the download from the UI (click the file's link) over navigating to its URL.
+
 #### Console (browser console output)
 
 Captures every `console.log/warn/error/info/debug` and every uncaught JS exception. **Resets each step**. Top frame only — iframes (payment widgets, third-party embeds) are not captured.
@@ -295,6 +297,8 @@ then open https://app.example.com and verify the dashboard loads
 
 **Tokens:** put any credential/token in a variable marked `secret: true` (§6) so it's masked and never logged.
 
+**Session:** a direct call is made by the agent, not by the page — do not assume it shares the browser's cookies or login. An endpoint behind the app's sign-in may answer a direct call as an anonymous client (401/403) even while the browser is signed in. To exercise such an endpoint as the signed-in user, trigger the request from the UI and observe it (§3.2); to call it directly, pass the credential explicitly (a bearer token or API key in a `secret: true` variable, §6).
+
 ---
 
 ## 4. Extraction — the "store as" rule
@@ -426,6 +430,7 @@ Positional assertions check where something is on the page:
 | Cram 25 operations into one objective | Split at logical boundaries (login, navigate, action, verify) | Long runs drift and stall. |
 | "Check the page is fast" | "Assert LCP is under 2500ms and CLS is below 0.1" | Use the explicit web-vital metric, not a vague "fast." |
 | "Make sure no errors" | "Assert no console errors and no API calls returned 5xx" | Be explicit about which kind of error you're checking. |
+| "Use DevTools to intercept the response and issue a GET to the invoice endpoint" | "Open the invoice from the order page, then verify the request to `/api/orders/42/invoice` returned 200 with `content-disposition: attachment`" | Describe the user action and the observable outcome, not the mechanism — the agent picks the method, and a prescribed mechanism it cannot perform leaves it stuck. |
 
 ---
 
