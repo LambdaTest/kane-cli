@@ -127,6 +127,27 @@ kane-cli design tests --use-case <uc-ref> --mode agent --max 8
 
 A freshly designed test has never been executed. On 0.8.4+ hand the set straight to `kane-cli testrun run`: unauthored members classify as `author`, the run authors them in a real browser, and afterwards the authored and replayed evidence consolidates into one published execution — best-effort: when consolidation cannot complete, evidence stays split rather than lost. `--from-context` (0.8.4+) selects members by assurance test ids and follows edit supersessions. Designed tests may carry `{{variables}}` for values the requirements never pinned (a store URL, a product name) — supply them per `references/testmd.md`. `kane-cli testmd run <file> --agent` remains the single-test authoring path, and on pre-0.8.4 CLIs it is REQUIRED first — `testrun` there refuses never-authored members (`missing_meta`). Evidence packs seal per `references/evidence.md`.
 
+### 6.1 A designed test is the design — do not edit it by hand
+
+Every designed `_test.md` carries an `assurance:` block in its frontmatter (`id: t-NN` and a `base:` pin). The pin is how kane-cli knows which design version the file came from. **Any change to the file is adopted silently:** the next `testmd run` / `testrun run` commits the edited file as a new, trusted version of that test, and from then on the edit IS the design — coverage, gaps and reconcile all build on it. Nothing warns, nothing asks.
+
+So a failing authored run is never, by itself, a reason to rewrite the step. Classify the failure first (the pack's `failure.yaml` and the step's network capture — `references/debug.md`), then route it:
+
+| The run failed because… | Do | Never |
+|---|---|---|
+| the app misbehaved (wrong status, missing header, wrong data) | keep the test as it is; report the finding with the evidence | edit the step until it passes |
+| the requirement changed | `kane-cli maintain reconcile --from <new source>` (§11) | patch the step text to match the new requirement |
+| the step wording sends the agent the wrong way (ambiguous target, no end state) | redesign through the CLI — the `next` command the run or `cover gaps <uc-id>` offers (`design tests … --force`, or `maintain evolve` in a terminal) — so the new wording is minted as a design version with its reason | rewrite the sentence in place |
+| the platform cannot perform what the step asks for (a body hash of a file download, a request that needs the browser's session — see `references/objectives-cookbook.md` §3.2 and §3.5) | tell the user and stop; different wording will not make the capability appear | paste the triage's `suggested_fix` prose into the step |
+
+**If you still judge a hand edit necessary**, do all of the following, in order:
+
+1. **Read `references/objectives-cookbook.md` in full before writing a word.** The edited step must be something kane-cli can actually run: an intent action with literal data, then an observable end state (§1); assertions in the checkpoint grammar (§3); a direct API call only where §3.5 applies.
+2. Change only the step body. Keep the `# title`, the `> intent` line, the `## Step N @verifies …` heading and the whole `assurance:` block byte for byte — the pin and the tags tie the test to its requirement.
+3. Describe the user action and the observable outcome, never the mechanism: "open the attachment from the task, then verify the request to `…/content` returned 200 with `content-disposition: attachment`", not "use DevTools interception to issue a GET".
+4. Tell the user, before running, that the edit becomes the new design version of `t-NN` on the next run, and what changed.
+5. Re-author with `kane-cli testmd run <file> --agent` and read the result against the ACs the step `@verifies`.
+
 ## 7. What's next — let the tool tell you
 
 ```bash
