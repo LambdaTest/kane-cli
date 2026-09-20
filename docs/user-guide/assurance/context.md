@@ -254,7 +254,8 @@ Freshness is orthogonal: `fresh` / `stale` (the source snapshot moved) / `orphan
 
 ```
 .context/
-├── meta.json            # store identity + format version
+├── meta.json            # format version (schema and canonicalizer)
+├── store.json           # this store's own identity ids
 ├── commits/             # append-only records — the truth
 ├── blobs/               # write-once source snapshots
 ├── derived/             # regenerable read caches (delete any time; rebuild restores)
@@ -267,7 +268,9 @@ Freshness is orthogonal: `fresh` / `stale` (the source snapshot moved) / `orphan
 └── signals.ndjson       # internal review bookkeeping (appears once recorded)
 ```
 
-Two rules worth repeating from the [overview](./overview.md#the-store-context): the store is **single-writer**, and it is **not git-mergeable** — gitignore it; use [context synchronization](#sharing-a-context-store) to share the store rather than merging its files manually.
+Two rules worth repeating from the [overview](./overview.md#the-store-context): the store is **single-writer**, and it is **never merged with git**. kane-cli adds `.context/` to your `.gitignore` when it creates the store inside a git repository *(0.8.14)* — `kane-cli context ingest`, `kane-cli context clone` and `kane-cli context sync doctor --export` all do it, and say `added .context/ to .gitignore` once; when the line cannot be written the store is still created and `warning: could not add .context/ to .gitignore: <reason>` says why (then add the line yourself). Set `KANE_CONTEXT_GITIGNORE=0` to keep it out. To share the store with your team, bind it to a **location** — a GitHub repository, an S3-compatible bucket, or a folder on a shared drive — and use `kane-cli context push`, `kane-cli context pull`, `kane-cli context sync` and `kane-cli context clone` *(0.8.14)*: see [Sharing the context graph with your team](./sharing.md). A teammate who has pulled your records has the same use-cases, cited lines and review verdicts you committed; nothing needs to be re-ingested.
+
+`.context/sync/` holds what sharing adds: the location list (no secret in it), a backup and a receipt for every rebase, and the location's on-disk state for this machine.
 
 ### Tracing a run
 
@@ -275,31 +278,18 @@ Every extract and design run prints a `trace: <path>` line naming its log file �
 
 ## For agents and CI
 
-Headless extraction (`--mode agent|ci|override`), the NDJSON event stream, exit codes, and the pause/resume contract are documented in [Automation](./automation.md).
+Headless extraction (`--mode agent|ci|override`), the NDJSON event stream, exit codes, and the pause/resume contract are documented in [Automation](./automation.md). A pipeline that works on a shared store clones it once, pulls before each run and pushes after — the sync verbs speak the same stream ([the sync verbs on the stream](./automation.md#the-sync-verbs-on-the-stream)), and the CI shape is in [CI/CD recipes](../cicd.md#a-shared-context-store-in-ci).
 
 ## Next steps
 
 - [Designing tests](./design.md) — turn a trusted use-case into ACs, scenarios, and runnable tests.
 - [Maintaining the suite](./maintain.md) — what to do when a source changes.
+- [Sharing the context graph with your team](./sharing.md) — one location; publishing, taking your teammates' records, cloning, and what happens when two people change the same thing.
 - [Automation](./automation.md) — the headless contract.
 
 ## Sharing a context store
 
-Use `kane-cli context sync setup` in a TTY for guided GitHub, S3 or folder setup. For automation, bind a location with `context sync add <name> <descriptor> --mode agent`; use a descriptor supplied by your team’s configured provider, not a guessed URL. `context clone <descriptor> <dir> --mode agent` creates a local store bound as `origin`.
-
-Inspect first:
-
-```bash
-kane-cli context sync list --mode agent
-kane-cli context sync status origin --mode agent
-kane-cli context sync doctor --mode agent
-```
-
-`status` never writes. `doctor` diagnoses the chain and open rebases without writing unless `--abort` or `--export` is requested. `context sync remove <name>` forgets the location but retains its witness.
-
-`context pull [name] --mode agent` imports verified records; `context push [name] --mode agent` publishes local work and refuses if remote work has not been pulled. `context sync [name] --mode agent` finishes an open rebase, pulls and publishes. These use the agent envelope with verb `sync` and final `done`; inspect the outcome and exit code.
-
-When both sides changed, `context pull [name] --rebase --yes --mode agent` explicitly permits replacing local records after their common position (saved first); it does not answer conflicts. For an open rebase, supply repeatable `--answer <decision-id>=keep-theirs|apply-mine|apply-mine-as-new` to `sync` or `pull`, choosing each answer from the reported decisions. Do not silently choose answers or delete records/locks. Use `sync status` and plain `sync doctor` before recovery. Provider-specific descriptor examples and interrupted-rebase recovery still need additional verification before being prescribed here.
+For location setup, sync, pull, push, clone and rebase recovery, see [Sharing the context store](./sharing.md).
 
 ## Lifecycle automation contracts
 

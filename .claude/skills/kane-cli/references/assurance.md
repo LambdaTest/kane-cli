@@ -1,4 +1,4 @@
-<!-- kane-cli skill reference: assurance (requirements → designed suite → coverage → upkeep). Read when the user has a requirements document and wants tests designed from it, coverage accounting, or suite upkeep. Requires kane-cli 0.6.1+; features marked with a release (0.7.1+ … 0.8.6+) need at least that release. -->
+<!-- kane-cli skill reference: assurance (requirements → designed suite → coverage → upkeep). Read when the user has a requirements document and wants tests designed from it, coverage accounting, or suite upkeep. Requires kane-cli 0.6.1+; features marked with a release (0.7.1+ … 0.8.14+) need at least that release. -->
 
 # Assurance — Agent Surface
 
@@ -9,7 +9,7 @@ When the user has **requirements** — a PRD, a spec, acceptance notes — and w
 
 Everything here works over a local store (`.context/` in the project directory) that the commands create and manage themselves.
 
-**Version gate — check before improvising.** The assurance commands exist on kane-cli **0.6.1 and later**; flags and events marked with a release (**0.7.1+** … **0.8.6+**) below need at least that release. On an older CLI, `kane-cli context …` fails as an *unknown command* (exit 2 with a "did you mean" suggestion) — that error means the CLI is too old, not that you typed it wrong. Confirm with `kane-cli --version`, tell the user to update (`npm install -g @testmuai/kane-cli`, or `brew upgrade kane-cli`), and stop — do not try to reproduce the workflow with other commands.
+**Version gate — check before improvising.** The assurance commands exist on kane-cli **0.6.1 and later**; flags and events marked with a release (**0.7.1+** … **0.8.14+**) below need at least that release. On an older CLI, `kane-cli context …` fails as an *unknown command* (exit 2 with a "did you mean" suggestion) — that error means the CLI is too old, not that you typed it wrong. Confirm with `kane-cli --version`, tell the user to update (`npm install -g @testmuai/kane-cli`, or `brew upgrade kane-cli`), and stop — do not try to reproduce the workflow with other commands.
 
 ## 1. The journey — follow in order, stop at the checkpoints
 
@@ -127,6 +127,27 @@ kane-cli design tests --use-case <uc-ref> --mode agent --max 8
 
 A freshly designed test has never been executed. On 0.8.4+ hand the set straight to `kane-cli testrun run`: unauthored members classify as `author`, the run authors them in a real browser, and afterwards the authored and replayed evidence consolidates into one published execution — best-effort: when consolidation cannot complete, evidence stays split rather than lost. `--from-context` (0.8.4+) selects members by assurance test ids and follows edit supersessions. Designed tests may carry `{{variables}}` for values the requirements never pinned (a store URL, a product name) — supply them per `references/testmd.md`. `kane-cli testmd run <file> --agent` remains the single-test authoring path, and on pre-0.8.4 CLIs it is REQUIRED first — `testrun` there refuses never-authored members (`missing_meta`). Evidence packs seal per `references/evidence.md`.
 
+### 6.1 A designed test is the design — do not edit it by hand
+
+Every designed `_test.md` carries an `assurance:` block in its frontmatter: `id: t-<slug>` and a `base:` pin naming the design version the file came from. The graph follows edits through that pin (0.8.4+): an edit made on top of the current design version is adopted at the file's next `testmd run` / `testrun run` as the next version of that test — no review checkpoint, no warning — and from then on the edit IS the design; coverage, gaps and reconcile build on it. An edit made on top of an older version is kept out of the graph, and the run reports a sync warning naming the test.
+
+So a failing authored run is never, by itself, a reason to rewrite the step. Classify the failure first (the pack's `failure.yaml` and the network capture it references — `references/debug.md`), then route it:
+
+| The run failed because… | Do | Never |
+|---|---|---|
+| the app misbehaved (wrong status, missing header, wrong data) | keep the test as it is; report the finding with the evidence | edit the step until it passes |
+| the requirement changed | `kane-cli maintain reconcile --from <new source> --source-id <id> --mode agent` (§11) | patch the step text to match the new requirement |
+| the step wording sends the agent the wrong way (ambiguous target, no end state) | redesign through the CLI so the new wording is minted as a design version: offer the user `kane-cli design tests --use-case <uc-ref> --force` (never auto-run a `--force`; interactively the session collects the reason, headless it is auto-stamped) or `kane-cli maintain evolve … --because "<reason>"` in a terminal — `cover gaps <uc-id>` names the remedy in its `next` block | rewrite the sentence in place |
+| the platform cannot perform what the step asks for (a hash of a downloaded file, a request that must carry the browser's login — `references/objectives-cookbook.md` §3.2 and §3.5) | tell the user and stop; different wording will not make the capability appear | paste the triage's `suggested_fix.summary` into the step |
+
+**If you still judge a hand edit necessary**, do all of the following, in order:
+
+1. **Read `references/objectives-cookbook.md` in full before writing a word.** The edited step must be something kane-cli can actually run: an intent action with literal data, then an observable end state (§1); assertions phrased as checkpoints (§3); a direct API call only where §3.5 applies.
+2. Change only the step body. Leave the `assurance:` block, the `# title`, the `>` blockquote under it, and every `## Step …` heading with its `@verifies` tags (e.g. `## Step 4 — assert @verifies ac-…`) exactly as they are — the pin and the tags tie the test to its requirement.
+3. Describe the user action and the observable outcome, never the mechanism: "open the invoice from the order page, then verify the request to `/api/orders/42/invoice` returned 200 with `content-disposition: attachment`", not "use DevTools to intercept the response and issue a GET".
+4. Tell the user, before running, that the edit becomes the next design version of that test on the run, and what changed.
+5. Re-author with `kane-cli testmd run <file> --agent` and read the result against the ACs the step `@verifies`.
+
 ## 7. What's next — let the tool tell you
 
 ```bash
@@ -142,7 +163,7 @@ On 0.8.2+ the default `cover gaps` output is the **coverage ribbon** — a high-
 ## 8. Store rules — don't corrupt the user's graph
 
 - `.context/` is **append-only and single-writer**. Never run two store-mutating commands concurrently (extract, review verdicts, design, ingest, reconcile, retire/revert/rebuild). On a lock error (`EXTRACT_LOCKED`, or reconcile's walk lock), another run is live: report it and wait — never delete lock files; a dead run's lock clears itself.
-- Never hand-edit anything under `.context/`. Suggest the user gitignore it.
+- Never hand-edit anything under `.context/`, and never `git merge` it — two histories merge cleanly in git and brick the store on the next read. Keep it gitignored — kane-cli 0.8.14 adds `.context/` to the folder's `.gitignore` itself when it creates the store inside a git repository — `gitignore_updated` on the stream, or a `warning{message}` when the line could not be written (relay it and add the line yourself); `KANE_CONTEXT_GITIGNORE=0` keeps it out. To share it with a team, use a **location** (a GitHub repository, an S3-compatible bucket, or a folder) through `kane-cli context sync`, `kane-cli context push`, `kane-cli context pull` and `kane-cli context clone` (0.8.14+) — a Git repository used as a location is not the same as committing `.context/`. While a sync rebase is open the store refuses every other write with `SYNC_REBASE_PENDING` (the fence) — finish it or `kane-cli context sync doctor --abort`, never delete files. Rules, events and decisions: `references/context-sync.md`.
 - Safe inspection any time: `kane-cli context list --json` (nodes with trust + freshness), `kane-cli context explain <ref>` (a node's full recorded history, no AI), `kane-cli context fsck` (integrity check), `kane-cli context view --no-open --out <path>` (writes a self-contained HTML graph snapshot to that path — never opens a browser, never touches the graph).
 - Destructive verbs (`context retire`, `revert`, `rebuild`, `name --backfill`) exist and take `--yes` headless — run them **only on an explicit user request**, never autonomously.
 
@@ -151,7 +172,7 @@ On 0.8.2+ the default `cover gaps` output is the **coverage ribbon** — a high-
 | Signal | Meaning | Do |
 |---|---|---|
 | `context`/`design`/`cover` is an *unknown command* (exit 2) | the CLI predates 0.6.1 | `kane-cli --version` to confirm; have the user update; stop |
-| an assurance flag from this reference is *unknown* (exit 2) | the CLI predates 0.7.1 | same: confirm version, update, stop |
+| an assurance flag from this reference is *unknown* (exit 2) | the installed CLI predates the version that flag is marked with here (0.7.1 for most; 0.8.14 for the sync flags), or the flag is misspelled or on the wrong command | check the full command, then `kane-cli --version` against the feature's stated minimum; have the user update; stop |
 | `error` code `NO_STORE` | no `.context/` here | `context ingest` the sources first (confirm the cwd is the project root) |
 | `SOURCE_MISSING` / `BLOB_MISSING` | store references a missing source | re-ingest the source file |
 | `STALE_BASIS` | the graph moved under the session | re-run the extract — it re-grounds |
@@ -173,10 +194,14 @@ On 0.8.2+ the default `cover gaps` output is the **coverage ribbon** — a high-
 | media refusals (`PDF_*`, `DOCX_*`, `ENCODING_UNSUPPORTED`, `UNSUPPORTED_MEDIA`, `FILE_TOO_LARGE`) | the source file can't be ingested as-is | relay the message — each names its remedy (save-as, split, re-encode) |
 | a remote URL refuses because its id is backed by a different kind of source (0.8.6+) | cross-provider id collision — remote ids share one space | retire the existing source, or adopt the new one with `--as`; never retry blindly |
 | lock held | another assurance run is live | wait for it; never break locks |
+| `sync_error` code `SYNC_REBASE_PENDING` (exit 2, 0.8.14+) | a sync rebase is open on this store — the fence refuses every other write | the user finishes it (`kane-cli context sync`, answering decisions) or closes it (`kane-cli context sync doctor --abort`); never delete files — `references/context-sync.md` §7 |
+| `sync_error` code `SYNC_BEHIND` / `SYNC_DIVERGED` (exit 3, 0.8.14+) | the location has records this store has not pulled / both sides added work — a pull or a rebase is needed, not a failure | relay the `remedy` verbatim (`kane-cli context pull <name>`, or `--rebase` on the user's go-ahead) — `references/context-sync.md` §6 |
+| `sync_behind` event on an extract/design/reconcile stream (0.8.14+) | advisory: the location has moved past this store | one line ("origin has records you have not pulled"); the run continues |
+| `sync_error` code `SYNC_STORE_BUSY` (exit 2, 0.8.14+) | a sync verb met a live session or lock on this store | wait; `kane-cli context sync doctor` when it names an interrupted rebase |
 | `error` + `done` with exit `1` | runtime failure (incl. a sweep where some sources failed) | report the message; **do not blindly re-run a paid command** |
 | auth/credit failure mid-run | token or balance problem | keep the `sid`, have the user fix auth/balance (`kane-cli whoami`, `kane-cli balance`), then resume |
-| stream ends with no `done` event | the process crashed — outcome unknown | check `context sessions --json` and `context list` before any retry, to avoid duplicate paid work |
-| exit `130` | force-interrupted | resumable only if a `session_paused` event was actually received |
+| stream ends with no `done` event | the process crashed — outcome unknown (the one designed exception: `kane-cli context review --mode agent` keeps its `--json` shape and ends its listings without `done`; read its exit code) | check `context sessions --json` and `context list` before any retry, to avoid duplicate paid work |
+| exit `130` | force-interrupted | extract/design: resumable only if a `session_paused` event was actually received. Sync verbs: the rebase state is on disk — `kane-cli context sync doctor`, then `kane-cli context sync` resumes it |
 
 ## 10. Narration
 
@@ -207,21 +232,7 @@ For staleness that arrived outside a reconcile, `kane-cli maintain evolve` re-de
 
 ## Sharing a context store
 
-Use `kane-cli context sync setup` in a TTY for guided GitHub, S3 or folder setup. For automation, bind a location with `context sync add <name> <descriptor> --mode agent`; use a descriptor supplied by your team’s configured provider, not a guessed URL. `context clone <descriptor> <dir> --mode agent` creates a local store bound as `origin`.
-
-Inspect first:
-
-```bash
-kane-cli context sync list --mode agent
-kane-cli context sync status origin --mode agent
-kane-cli context sync doctor --mode agent
-```
-
-`status` never writes. `doctor` diagnoses the chain and open rebases without writing unless `--abort` or `--export` is requested. `context sync remove <name>` forgets the location but retains its witness.
-
-`context pull [name] --mode agent` imports verified records; `context push [name] --mode agent` publishes local work and refuses if remote work has not been pulled. `context sync [name] --mode agent` finishes an open rebase, pulls and publishes. These use the agent envelope with verb `sync` and final `done`; inspect the outcome and exit code.
-
-When both sides changed, `context pull [name] --rebase --yes --mode agent` explicitly permits replacing local records after their common position (saved first); it does not answer conflicts. For an open rebase, supply repeatable `--answer <decision-id>=keep-theirs|apply-mine|apply-mine-as-new` to `sync` or `pull`, choosing each answer from the reported decisions. Do not silently choose answers or delete records/locks. Use `sync status` and plain `sync doctor` before recovery. Provider-specific descriptor examples and interrupted-rebase recovery still need additional verification before being prescribed here.
+For location setup, sync, pull, push, clone and rebase recovery, see [Sharing the context store](context-sync.md).
 
 ## Lifecycle automation contracts
 

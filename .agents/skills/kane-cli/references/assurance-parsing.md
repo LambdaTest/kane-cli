@@ -10,7 +10,7 @@
 
 ## Terminal detection — the `done` guarantee
 
-Every `--mode agent` invocation ends its stream with exactly one `{"type":"done","status":…,"exit_code":…}` — including refusals. Build all post-run logic on it, exactly like `run_end` for browser runs:
+Except for `kane-cli context review --mode agent` (below), every `--mode agent` invocation ends its stream with exactly one `{"type":"done","status":…,"exit_code":…}` — including refusals. Build all post-run logic on it, exactly like `run_end` for browser runs:
 
 ```text
 for each line:
@@ -19,7 +19,7 @@ for each line:
   else                             → per-type handling below
 ```
 
-A stream that ends **without** `done` means the process crashed — outcome unknown; inspect `context sessions --json` and `context list` before retrying anything paid. One version-scoped rule for merged-ingest landing failures (bad path, unsupported media, refused URL, a misused `--mode` or `--as`): on 0.7.2+ they ride the stream as `error` (codes `MODE_USAGE`, `AS_SINGLE_SOURCE`, `UNSUPPORTED_URL`, `INGEST_FAILED`) + `done` — the guarantee covers the whole invocation; on 0.7.1 they end with prose + exit `1`/`2` **before any NDJSON begins** — no stream at all is a refusal to fix, not a crash, and the guarantee starts with the extraction stream.
+A stream that ends **without** `done` means the process crashed — outcome unknown; inspect `context sessions --json` and `context list` before retrying anything paid. One designed exception: `kane-cli context review --mode agent` keeps its `--json` shape — verdict and drift listings are one JSON object per line with no `done` (an empty listing prints nothing, exit `0`); its early refusals — no store, an open rebase, a verdict queue that needs a terminal (`TTY_REQUIRED`) — are typed events followed by `done`; its later refusals exit without `done`. Read its exit code instead. One version-scoped rule for merged-ingest landing failures (bad path, unsupported media, refused URL, a misused `--mode` or `--as`): on 0.7.2+ they ride the stream as `error` (codes `MODE_USAGE`, `AS_SINGLE_SOURCE`, `UNSUPPORTED_URL`, `INGEST_FAILED`) + `done` — the guarantee covers the whole invocation; on 0.7.1 they end with prose + exit `1`/`2` **before any NDJSON begins** — no stream at all is a refusal to fix, not a crash, and the guarantee starts with the extraction stream.
 
 ## Events (extract / design)
 
@@ -33,7 +33,7 @@ A stream that ends **without** `done` means the process crashed — outcome unkn
 | `assumed_default` | a question auto-answered with its recommended default: `id`, `selected_index`, `risk` — 0.8.8+ agent mode never emits it (every question pauses instead); seen only on older CLIs' streams | mention that defaults were assumed (they are flagged in the commit) |
 | `agent_activity` | `kind` (`tool`/`decision`/`progress`/`thinking_done`) + display `label` | noise — fold; **never script against labels** |
 | `agent_message` *(0.7.2+)* | the agent's narrative `text` — the lead-in before a question batch, the closing statement | the story around the structured events; quote or fold, never script against it |
-| `warning` *(0.7.2+)* | actionable non-fatal condition: `code` (`ZERO_USE_CASES`, `SAVE_FAILED`) + `message` | surface it — non-fatal but user-relevant |
+| `warning` *(0.7.2+)* | actionable non-fatal condition: `message`, plus `code` when there is one (`ZERO_USE_CASES`, `SAVE_FAILED`); a `.gitignore` that could not be written or a lifecycle note carries `message` alone | surface it — non-fatal but user-relevant, with or without a `code` |
 | `lock_steal` *(0.7.2+)* | a stale run lock was taken over: `key`, `stale_owner`, `by`, `ts` | observability only — fold or ignore |
 | `usage` | per agent turn: `credits`, running `total_credits` (*(0.7.2+)* rounded to two decimals) | track; report the final total |
 | `validate_failed` | kane-side validation failed: `codes[]`, `repairing` | the agent self-repairs; only surface if the run then errors |
@@ -81,6 +81,10 @@ Use `text` + `options[].label` + `recommended_index` + `rationale` to decide or 
 
 *(0.7.2+)* the stream opens with a minimal `run_start` (`session` only — no `trace`) and the re-extract child rides the SAME stream: extract-vocabulary events (`source_start`, `agent_activity`, `plan`, `commit`, …) interleave between the `reconcile_*` events, all stamped `verb: "reconcile"` — dispatch on `type`, never on position. The reconcile family: `reconcile_plan` `{source_id, plan_path, rows[], archive[]}` → per row `reconcile_row_start` `{kind, ref, stale?, direct?}` + `reconcile_row_end` `{kind, ref, outcome: applied|failed|skipped|plan-only|paused, exit_code?, detail?}` → `reconcile_paused` `{plan_path, pending[]}` when ARCHIVE rows remain (exit 3; a human resumes with `--apply <plan_path>` in a terminal) → `reconcile_summary` `{applied, skipped, deferred, plan_only, failed, paused, stale_created}` on every path → `done` always last. Validation refusals ride the stream as `error` + `done` (exit 2), never stderr alone.
 
+## Sync events (verb `sync`) *(0.8.14+)*
+
+`kane-cli context sync`, `kane-cli context push`, `kane-cli context pull` and `kane-cli context clone` under `--mode agent` (and `kane-cli context sync add`, `kane-cli context sync list`, `kane-cli context sync remove`, `kane-cli context sync status`, `kane-cli context sync doctor`) share the envelope with `verb: "sync"` and their own `sync_*` family — `sync_probe_started`/`sync_probe`, `sync_status`, `sync_pull_done`/`sync_push_done`, `sync_rebase_started`/`sync_rebase_decision`/`sync_rebase_done`/`sync_rebase_open`, `sync_error{code, detail, remedy}` — then `done`. Two of them cross into the assurance streams: `sync_behind` (an advisory on `extract`/`design`/`reconcile` streams: the location has records this store has not pulled — one line, not a failure) and `sync_error` code `SYNC_REBASE_PENDING` (the fence: a sync rebase is open, so the write verb refused; `verb` carries that verb's own name). Schema, refusal codes and the `--answer` loop: `references/context-sync.md`.
+
 ## Coverage events (verbs `cover` / `gaps`) *(0.7.1+)*
 
 One payload event carrying the full `--json` document — `coverage` for `cover`, `gaps` for `cover gaps`; with a `<uc-id>` (0.8.2+) the `gaps` document closes over that use-case — then `done` (with the worklist's ready-commands in `next[]`). Refusal = `error` + `done{refused, 2}`.
@@ -91,8 +95,8 @@ One payload event carrying the full `--json` document — `coverage` for `cover`
 |---|---|
 | `0` | complete |
 | `1` | runtime failure — incl. an extract sweep where some sources failed (each got one line; they retry next run). Report, don't blindly retry (turns already consumed credits) |
-| `2` | usage/auth/refusal — bad flags, no store, bare non-TTY without `--mode`, gates (unreviewed target, phase order, trust misuse, lock held, release-pair mismatch); nothing mutated |
-| `3` | **paused and resumable** — not a failure; run the pause loop. Includes crash-pauses (0.7.1+) |
-| `130` | force-interrupted — resumable only if a `session_paused` event arrived |
+| `2` | usage/auth/refusal — bad flags, no store, bare non-TTY without `--mode`, gates (unreviewed target, phase order, trust misuse, lock held, release-pair mismatch); earlier writes may already have landed: `kane-cli context ingest` keeps landed sources when the extraction then refuses, and `kane-cli context sync` (0.8.14+) keeps its completed pull when the push refuses (`SYNC_READ_ONLY`) — read the events before the `error` or `sync_error` |
+| `3` | **paused and resumable** — not a failure; run the pause loop. Includes crash-pauses (0.7.1+). On the sync verbs (0.8.14+) `done{status: "paused"}` means decisions are waiting: after a rebase walk the rebase is open (answer with `--answer`); after `kane-cli context sync doctor --abort` it is closed and the unanswered decisions stayed in the backup — the `sync_rebase_done` before it says which (`status` `paused` or `aborted`); `paused` with no `sync_rebase_done` means doctor set aside a rebase whose saved state it could not read — `sync_doctor.detail` says the next `kane-cli context sync` reapplies the saved backup. `done{status: "refused", exit_code: 3}` means a pull or a rebase is needed first — `references/context-sync.md` §4 |
+| `130` | force-interrupted — for extract and design, resumable only if a `session_paused` event arrived; on the sync verbs the rebase state is on disk: `kane-cli context sync doctor --mode agent` shows it, `kane-cli context sync --mode agent` resumes it |
 
 Reminder: this exit-3 meaning is **specific to these assurance commands**. `run` / `testmd` / `testrun` / `generate` keep their own meanings (3 = timeout/cancelled).
