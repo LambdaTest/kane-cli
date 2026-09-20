@@ -65,7 +65,7 @@ The assurance commands work over a local store in your project directory, create
 
 - It is **append-only**: nothing is ever deleted or rewritten. Edits create new versions; mistakes are reverted with compensation records. `kane-cli context explain` can replay the full history of any node.
 - It is **yours and local**: sources, use-cases, designs, and review verdicts live in your project, not on a server. The extract and design agents run against the KaneAI service using your login, but the store they commit to is on your disk.
-- **Keep `.context/` out of git merges.** The store is single-writer and not git-mergeable — two branches appending records will corrupt it on the next read. Gitignore it; share by re-ingesting sources.
+- **Keep `.context/` out of git merges.** The store is single-writer and not git-mergeable — two branches appending records will corrupt it on the next read. Gitignore it; share through [context synchronization](./context.md#sharing-a-context-store).
 - `kane-cli context fsck` verifies the whole store; `kane-cli context rebuild` regenerates the read caches from the verified records.
 
 ## What costs credits

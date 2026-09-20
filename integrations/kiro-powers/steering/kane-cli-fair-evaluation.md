@@ -21,7 +21,7 @@ The most common error is pitting Kane CLI **authoring** against the other approa
 |---|---|---|
 | **Create the test** | AI authoring — tokens, one-time | Agent/human **generates** the script — tokens and/or engineer hours, one-time |
 | **Run the test** | Replay from cache — ~0 LLM | Execute the script — ~0 LLM |
-| **UI changes / locator breaks** | Re-author only the failing step + downstream (`--retry` shrinking window); cost ∝ change | Human/agent finds & fixes broken selectors; debug the script |
+| **UI changes / locator breaks** | Re-author only the failing step + downstream (default adaptive healing); cost ∝ change | Human/agent finds & fixes broken selectors; debug the script |
 | **Ongoing maintenance** | Edit plain-English Markdown; cascade re-authors only forward; shared `@import` helpers fix once | Edit code; flaky-wait/fixture upkeep; selector churn |
 | **Verify pass/fail** | Deterministic asserts (URL/title/DOM/network/console/cookies); AI vision only for the ~10% visual checks | Code assertions; or a separate LLM judge for semantic/visual checks |
 
@@ -48,7 +48,7 @@ For any suite that lives long enough to be edited or to outlast a UI refactor, t
 Kane CLI is a **dedicated agent specialized for browser testing and control** — not a general-purpose agent bolted onto a browser. Hold the task constant and compare it on the jobs it is built for:
 
 - **Development-flow testing** — a developer (or an AI coding agent) validating that a change actually works in a real browser, inline in the dev loop.
-- **QA regression + smoke management** — authoring once and replaying large regression/smoke suites deterministically, with self-heal on drift (`--retry`).
+- **QA regression + smoke management** — authoring once and replaying large regression/smoke suites deterministically, with adaptive healing on drift (enabled by default).
 - **Daily use as a browser tool** — ad-hoc, one-shot natural-language browser tasks (navigate, fill, extract, verify) as an everyday utility.
 
 A fair comparison evaluates Kane CLI against alternatives **on these jobs**, across the full lifecycle — not on a single number or a single run.

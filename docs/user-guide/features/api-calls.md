@@ -20,25 +20,28 @@ curl -X POST https://api.example.com/login -H 'Content-Type: application/json' -
 
 ## Using the response
 
-Once you've saved a response under a name, reference it elsewhere in the objective:
+Use the response in plain English. The `{{name}}` form is reserved for global variables and secrets (see [Variables and Context](../variables-and-context.md)); a value the run produces is never written that way.
 
-| Reference | Resolves to |
-|-----------|-------------|
-| `{{order.status}}` | the HTTP status code (e.g. `201`) |
-| `{{order.response_body}}` | the whole response body |
-| `{{order.response_body.<field>}}` | a field from the JSON response body |
+| To use | Say |
+|---|---|
+| the HTTP status code | `assert the response status is 201` |
+| a field from the JSON body | `store the id from the response body as 'order_id'` |
+| the whole body | `store the response body as 'order_body'` |
+| a value later in the run | `the stored order_id value` |
+
+When one objective makes several calls, name each response (`save the response as order`) and say which one you mean: `assert the order response status is 201`.
 
 Assert on it, or feed it into later actions — API calls and browser actions mix freely in one objective:
 
 ```
 Call POST https://api.example.com/login with body {"u": "{{user}}", "p": "{{password}}"}, save the response as login,
-assert {{login.status}} is 200,
+assert the response status is 200,
 then open https://app.example.com and verify the dashboard loads
 ```
 
 ```
 Call POST https://api.example.com/orders with body {"item": "sku_42", "qty": 1}, save the response as order,
-assert {{order.status}} is 201,
+assert the response status is 201,
 then open https://app.example.com/orders and verify an order for "sku_42" is visible
 ```
 

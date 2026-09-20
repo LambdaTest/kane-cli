@@ -15,7 +15,7 @@
 ## Command
 
 ```bash
-kane-cli testrun run [paths...] [flags]     # NDJSON is automatic when stdout is piped — there is NO --agent flag on testrun
+kane-cli testrun run [paths...] [flags]     # NDJSON is automatic when stdin is not a TTY (use < /dev/null in terminal automation) — there is NO --agent flag on testrun
 ```
 
 `[paths...]` is optional — omit it to auto-discover every `*_test.md` under the cwd. Explicit paths must end in `_test.md`.
@@ -24,11 +24,11 @@ kane-cli testrun run [paths...] [flags]     # NDJSON is automatic when stdout is
 |---|---|---|
 | `--match <regex>` | Filter candidates by project-relative path regex | — |
 | `--tags <list>` | ANY-match on frontmatter `tags:` (repeatable or comma-separated, case-insensitive) | — |
-| `--parallel <n>` | Worker count; each worker gets an isolated Chrome with a fresh temp profile | `1` |
+| `--parallel <n>` | Worker count; each desktop worker gets an isolated Chrome with a fresh temp profile | `1` |
 | `--on-failure <mode>` | `continue` (run everything) \| `fail-fast` (stop dispatching new members after a failure) | `continue` |
 | `--name <label>` | Run title in the dashboard | derived |
 | `--dry-run` | Print the plan (members + preflight failures) and exit; runs nothing | off |
-| `--retry` / `--retry-count <n>` | Replay-failure restart with shrinking replay window / max attempts | off / `3` |
+| `--no-adaptive-heal` | Disable default adaptive healing after replay failure | healing enabled |
 | `--bug-detection <mode>` | `off`\|`stop`\|`continue`, passed through to authoring members | config (`off`) |
 | `--headless` | Headless Chrome — use in CI | off |
 | `--remote [backend]` | Dispatch the suite to the HyperExecute grid instead of local Chrome / local devices (default backend `hyper`); needs `kane-cli plugin install remote-execution` — §Remote | off |
@@ -61,7 +61,7 @@ kane-cli testrun run tests/ios/ --remote --device-name "iPhone 15" --os-version 
 - **`--parallel N`** becomes the job's concurrency for web and device suites alike (members auto-split across N grid tasks; a device task gets its own VM and device). **Web suites**: `--headless` is unnecessary (always headless on the grid); there is no `remote_device` event. Overhead is ~15 s of setup plus the tests' own time; a mobile job adds a minute or more for device boot.
 - **One job = one runtime.** A selection that mixes web and device members, emulator and simulator members, or emulator members on several Android versions is refused with a split suggestion (`--match`/`--tags`). Simulator members may differ in iOS version as long as they land on one HyperExecute pool (`mobile_pool_split` otherwise).
 - **Mobile app on the grid**: a member's local build (`.apk` for emulator, `.zip` for simulator, anywhere on disk) is uploaded from the laptop at preflight and handed to the grid as `--app <id>` (one `remote_app` event per distinct build); an `APP…` id is used as-is. Nothing has to be inside the project or un-gitignored; `--dry-run` uploads nothing. Details and the preflight codes: `references/mobile.md` §Remote.
-- `--author`, `--no-adaptive-heal`, `--bug-detection`, `--name`, `--on-failure` are forwarded to the grid. Use a long Bash timeout (up to 600000 ms).
+- Grid member flags include `--author`, `--no-adaptive-heal`, `--dataset-id`, and `--dataset-row`. `--name` labels suite metadata.
 - The dispatch writes `.hyperexecute/`, `hyperexecute-cli.log`, and `.updatedhyperexecute.yaml` into the cwd — suggest gitignoring them; they are not inputs.
 
 Remote preflight refusals arrive as one `remote_error` per reason (then `testrun_done` failed, exit 2):
@@ -83,7 +83,7 @@ Remote preflight refusals arrive as one `remote_error` per reason (then `testrun
 
 ## NDJSON events (agent mode)
 
-All typed; stdout; one JSON object per line. **Terminal event: `testrun_done` — stop parsing there.**
+All typed; stdout; one JSON object per line. **Local completion: `testrun_done`. With `--remote`, keep reading through `remote_done` and process exit; preflight refusals or dry runs may exit without that wrapper event.**
 
 | `type` | Payload | Notes |
 |---|---|---|
@@ -94,7 +94,7 @@ All typed; stdout; one JSON object per line. **Terminal event: `testrun_done` �
 | `testrun_investigations_wait` | `count` | Failed replays left investigations running; the coordinator waits before sealing. Narrate as "investigating N failures". |
 | `testrun_evidence_ingest` | `status: "ok"\|"failed"`, `evidence_id`, `stage?` | Pack published to the dashboard. Absent when publish is skipped. |
 | `testrun_summary` | `totals: {tests, passed, failed, broken, skipped}`, `duration_s`, `upload`, `cancelled` | Build the rollup table from this. |
-| `testrun_done` | `execution_id`, `overall_status: "passed"\|"failed"\|"cancelled"` | Terminal. |
+| `testrun_done` | `execution_id`, `overall_status: "passed"\|"failed"\|"cancelled"` | Local completion; remote runs continue through `remote_done`. |
 
 With `--remote`, the stream is wrapped in typed `remote_*` events (all on stdout):
 
@@ -115,7 +115,8 @@ Parsing strategy:
 
 ```text
 for each line:
-  if type === "testrun_done"          → terminal, stop
+  if type === "testrun_done"          → capture suite outcome; remote runs keep reading
+  if type === "remote_done"           → capture remote status, exit and sessions_path
   if type === "testrun_plan" && !valid → report offenders, expect exit 2
   if type === "testrun_member_end"    → note per-member outcome
   if type === "testrun_summary"       → capture totals for the rollup
@@ -124,7 +125,7 @@ for each line:
 
 ## Presenting results (same discipline as SKILL.md §1)
 
-Never expose event/field names. After `testrun_done`, always render a suite rollup:
+Never expose event/field names. After completion and process exit (`remote_done` for dispatched remote runs), render a suite rollup:
 
 ```markdown
 | | |
@@ -144,3 +145,19 @@ For failures, add one line per failed member only (path + duration + status) —
 ## Evidence & debugging
 
 The suite produces **one** sealed pack, created directly in `<cwd>/.testmuai/evidence/`. Offer it to the user per `references/evidence.md`. Members run silently by design; to see per-member output while debugging, set `KANE_TESTRUN_MEMBER_DEBUG=1` (routes member events to stderr, prefixed `[member]`).
+
+## Execution constraints
+
+Local suites containing any mobile member require `--parallel 1`; larger values are refused. Isolated Chrome workers apply to desktop members only. Remote suites support grid concurrency via `--parallel N`.
+
+Healing is enabled by default (three shrinking replay windows, then re-authoring of authorable steps). `--no-adaptive-heal` disables it. Retired `--retry`/`--retry-count` only print a notice and have no effect. Replay-only recorded steps retain their recordings even during healing.
+
+NDJSON selection uses stdin, not stdout: run `kane-cli testrun run <paths> < /dev/null` for automation launched from a terminal. Dry-run validates a plan, not runtime authentication or browser/device readiness. Always observe process exit, including paths without a normal completion event.
+
+### Remote behavior still requiring verification
+
+The audited dispatch does not forward `--bug-detection` to member commands and does not map `--on-failure` into the job template. Do not rely on these flags for remote bug-detection or fail-fast behavior until implementation owners confirm or fix the mapping. `--name` is suite metadata, not a forwarded member flag.
+
+For dispatched runs, read through `remote_done` and process exit after `testrun_done`; retain the remote status and session-log path. Preflight refusal and dry-run may terminate without `remote_done`.
+
+Data-driven execution: see [Dataset parameters](datasets.md) for `--dataset-id`, `--dataset-row`, root `dataset:` frontmatter, and `${column}` placeholders.

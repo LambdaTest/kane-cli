@@ -164,8 +164,8 @@ Present after `testrun_done`/`remote_done`: the suite rollup, the device line (`
 
 The **same natural-language objective grammar** applies: action verbs, assertions, extractions ("store … as '<name>'"), if/else, chaining, and variables all carry over. A mobile run just drives an app instead of a page. Parsing, `--agent` output, and results presentation are identical to a web run (see the **`kane-cli-run`** steering file).
 
-The exception is **browser / DevTools-only checkpoints**, which are **web-only** and do not apply to a mobile run:
-
-- Network (HTTP traffic), Console, DOM / selectors, Cookies, localStorage, and Core Web Vitals (LCP / CLS / INP / FCP / TTFB).
+Checkpoint support depends on platform and app. Native network operations and Android storage/cookie paths for visible Chrome or debuggable WebViews exist in the implementation. Full desktop DevTools parity, general native DOM support and equivalent iOS support are not established; verify the specific checkpoint and prerequisites on the intended device.
 
 Write mobile objectives around what the app shows and does (open a screen, tap, type, assert visible text or state, store a value). And **never point a mobile run at a URL**: a mobile run drives an app, not a website.
+
+In the interactive TUI, `/mobile` and `/desktop` can switch targets before the first dispatch. The target locks after dispatch; use `/new` to start a new session before switching.

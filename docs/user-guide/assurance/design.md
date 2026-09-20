@@ -39,7 +39,7 @@ Between phases the session parks on a **check-in panel** — the same panel surf
 
 **Questions that need a typed value.** When an answer is a concrete value (a URL, a fixture id), the question either offers an input-bearing option row — selecting it opens an inline editor so the answer carries the pick and your value together *(0.7.1)* — or tells you to type the value directly. A plain option row sends only its label, so plain options on such questions are the genuine alternatives (use a placeholder, reduce scope, skip). If a needed value doesn't arrive, the agent re-asks once and then proceeds on its stated fallback — announced in the narrative, never silently.
 
-Headless modes run all phases without parking; a high-risk question pauses an `agent`-mode run (resumable) and fails a `ci`-mode run closed. Each phase still commits and reports as it completes on the event stream. See [Automation](./automation.md).
+Headless phases report their progress; every question pauses an `agent`-mode run (resumable); a high-risk question fails a `ci`-mode run closed. Each phase still commits and reports as it completes on the event stream. See [Automation](./automation.md).
 
 ## What you get
 

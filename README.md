@@ -201,7 +201,7 @@ kane-cli run "<one-sentence objective starting with 'Go to <url> and …'>" --ag
 
 Three rules:
 
-1. **Always use `--agent`** — gives you structured NDJSON to parse. Build automation on the `run_end` event; it's the only one with a stable schema.
+1. Use `--agent` for `run`, `testmd run`, and `generate`. `testrun run` has no `--agent`: it emits NDJSON when **stdin** is not a TTY (use `< /dev/null` for terminal automation). Assurance conversational commands use `--mode agent`. Parse command-specific completion events and process exit.
 2. **Use the "store as" pattern** for extraction. `"go to example.com, store the page title as 'page_title'"` — never `"read the page title"`.
 3. **One objective = one task.** If a flow has more than ~15 steps, split it into multiple `kane-cli run` calls and run them in parallel.
 
@@ -300,7 +300,7 @@ TUI slash commands (`/run`, `/mobile`, `/desktop`, `/doctor`, `/login`, `/logout
 | --------------------------- | ------------------------------------- | ----------------------------------------------------------------------- |
 | `--agent`                   | off                                   | Emit NDJSON to stdout. **Required for any scripted use.**               |
 | `--headless`                | off                                   | Run Chrome with no visible window. Required in CI.                      |
-| `--max-steps <n>`           | `30`                                  | Cap on agent reasoning steps.                                           |
+| `--max-steps <n>`           | `50`                                  | Cap on agent reasoning steps.                                           |
 | `--timeout <s>`             | none                                  | Hard kill the run after N seconds.                                      |
 | `--url <url>`               | config `default_url`                  | Start URL for the run. Overrides the configured default; bare domains get `https://`. |
 | `--allow-missing-url`       | off                                   | Non-TTY only: proceed from the browser's current page instead of failing when no start URL resolves. |
@@ -319,8 +319,8 @@ TUI slash commands (`/run`, `/mobile`, `/desktop`, `/doctor`, `/login`, `/logout
 | `--local-context <file>`    | `.testmuai/context.md` (cwd)          | Override project-local agent context.                                   |
 | `--username <user>`         | none                                  | Basic auth username (skips OAuth).                                      |
 | `--access-key <key>`        | none                                  | Basic auth access key (skips OAuth).                                    |
-| `--code-export`             | off                                   | Generate a code export of the run after upload.                         |
-| `--code-language <lang>`    | `python`                              | Code-export language (only `python` supported today).                   |
+| `--code-export`             | config (`true` by default) | Generate a code export of the run after upload.                         |
+| `--code-language <lang>`    | `python`                              | Code-export language (`python` or `javascript` supported today).                   |
 | `--skip-code-validation`    | on                                    | Skip post-codegen worker-side validation.                               |
 | `--no-skip-code-validation` | off                                   | Force post-codegen worker-side validation.                              |
 
@@ -345,19 +345,20 @@ With `--agent`, `kane-cli` writes **one JSON object per line** to stdout. The pr
 
 There are two shapes of event:
 
-### Progress events (one per step)
+### Progress events (start and completion per step)
 
 These are **untyped** — they have no `type` field. Identify them by the presence of `step`.
 
 ```json
-{"step": 1, "status": "passed", "remark": "Navigated to amazon.in"}
+{"step": 1, "status": "running", "remark": "Navigate to amazon.in"}
+{"step": 1, "status": "done", "remark": "Navigated to amazon.in"}
 {"step": 2, "status": "failed", "remark": "Could not find Add to Cart button"}
 ```
 
 | Field    | Type   | Description                          |
 | -------- | ------ | ------------------------------------ |
 | `step`   | number | 1-based step index                   |
-| `status` | string | `"passed"` or `"failed"`             |
+| `status` | string | `"running"` at start; `"done"` or `"failed"` at completion |
 | `remark` | string | What the agent did, or why it failed |
 
 ### `run_end` (the one event you should script against)

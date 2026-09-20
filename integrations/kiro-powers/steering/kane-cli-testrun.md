@@ -15,7 +15,7 @@ Load this file when the user wants to run **several** saved `_test.md` tests as 
 # Command
 
 ```bash
-kane-cli testrun run [paths...] [flags]     # NDJSON is automatic when stdout is piped — there is NO --agent flag on testrun
+kane-cli testrun run [paths...] [flags]     # NDJSON is automatic when stdin is not a TTY (use < /dev/null in terminal automation) — there is NO --agent flag on testrun
 ```
 
 `[paths...]` is optional — omit it to auto-discover every `*_test.md` under the cwd. Explicit paths must end in `_test.md`.
@@ -24,11 +24,11 @@ kane-cli testrun run [paths...] [flags]     # NDJSON is automatic when stdout is
 |---|---|---|
 | `--match <regex>` | Filter candidates by project-relative path regex | — |
 | `--tags <list>` | ANY-match on frontmatter `tags:` (repeatable or comma-separated, case-insensitive) | — |
-| `--parallel <n>` | Worker count; each worker gets an isolated Chrome with a fresh temp profile | `1` |
+| `--parallel <n>` | Worker count; each desktop worker gets an isolated Chrome with a fresh temp profile | `1` |
 | `--on-failure <mode>` | `continue` (run everything) \| `fail-fast` (stop dispatching new members after a failure) | `continue` |
 | `--name <label>` | Run title in the dashboard | derived |
 | `--dry-run` | Print the plan (members + preflight failures) and exit; runs nothing | off |
-| `--retry` / `--retry-count <n>` | Replay-failure restart with shrinking replay window / max attempts | off / `3` |
+| `--no-adaptive-heal` | Disable default adaptive healing after replay failure | healing enabled |
 | `--bug-detection <mode>` | `off`\|`stop`\|`continue`, passed through to authoring members | config (`off`) |
 | `--headless` | Headless Chrome — use in CI | off |
 | `--remote [backend]` | Dispatch the suite to the HyperExecute grid (default backend `hyper`); needs `kane-cli plugin install remote-execution` — see "Remote" below | off |
@@ -61,7 +61,7 @@ kane-cli testrun run tests/ios/ --remote --device-name "iPhone 15" --os-version 
 - **`--parallel N`** becomes the job's concurrency for web and device suites alike (members auto-split across N grid tasks; a device task gets its own VM and device). **Web suites**: `--headless` is unnecessary; no `remote_device` event. Overhead ~15 s of setup plus the tests' own time (a mobile job adds a minute or more for device boot).
 - **One job = one runtime**: a selection mixing web and device members, emulator and simulator members, or emulator members on several Android versions is refused with a split suggestion. Simulator members may differ in iOS version as long as they land on one HyperExecute pool (`mobile_pool_split` otherwise).
 - **Mobile app on the grid**: a member's local build (`.apk` for emulator, `.zip` for simulator, anywhere on disk) is uploaded from the laptop at preflight and handed to the grid as `--app <id>` (one `remote_app` event per distinct build); an `APP…` id is used as-is. Nothing has to be inside the project or un-gitignored; `--dry-run` uploads nothing. Details in `kane-cli-mobile.md`.
-- `--author`, `--no-adaptive-heal`, `--bug-detection`, `--name` are forwarded. Allow several minutes.
+- Grid member flags include `--author`, `--no-adaptive-heal`, `--dataset-id`, and `--dataset-row`. `--name` labels suite metadata.
 
 Remote preflight refusals arrive as one `remote_error` per reason (then `testrun_done` failed, exit 2): `mobile_remote_mixed`, `mobile_remote_mixed_platform`, `mobile_os_version_split`, `mobile_pool_split`, `mobile_remote_unsupported`, `mobile_app_missing`, `mobile_app_not_uploadable`, `mobile_app_upload_failed`, `member_outside_payload`, `gitignored_inputs`, `on_grid`, `invalid_plan`, `project_authority_conflict` — each `detail` names the paths and the fix; relay it in plain language.
 
@@ -69,7 +69,7 @@ Extra events with `--remote` (stdout, typed): `remote_start {backend, env}` → 
 
 # NDJSON events
 
-All typed; stdout; one JSON object per line. **Terminal event: `testrun_done` — stop parsing there** (there is no `run_end` at the testrun level).
+All typed; stdout; one JSON object per line. **Local completion: `testrun_done`; with `--remote`, read through `remote_done` and process exit** (there is no `run_end` at the testrun level).
 
 | `type` | Payload | Notes |
 |---|---|---|
@@ -80,7 +80,7 @@ All typed; stdout; one JSON object per line. **Terminal event: `testrun_done` �
 | `testrun_investigations_wait` | `count` | Failed replays left investigations running; the coordinator waits before sealing. Narrate as "investigating N failures". |
 | `testrun_evidence_ingest` | `status: "ok"\|"failed"`, `evidence_id`, `stage?` | Pack published to the dashboard. Absent when publish is skipped. |
 | `testrun_summary` | `totals: {tests, passed, failed, broken, skipped}`, `duration_s`, `upload`, `cancelled` | Build the rollup from this. |
-| `testrun_done` | `execution_id`, `overall_status: "passed"\|"failed"\|"cancelled"` | Terminal. |
+| `testrun_done` | `execution_id`, `overall_status: "passed"\|"failed"\|"cancelled"` | Local completion; remote runs continue through `remote_done`. |
 
 The wait-for-terminal rule from `kane-cli-run.md` applies unchanged — narrate while events stream, act only after `testrun_done` or process exit.
 
@@ -169,3 +169,23 @@ kane-cli evidence merge <targets...> --run-id <id>          # exit 0 merged / 1 
 **Debugging with a pack:** the failed step's failure record (error + page state), its console/network slice (4xx/5xx or JS errors usually explain the failure), and the annotated screenshot (what the agent actually acted on). Same flow as "Failure handling" in `kane-cli-run.md`.
 
 **Debug escape hatch:** `KANE_TESTRUN_MEMBER_DEBUG=1` surfaces per-member output (stderr, `[member]` prefix).
+
+## Execution constraints
+
+Local suites containing any mobile member require `--parallel 1`; larger values are refused. Isolated Chrome workers apply to desktop members only. Remote suites support grid concurrency via `--parallel N`.
+
+Healing is enabled by default (three shrinking replay windows, then re-authoring of authorable steps). `--no-adaptive-heal` disables it. Retired `--retry`/`--retry-count` only print a notice and have no effect. Replay-only recorded steps retain their recordings even during healing.
+
+NDJSON selection uses stdin, not stdout: run `kane-cli testrun run <paths> < /dev/null` for automation launched from a terminal. Dry-run validates a plan, not runtime authentication or browser/device readiness. Always observe process exit, including paths without a normal completion event.
+
+### Remote behavior still requiring verification
+
+The audited dispatch does not forward `--bug-detection` to member commands and does not map `--on-failure` into the job template. Do not rely on these flags for remote bug-detection or fail-fast behavior until implementation owners confirm or fix the mapping. `--name` is suite metadata, not a forwarded member flag.
+
+For dispatched runs, read through `remote_done` and process exit after `testrun_done`; retain the remote status and session-log path. Preflight refusal and dry-run may terminate without `remote_done`.
+
+## Evidence merge identity
+
+Default identity keys are `external_id.commit_id`, `external_id.test_id`, `external_id.dataset_row_id`, `environment.os`, `environment.os_version`, `environment.browser`, and `environment.browser_version`. Re-runs with the same identity nest as attempts; a different row or environment produces a separate sibling. Dataset metadata records `dataset_id`, `dataset_row_id`, and `dataset_version_id` in `external_id`.
+
+Explicit collision policies can change grouping; a custom `--rules` file replaces the default rules rather than extending them. Check the selected identity rules before interpreting two runs as retries of the same test.

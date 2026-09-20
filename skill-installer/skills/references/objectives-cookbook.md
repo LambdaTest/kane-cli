@@ -4,7 +4,7 @@
 
 Read this whenever you're constructing the prose objective for `kane-cli run "<objective>"` or the body of a `## Step` in a `_test.md` file. Both surfaces feed the same agent and accept the same grammar.
 
-> **Mobile runs** (`--target emulator|simulator`, macOS Apple Silicon) share this same objective grammar, but the browser/DevTools-only checkpoints below (Network, Console, DOM/selectors, Cookies, localStorage, Core Web Vitals) are **web-only** and do not apply. Read `references/mobile.md`.
+> **Mobile runs** (`--target emulator|simulator`) share this objective grammar. Checkpoint support depends on platform and app: native network and Android Chrome/debuggable-WebView storage paths exist, but desktop parity and iOS equivalents must be verified. Read `references/mobile.md` for the capability boundary and local/cloud prerequisites.
 
 ---
 
@@ -37,6 +37,15 @@ Close each objective with a claim about the resulting **page state** — not a b
 ```
 
 If an objective has several phases (log in, then search, then check out), **each phase ends in its own assertion** — an intermediate phase with no check runs unverified, and a replay can't tell you which phase drifted.
+
+**The closing assertion is a look, not a trip.** Phrase it as a claim about what is on screen once the last action completes, so the agent verifies it without clicking, navigating, scrolling, or typing anywhere else. If the evidence lives somewhere else (Order History, the cart, a details drawer), add the action that gets there as its own step, then assert.
+
+```text
+❌ Place the order, then verify it succeeded by checking that it appears in Order History
+✅ Place the order, open Order History, then verify the newest order shows "Processing"
+```
+
+The ❌ version hides an action inside a check. The agent has to find its own way to Order History on every run, so the route can differ between runs and is never a step you can read or fix. The ✅ version keeps the route in the actions and leaves the assertion a pure observation of the page it lands on.
 
 Two things look like assertions but are not:
 
@@ -275,19 +284,22 @@ A pasted `curl` works too and is kept verbatim (method, headers, body, auth):
 curl -X POST https://api.example.com/login -H 'Content-Type: application/json' -d '{"u":"a","p":"b"}', save the response as login
 ```
 
-Once saved, reference the response by name:
+Once the call is made, use the response in plain English. `{{name}}` is reserved for global variables and secrets (§6); a value the run produces is never written that way.
 
-| Reference | Resolves to |
+| To use | Say |
 |---|---|
-| `{{order.status}}` | the HTTP status code (e.g. `201`) |
-| `{{order.response_body}}` | the whole response body |
-| `{{order.response_body.<field>}}` | a field from the JSON response body |
+| the HTTP status code | `assert the response status is 201` |
+| a field from the JSON body | `store the id from the response body as 'order_id'` |
+| the whole body | `store the response body as 'order_body'` |
+| a value later in the run | `the stored order_id value` |
+
+When one objective makes several calls, name each response (`save the response as order`) and say which one you mean: `assert the order response status is 201`.
 
 Then assert or chain on it — API calls and browser actions mix freely in one objective:
 
 ```text
 Call POST https://api.example.com/login with body {"u": "{{user}}", "p": "{{password}}"}, save the response as login,
-assert {{login.status}} is 200,
+assert the response status is 200,
 then open https://app.example.com and verify the dashboard loads
 ```
 
@@ -317,6 +329,8 @@ For DevTools extractions, the same rule applies — use "store" or "extract":
 ```
 
 Stored values land in `run_end.final_state` and feed the second results table per `SKILL.md §1.4`.
+
+Refer back to a stored value in plain English (`the stored price value`, `the same version as the stored api_tag value`), never as `{{price}}`. The `{{name}}` form is for global variables and secrets only (§6).
 
 ---
 
@@ -370,6 +384,7 @@ Use `{{name}}` syntax for values that should be parameterized:
 
 **Always parameterize:** credentials, API keys, tokens, environment-specific URLs.
 **OK to hardcode:** one-off URLs, static UI text, navigation paths.
+**Never `{{name}}`:** anything the run itself produces. A stored value or an API response is referenced in plain English (§3.5, §4): `the stored order_id value`, `the response status`.
 
 Mark credentials with `secret: true` in the variables JSON so they're masked in logs and routed to the secrets store:
 
@@ -426,6 +441,7 @@ Positional assertions check where something is on the page:
 | Cram 25 operations into one objective | Split at logical boundaries (login, navigate, action, verify) | Long runs drift and stall. |
 | "Check the page is fast" | "Assert LCP is under 2500ms and CLS is below 0.1" | Use the explicit web-vital metric, not a vague "fast." |
 | "Make sure no errors" | "Assert no console errors and no API calls returned 5xx" | Be explicit about which kind of error you're checking. |
+| "Place the order, then verify it succeeded by checking Order History" | "Place the order, open Order History, then verify the newest order shows 'Processing'" | A check that needs its own navigation is an action hiding inside an assertion. Put the route in the actions and keep the assertion a pure observation of the screen it lands on. |
 
 ---
 
@@ -478,7 +494,7 @@ The step body is exactly the same grammar as `kane-cli run`. Everything in this 
 ```text
 "Call POST https://api.example.com/orders with body {"item": "sku_42", "qty": 1},
  save the response as order,
- assert {{order.status}} is 201,
+ assert the response status is 201,
  then open https://app.example.com/orders,
  assert an order for 'sku_42' is visible"
 ```

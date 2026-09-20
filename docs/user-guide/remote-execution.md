@@ -58,7 +58,7 @@ job 24fc58b2-… dispatched → https://hyperexecute.lambdatest.com/hyperexecute
 |---|---|
 | `--parallel <n>` | Becomes the job's concurrency: the members are auto-split across `n` grid runners, each running its share one member at a time. Device suites parallelize the same way — every task has its own VM and device |
 | `--headless` | Not needed — every member runs headless on the grid |
-| `--on-failure`, `--name`, `--bug-detection`, `--author`, `--no-adaptive-heal` | Forwarded to the members on the grid |
+| `--author`, `--no-adaptive-heal`, `--dataset-id`, `--dataset-row` | Forwarded to grid member runs |
 | `--username`, `--access-key` | Used for the grid login and the Test Manager upload |
 
 ## Web suites on the grid
@@ -67,7 +67,7 @@ A web suite needs nothing beyond the prerequisites: the grid runner has Chrome, 
 
 ```bash
 kane-cli plugin install remote-execution
-kane-cli testrun run tests/web/ --remote --parallel 4 --on-failure fail-fast
+kane-cli testrun run tests/web/ --remote --parallel 4
 ```
 
 What you see back is a normal `testrun` summary; the only extra lines are the dispatch and the job link. A member that authors on the grid comes back with its `output-<stem>/` recordings, so the next run — local or remote — replays them. Commit those recordings as you would after a local run.
@@ -155,12 +155,12 @@ kane-cli plugin install remote-execution
 
 # a web suite
 kane-cli testrun run tests/web/ --remote --parallel 4 \
-  --username "$LT_USERNAME" --access-key "$LT_ACCESS_KEY" --on-failure fail-fast
+  --username "$LT_USERNAME" --access-key "$LT_ACCESS_KEY"
 
 # a mobile suite
 kane-cli testrun run tests/app/ --remote \
   --device-name "Pixel 7" --os-version 14 \
-  --username "$LT_USERNAME" --access-key "$LT_ACCESS_KEY" --on-failure fail-fast
+  --username "$LT_USERNAME" --access-key "$LT_ACCESS_KEY"
 ```
 
 Archive `.testmuai/evidence/*.evidence` as the build artifact. More pipeline shapes: [CI/CD recipes](./cicd.md).
@@ -189,3 +189,9 @@ In agent / non-TTY mode a remote run adds typed events around the normal `testru
 - [Writing test.md files](./testmd/overview.md#mobile-target) — `target:`, `app:`, `device_name:`, `os_version:`.
 - [Evidence packs](./evidence.md) — what comes back and how to view it.
 - [CI/CD recipes](./cicd.md) — pipeline patterns, including runners with no Chrome.
+
+### Remote behavior still requiring verification
+
+The audited dispatch does not forward `--bug-detection` to member commands and does not map `--on-failure` into the job template. Do not rely on these flags for remote bug-detection or fail-fast behavior until implementation owners confirm or fix the mapping. `--name` is suite metadata, not a forwarded member flag.
+
+For dispatched runs, read through `remote_done` and process exit after `testrun_done`; retain the remote status and session-log path. Preflight refusal and dry-run may terminate without `remote_done`.

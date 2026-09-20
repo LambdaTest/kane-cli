@@ -81,14 +81,14 @@ Frontmatter is YAML inside `---` fences at the top of the file. Every key is opt
 | `mode` | `"action"` \| `"testing"` | root only | How the agent reacts to auth walls, blocked pages, and error pages. `testing` (default) pushes through so negative-test assertions can run; `action` halts so you can intervene. See [Run mode](./running.md#run-mode). |
 | `url` | string | root only | Start URL for the test's first step. Bare domains are normalized to `https://`. Overridden by the `--url` flag; falls back to the configured `default_url`. See [Default start URL](../configuration.md#default-start-url). |
 | `tags` | list or string | root only | Labels for selecting tests in batch runs. Accepts a YAML list, a bracketed inline list (`tags: [smoke, checkout]`), or a bare comma string (`tags: smoke, checkout`). Tags are trimmed, lowercased, and de-duplicated. Shown by `kane-cli testmd list` and the interactive picker; selected with [`testrun --tags`](../testrun.md#selecting-tests); recorded in the run's [evidence pack](../evidence.md). |
-| `max_steps` | integer | root + per-step | Maximum agent reasoning steps for the run or step. Default is `30`. |
+| `max_steps` | integer | root + per-step | Maximum agent reasoning steps for the run or step. Engine fallback is `30` when neither step config nor CLI supplies a value; CLI default is `50`. |
 | `timeout` | integer (seconds) | root + per-step | Hard kill timer applied per step. No default. |
 | `global_context` | string (Markdown text) or file path | root + per-step | Standing instructions inlined into the agent's context. See [variables-and-context.md](../variables-and-context.md). |
 | `local_context` | string or file path | root + per-step | Project-scoped guidance. Same shape as `global_context`. |
 | `variables` | object | root + per-step | Named values usable as `{{name}}` in objectives. See [Variables](#variables). |
 | `session_context` | `{ prior_runs: [...] }` | root + per-step | Pre-loaded prior-run context for the agent. |
 | `target` | `"chrome"` \| `"cdp"` \| `"ws"` \| `"emulator"` \| `"simulator"` | root only | Where the test runs: a browser transport (default `chrome`) or a mobile target (a virtual Android or iOS device — locally on macOS Apple Silicon, or on the cloud grid with `testrun run --remote`). See [Mobile target](#mobile-target). |
-| `app` | string | root only | Mobile only: the app under test — a build path (emulator `.apk`, simulator `.zip`) or an uploaded `APP…` id. Required with `target: emulator\|simulator`, rejected with a browser target. On the grid a simulator test needs the `APP…` id. |
+| `app` | string | root only | Mobile only: the app under test — a build path (emulator `.apk`, simulator `.zip`) or an uploaded `APP…` id. Required with `target: emulator\|simulator`, rejected with a browser target. On the grid, simulator `.zip` builds are uploaded from this machine during a real run; an existing `APP…` id is also accepted. Dry-run does not upload. |
 | `no_reset` | boolean | root only | Mobile only: keep the app's existing state between runs instead of resetting it. |
 | `device_name` | string | root only | Mobile only: the default device for this test, as `kane-cli devices list --target <kind>` (add `--remote` for the grid catalog) prints it. Overridden by `--device-name`. |
 | `os_version` | string | root only | Mobile only: the device's OS version (`14`, `17.5`). Overridden by `--os-version`. Required alongside `device_name`. |
@@ -123,7 +123,7 @@ no_reset: false              # optional
 
 The nested form (`target: {platform, app}`) is not accepted — the parser refuses it and spells out the flat shape above.
 
-Mobile tests run with `kane-cli testmd run` and in batch with [`testrun`](../testrun.md#mobile-members). Locally that needs macOS Apple Silicon — setup is covered in [Mobile testing](../mobile/overview.md); with [`testrun run --remote`](../remote-execution.md) the suite runs on a grid emulator or simulator from any machine (a simulator member then needs an `APP…` id in `app:`).
+Mobile tests run with `kane-cli testmd run` and in batch with [`testrun`](../testrun.md#mobile-members). Locally that needs macOS Apple Silicon — setup is covered in [Mobile testing](../mobile/overview.md); with [`testrun run --remote`](../remote-execution.md) the suite runs on a grid emulator or simulator from any machine (simulator members accept a local `.zip` build or an `APP…` id in `app:`).
 
 ### Root-only vs root-or-per-step
 
@@ -329,3 +329,7 @@ Parse errors abort the run before any browser launch, auth call, or upload. The 
 - [Batch runs with testrun](../testrun.md) — run many tests at once, selected by path or `tags:`.
 - [Composition with @import](./composition.md) — break a long test into reusable helpers.
 - [Variables and context](../variables-and-context.md) — the full variables pipeline.
+
+Data-driven execution: see [Dataset parameters](../datasets.md) for `--dataset-id`, `--dataset-row`, root `dataset:` frontmatter, and `${column}` placeholders.
+
+For replay-only heading markers and balanced structured control flow (`@if`/`@end-if`, `@while`/`@end-while`), see [Replay policy and completion](./running.md#replay-policy-and-completion).

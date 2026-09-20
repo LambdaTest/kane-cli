@@ -76,7 +76,7 @@ kane-cli testmd run <path>             # run a test
 kane-cli testmd list                    # list every *_test.md under cwd (NDJSON when stdin is non-TTY; records include tags)
 kane-cli testmd status <path>           # show TMS identity + local-sync state
 kane-cli testmd delete <path>           # local-only delete: removes source + output-<stem>/. Does NOT delete from Test Manager.
-kane-cli testmd export <path> [--code-language python|javascript]  # regenerate code export from cached recordings
+kane-cli testmd export <path> [--language python|javascript]  # regenerate code export from cached recordings
 kane-cli testmd sync <path>             # re-push the test bundle (test + imports + outputs) to the cloud; automatic after every authored commit — manual use is for recovering a failed auto-sync
 ```
 
@@ -84,7 +84,7 @@ kane-cli testmd sync <path>             # re-push the test bundle (test + import
 
 ## `kane-cli testmd run` — flag reference
 
-All `kane-cli run` flags also apply. The flags below are `testmd`-specific.
+Many flags are shared with `run`, but not all; check `kane-cli testmd run --help`. The flags below are `testmd`-specific.
 
 | Flag | Default | Description |
 |---|---|---|
@@ -92,9 +92,8 @@ All `kane-cli run` flags also apply. The flags below are `testmd`-specific.
 | `--allow-missing-url` | off | Non-TTY only: start from the browser's current page instead of failing when the first step has no start URL. |
 | `--name <name>` | none | Persist the run under this name. Slug: `[a-zA-Z0-9_-]+`. |
 | `--on-lock-conflict <readonly\|fail\|wait>` | none | Behavior when another user holds the test's edit lock. `readonly` = replay-only / no upload; `fail` = exit `2`; `wait` = block until released. |
-| `--retry` | off | On replay failure, restart with a shrinking replay window. |
-| `--retry-count <n>` | `3` | Max restarts before falling back to full re-author. |
-| `--author` | off | Force authoring every step (skip the replay decision). |
+| `--no-adaptive-heal` | healing enabled | Disable adaptive healing after replay failure |
+| `--author` | off | Force authorable steps to re-author; replay-only steps still replay. |
 | `--bug-detection <off\|stop\|continue>` | config (`off`) | Flag suspected product bugs while **authoring** (`stop` halts on a confirmed bug; `continue` records it). Replay failures always investigate regardless. |
 
 **Flag vs frontmatter precedence:** flags win for everything **except** `variables`, where the file wins (a test's data stays close to the test). CLI variables can still **add** keys the file doesn't define.
@@ -156,7 +155,7 @@ Every key is optional. Unrecognised keys are rejected at parse time.
 | `mode` | **root only** | `testing` (default) pushes through auth walls and error pages so negative-test assertions can fire. `action` halts on those pages so a human can intervene. |
 | `url` | **root only** | Start URL for the test's first step (bare domains get `https://`). Overridden by `--url`; falls back to config `default_url`. |
 | `tags` | **root only** | Labels for batch selection: YAML list, `[a, b]`, or bare `a, b`. Trimmed, lowercased, deduped. Selected with `testrun --tags`; shown by `testmd list`. Empty → parse error (`tags must be a non-empty list of non-empty strings`); per-step → parse error. |
-| `max_steps` | root + per-step | Max agent reasoning steps. Default `30`. |
+| `max_steps` | root + per-step | Max agent reasoning steps. Engine fallback `30` when neither step config nor CLI supplies a value; CLI default is `50`. |
 | `timeout` | root + per-step | Hard kill timer per step, seconds. No default. |
 | `headless` | **root only** | Launch Chrome without a window. |
 | `variables` | root + per-step | `{{name}}` parameters, same shape as `kane-cli run`, with `secret: true` for credentials. |
@@ -321,21 +320,20 @@ Otherwise the step authors again.
 
 ## Edits cascade
 
-Each step starts where the previous one left off (same browser, URL, logged-in state). When step 3 changes, the state step 4 expected may no longer be there — so step 4 (and 5, 6, …) re-author automatically.
+Each step starts where the previous one left off (same browser, URL, logged-in state). When step 3 changes, the state step 4 expected may no longer be there — so authorable steps 4 (and 5, 6, …) re-author automatically; replay-only marked steps still replay.
 
-Practical consequence: a one-line tweak at the top of a long test re-authors the whole file. If you're iterating and want only the last step to re-record, edit only the last step.
+Practical consequence: a one-line tweak at the top of a long test re-authors the authorable steps in the file. If you're iterating and want only the last step to re-record, edit only the last step.
 
 ## Forcing fresh authoring
 
-- **`--author`** — bypass the replay decision for one run. Every step authors.
-- **`rm -rf output-<stem>/`** — wipe the cache.
+- **`--author`** — bypass the replay decision for one run. Every authorable step authors; replay-only marked steps still replay.
+- Preserve output recordings for replay-only marked steps; deleting them cannot force fresh authoring.
 
 ## Recovering replay failures
 
 A replay can fail when the site shifts under you:
 
-- **`--retry`** — on failure, Kane CLI restarts with a smaller replay window: it authors the failing step and replays fewer earlier ones.
-- **`--retry-count <n>`** — default `3`. After this many restarts, fall back to full re-author.
+- **Adaptive healing** — enabled by default: three shrinking replay windows, then re-author authorable steps. Use `--no-adaptive-heal` to disable it.
 
 Every failed replay is also **investigated automatically** — a failure record (error, page state, console/network pointers) is written into the run's evidence pack, so you can explain *why* the replay broke.
 
@@ -454,8 +452,7 @@ Standard CI-friendly invocation:
 kane-cli testmd run ./tests/checkout_test.md \
   --agent \
   --headless \
-  --on-lock-conflict wait \
-  --retry
+  --on-lock-conflict wait
 ```
 
 Why each flag:
@@ -463,7 +460,7 @@ Why each flag:
 - `--agent` — NDJSON to stdout, no TUI. Auto-enabled when stdin is non-TTY but pass it explicitly.
 - `--headless` — Chrome runs without a window.
 - `--on-lock-conflict wait` — block instead of failing if a teammate is editing the same test.
-- `--retry` — recover transient replay failures without a full re-author.
+- Adaptive healing recovers replay failures by default; `--no-adaptive-heal` opts out.
 
 Two non-TTY behaviors to know (Kiro always runs Kane CLI non-TTY): interactive `ask_user` prompts are disabled, so a step that would wait for input fails cleanly instead of hanging; and the first step needs a resolvable start URL (the `url:` frontmatter key, the `--url` flag, or a site named in the step's prose) or the run fails — pass `--allow-missing-url` to start from the current page instead.
 
@@ -549,3 +546,13 @@ When the agent surfaces a parse error, repeat the message verbatim, point at the
 - **Never** echo a `secret: true` variable's value back to the user.
 - **Never** delete `output-<stem>/` or `helper-output-...` without explicit consent — those are checked-in artifacts other tests / teammates may rely on.
 - **Never** rename a `_test.md` casually — the output directory is keyed on the stem and the cache will not follow. If renaming is unavoidable, also rename the matching `output-<stem>/` directory.
+
+## Replay policy and completion
+
+Adaptive healing is enabled by default: after a replay failure the runner tries up to three shrinking replay windows, then full re-authoring of authorable steps. `--no-adaptive-heal` disables this recovery. Retired `--retry` and `--retry-count` are accepted only to print a notice; they do not enable healing or change the fixed budget.
+
+Headings marked `@db`, `@api`, `@js`, `@smartui`, `@network_query`, or `@network_assertion` are replay-only. They still replay under `--author`, downstream divergence and adaptive healing. Missing recordings cannot be re-authored through these markers: restore the recording or recreate it through the originating workflow. Do not delete their tapes to force authoring; adding a marker does not create an operation.
+
+Structured control flow uses balanced heading markers: `@if`, `@elif`, `@else`, `@end-if`, `@while`, `@end-while`. An `@else` must be last in its conditional; end markers must match the opened block type. These are distinct from natural-language conditionals. Markers are excluded from the step body hash. Only one replay-only kind is allowed per step, and an import cannot also be marked replay-only.
+
+Under `--agent`, wait for `test_md_done` (file-level `overall_status`, `duration_s`, `session_id`, optional `share_url`) and process exit. Individual `run_end` events do not complete the file.

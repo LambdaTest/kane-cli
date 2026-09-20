@@ -54,7 +54,7 @@ Four parts in order:
 
 1. **YAML frontmatter** — between `--- ... ---` at the very top.
 2. **`# Title`** — decorative; everything before the first `## ` is ignored.
-3. **`## H2` step headings** — one per step. The agent reads the step body, not the heading.
+3. **`## H2` step headings** — one per step. The agent reads the step body; the parser also interprets heading markers for replay-only steps, imports and structured control flow.
 4. **Step body** — either prose **or** a single `@import <path>` line. Never both. Prose bodies are objectives with the same grammar as `kane-cli run` — for the full pattern catalog (action verbs, assertion analyze methods, checkpoint types, chaining, worked examples), Read `references/objectives-cookbook.md`.
 
 Per-step `yaml` overrides go immediately under the heading, in a fenced block:
@@ -75,7 +75,7 @@ Click submit and verify the confirmation banner.
 | `mode` | root | `action` (halts on auth walls) or `testing` (default — pushes through so negative-test assertions can fire) |
 | `url` | root | Start URL for the first step (bare domains get `https://`). Overridden by `--url`; falls back to config `default_url`. |
 | `tags` | root | Labels for batch selection: YAML list, `[a, b]`, or bare `a, b`. Trimmed, lowercased, deduped. Selected with `testrun --tags` (`references/testrun.md`); shown by `testmd list`. Empty → parse error; per-step → parse error. |
-| `max_steps` | root + step | Max agent reasoning steps. Default `30`. |
+| `max_steps` | root + step | Max agent reasoning steps. Engine fallback `30`; CLI default `50` (step config overrides). |
 | `timeout` | root + step | Hard kill per step in seconds. |
 | `headless` | root | No browser window. |
 | `variables` | root + step | `{{name}}` params, same shape as §3, with `secret: true` for credentials. Counts as a value for the pre-run check (0.8.12+) — a `{{name}}` with no value anywhere refuses the run before it starts |
@@ -88,19 +88,19 @@ Files ending in `_test.md` are tests (valid entry points). Any other `.md` is a 
 
 On the **first** run of a test, the agent authors each step and saves a recording. On **every later run**, each step replays from its recording — no agent, no LLM cost, much faster.
 
-A step replays only if **all** of these hold:
+An authorable step replays only if **all** of these hold (replay-only marked steps always require their recording):
 - A recording for that step exists,
 - Its prose is unchanged since the recording,
 - Its `yaml` block is unchanged,
 - No earlier step in the file invalidated it.
 
-**Editing step N re-authors step N AND every step after it in the same file.** Each step starts where the previous step left off (URL, login, tabs). When step 3 changes, step 4 cannot safely replay against state that no longer exists.
+**Editing step N re-authors authorable steps from N onwards in that file. Replay-only marked steps still replay.** Each step starts where the previous step left off (URL, login, tabs). When step 3 changes, step 4 cannot safely replay against state that no longer exists.
 
 Consequences when editing tests:
-- A one-line tweak at the top of a 20-step test re-authors all 20 steps on the next run.
+- A one-line tweak at the top of a 20-step test re-authors all authorable steps on the next run; replay-only steps keep their recordings.
 - To re-record only one step, edit only that step (or steps after it).
-- `--author` forces full authoring for one run (debugging only).
-- `rm -rf output-<stem>/` wipes the cache entirely.
+- `--author` forces authorable steps to re-author; replay-only marked steps still require their recordings.
+- Do not delete output recordings for replay-only marked steps; they cannot be recovered by re-authoring.
 
 ## `@import` for reusing flows
 
@@ -129,7 +129,7 @@ Editing a helper re-authors that step in **every test that imports it**, plus ev
 | `kane-cli testmd run <path> --agent [flags]` | Run a test |
 | `kane-cli testmd list` | List `*_test.md` files under cwd (NDJSON when non-TTY; records include `tags`) |
 | `kane-cli testmd status <path>` | Test Manager identity + local-sync state |
-| `kane-cli testmd export <path> [--code-language python\|javascript]` | Regenerate code export from existing recordings (no browser launch) |
+| `kane-cli testmd export <path> [--language python\|javascript]` | Regenerate code export from existing recordings (no browser launch) |
 | `kane-cli testmd delete <path>` | Local-only delete: removes source + `output-<stem>/`. Does NOT delete from Test Manager. |
 | `kane-cli testmd sync <path>` | Re-push the test bundle (test + imports + outputs) to the cloud. Rarely needed — it happens automatically after every authored commit; use only to recover a failed auto-sync. |
 
@@ -143,12 +143,11 @@ Editing a helper re-authors that step in **every test that imports it**, plus ev
 | `--allow-missing-url` | off | Non-TTY only: start from the browser's current page instead of failing when the first step has no start URL. |
 | `--name <name>` | none | Persist the run under this name. Regex `[a-zA-Z0-9_-]+`. |
 | `--on-lock-conflict <readonly\|fail\|wait>` | none | Behavior when another user holds the test's edit lock. `readonly` = replay-only / no upload, `fail` = exit 2, `wait` = block until released |
-| `--retry` | off | On replay failure, restart with a shrinking replay window |
-| `--retry-count <n>` | `3` | Max retry restarts before falling back to full re-author |
-| `--author` | off | Force authoring every step (skip replay decision) |
+| `--no-adaptive-heal` | healing enabled | Disable adaptive healing after replay failure |
+| `--author` | off | Force authorable steps to re-author; replay-only steps still replay |
 | `--bug-detection <off\|stop\|continue>` | config (`off`) | Flag suspected product bugs while **authoring** (`stop` halts on a confirmed bug; `continue` records it). Replay failures always investigate regardless. |
 
-All §3 `run` flags also apply (`--agent`, `--headless`, `--max-steps`, `--timeout`, `--variables`, etc.).
+Common flags include `--agent`, `--headless`, `--max-steps`, `--timeout`, and `--variables`. Command-specific flags differ; check `kane-cli testmd run --help`.
 
 Flag wins over frontmatter for everything **except** `variables` — the file owns variables; you can add new keys via flags but cannot override file-defined ones.
 
@@ -195,14 +194,13 @@ On exit, kane-cli writes `<cwd>/.testmuai/tests/amazon-search_test.md`. Move tha
 kane-cli testmd run ./tests/checkout_test.md \
   --agent \
   --headless \
-  --on-lock-conflict wait \
-  --retry
+  --on-lock-conflict wait
 ```
 
 - `--agent` — NDJSON to stdout (auto-enabled when stdin is not a TTY; pass explicitly anyway).
 - `--headless` — no window.
 - `--on-lock-conflict wait` — block instead of failing if a teammate is editing the same test.
-- `--retry` — automatically recover transient replay failures.
+- Adaptive healing recovers replay failures by default; `--no-adaptive-heal` opts out.
 
 In non-TTY runs, interactive `ask_user` prompts are disabled — a step that would wait for input fails cleanly instead of hanging forever. Write CI test steps that don't depend on mid-run prompts. (Likewise, supply a start URL via the objective, `url:` frontmatter, or `--url`; a non-TTY run with no resolvable start URL fails unless you pass `--allow-missing-url`.)
 
@@ -234,3 +232,15 @@ Parse errors abort **before** any browser launch with exit `2`. Common ones and 
 | `auth/identity keys are CLI-only` | Pass `username` / `access_key` as CLI flags, not in frontmatter |
 
 When the user reports a parse error, fix the file before retrying — don't loop on the same error.
+
+## Replay policy and completion
+
+Adaptive healing is enabled by default: after a replay failure the runner tries up to three shrinking replay windows, then full re-authoring of authorable steps. `--no-adaptive-heal` disables this recovery. Retired `--retry` and `--retry-count` are accepted only to print a notice; they do not enable healing or change the fixed budget.
+
+Headings marked `@db`, `@api`, `@js`, `@smartui`, `@network_query`, or `@network_assertion` are replay-only. They still replay under `--author`, downstream divergence and adaptive healing. Missing recordings cannot be re-authored through these markers: restore the recording or recreate it through the originating workflow. Do not delete their tapes to force authoring; adding a marker does not create an operation.
+
+Structured control flow uses balanced heading markers: `@if`, `@elif`, `@else`, `@end-if`, `@while`, `@end-while`. An `@else` must be last in its conditional; end markers must match the opened block type. These are distinct from natural-language conditionals. Markers are excluded from the step body hash. Only one replay-only kind is allowed per step, and an import cannot also be marked replay-only.
+
+Under `--agent`, wait for `test_md_done` (file-level `overall_status`, `duration_s`, `session_id`, optional `share_url`) and process exit. Individual `run_end` events do not complete the file.
+
+Data-driven execution: see [Dataset parameters](datasets.md) for `--dataset-id`, `--dataset-row`, root `dataset:` frontmatter, and `${column}` placeholders.

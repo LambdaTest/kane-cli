@@ -204,3 +204,27 @@ Never `context ingest` the new version first — reconcile does its own re-inges
 - **One stream.** The re-extract child's events ride the reconcile stream itself, stamped `verb: "reconcile"` — parse per `references/assurance-parsing.md`.
 
 For staleness that arrived outside a reconcile, `kane-cli maintain evolve` re-designs a use-case — it is interactive-only (the blast-radius confirmation is the point); suggest the user run it in a terminal rather than scripting around it.
+
+## Sharing a context store
+
+Use `kane-cli context sync setup` in a TTY for guided GitHub, S3 or folder setup. For automation, bind a location with `context sync add <name> <descriptor> --mode agent`; use a descriptor supplied by your team’s configured provider, not a guessed URL. `context clone <descriptor> <dir> --mode agent` creates a local store bound as `origin`.
+
+Inspect first:
+
+```bash
+kane-cli context sync list --mode agent
+kane-cli context sync status origin --mode agent
+kane-cli context sync doctor --mode agent
+```
+
+`status` never writes. `doctor` diagnoses the chain and open rebases without writing unless `--abort` or `--export` is requested. `context sync remove <name>` forgets the location but retains its witness.
+
+`context pull [name] --mode agent` imports verified records; `context push [name] --mode agent` publishes local work and refuses if remote work has not been pulled. `context sync [name] --mode agent` finishes an open rebase, pulls and publishes. These use the agent envelope with verb `sync` and final `done`; inspect the outcome and exit code.
+
+When both sides changed, `context pull [name] --rebase --yes --mode agent` explicitly permits replacing local records after their common position (saved first); it does not answer conflicts. For an open rebase, supply repeatable `--answer <decision-id>=keep-theirs|apply-mine|apply-mine-as-new` to `sync` or `pull`, choosing each answer from the reported decisions. Do not silently choose answers or delete records/locks. Use `sync status` and plain `sync doctor` before recovery. Provider-specific descriptor examples and interrupted-rebase recovery still need additional verification before being prescribed here.
+
+## Lifecycle automation contracts
+
+`context name`, `context retire`, and `context revert` accept `--mode agent` and emit an envelope ending in `done`. Destructive agent-mode operations require `--yes` even when stdin is a TTY. Other modes retain human output. Read commands use their documented `--json` flags; do not assume they all accept `--mode`.
+
+`context review --mode agent` / `--json` returns review outcome rows on success rather than the conversational `done` contract. Early agent-mode errors may emit `error` plus `done`; check command-specific output and process exit.

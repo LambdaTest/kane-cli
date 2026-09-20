@@ -15,7 +15,7 @@ extract: no TTY — pass an explicit --mode agent|ci|override to run headless
 | Mode | Questions | stdout |
 |---|---|---|
 | `interactive` | asked in the chat (TTY default) | the Ink chat UI |
-| `agent` | low/medium-risk defaults are auto-taken (each reported); a **high-risk** question pauses the session — exit `3`, resumable | **NDJSON events** (one JSON object per line); *(0.7.2)* nothing else on either output — stderr stays silent |
+| `agent` | every question pauses the session for an answer — exit `3`, resumable | **NDJSON events** (one JSON object per line); *(0.7.2)* nothing else on either output — stderr stays silent |
 | `ci` | any high-risk question **fails closed** — exit `1`, error code `HIGH_RISK_CI` | prose transcript |
 | `override` | every default is auto-taken, including high-risk (each flagged in the commit record) | prose transcript |
 
@@ -127,7 +127,7 @@ $ kane-cli context extract --resume ext-20260716T140742-prd-online-store --mode 
 {"type":"done","v":1,"verb":"extract","status":"complete","exit_code":0}
 ```
 
-The agent maps your statement to its own pending questions. A statement that answers nothing pending is treated as steering ("also cover the coupon path"); if it leaves a high-risk ambiguity standing, the run pauses again with refreshed questions.
+The agent maps your statement to its own pending questions. A statement that answers nothing pending is treated as steering ("also cover the coupon path"); if it leaves a pending question unanswered, the run pauses again with refreshed questions.
 
 Two structured alternatives to `--message` *(0.7.1)*:
 

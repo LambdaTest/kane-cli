@@ -1,6 +1,6 @@
 # Visual Assertions
 
-Visual assertions verify what's visible on screen by analyzing the current screenshot. This is the default method — when in doubt, KaneAI uses visual analysis.
+Visual assertions verify what's visible on screen by analyzing the current screenshot. The default assertion mode is `dom`, with vision fallback. Set `--assertion-mode visual` to request visual assertions explicitly.
 
 ## When It's Used
 
