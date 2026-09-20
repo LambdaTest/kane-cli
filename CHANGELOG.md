@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.16] - 2026-09-20
+
+### Replays that use this run's data
+- **Stored values resolve at run time** — a step that stores a parameter now records what this run actually produced, including an empty string, instead of falling back to the author-time value.
+- **Replayed API and JavaScript steps feed the next step** — the response from a replayed API call and the result of a replayed JS step reach the operation that depends on them, so downstream steps see real data.
+- **`JS` results are recorded as JSON** — no more Python-style reprs in results, so values are directly usable and comparable.
+- **JavaScript reaches the page exactly as written** — `JS` scripts are sent verbatim with no substitution, and script matching ignores surrounding whitespace so formatting changes don't break a match.
+- **Pure replays carry their own results** — the replay's result bundle reflects that run only, and overlays keep applying correctly even after an instruction is swapped.
+
+### Browser behavior that matches what you configured
+- **Your window size is the actual page viewport** — when kane-cli attaches to an existing browser, the configured size applies to the page, with browser chrome measured once rather than through another override.
+- **Key combinations use the platform's main modifier** — Cmd on macOS, Ctrl elsewhere, so shortcuts work without per-OS test variants.
+- **A disabled playground degrades gracefully** — it drops to read-only instead of aborting the session.
+
 ## [0.8.15] - 2026-09-17
 
 ### Data-driven runs
