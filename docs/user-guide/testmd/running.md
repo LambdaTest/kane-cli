@@ -342,5 +342,3 @@ Headings marked `@db`, `@api`, `@js`, `@smartui`, `@network_query`, or `@network
 Structured control flow uses balanced heading markers: `@if`, `@elif`, `@else`, `@end-if`, `@while`, `@end-while`. An `@else` must be last in its conditional; end markers must match the opened block type. These are distinct from natural-language conditionals. Markers are excluded from the step body hash. Only one replay-only kind is allowed per step, and an import cannot also be marked replay-only.
 
 Under `--agent`, wait for `test_md_done` (file-level `overall_status`, `duration_s`, `session_id`, optional `share_url`) and process exit. Individual `run_end` events do not complete the file.
-
-Data-driven execution: see [Dataset parameters](../datasets.md) for `--dataset-id`, `--dataset-row`, root `dataset:` frontmatter, and `${column}` placeholders.

@@ -295,7 +295,6 @@ Progress is for live display: count only `done`/`failed` completions, retaining 
 
 In the interactive TUI, `/mobile` and `/desktop` can switch targets before the first dispatch. The target locks after dispatch; use `/new` to start a new session before switching.
 
-Data-driven execution: see [Dataset parameters](./datasets.md) for `--dataset-id`, `--dataset-row`, root `dataset:` frontmatter, and `${column}` placeholders.
 
 ## Assertion controls and current-page analysis
 

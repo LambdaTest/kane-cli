@@ -58,7 +58,7 @@ job 24fc58b2-… dispatched → https://hyperexecute.lambdatest.com/hyperexecute
 |---|---|
 | `--parallel <n>` | Becomes the job's concurrency: the members are auto-split across `n` grid runners, each running its share one member at a time. Device suites parallelize the same way — every task has its own VM and device |
 | `--headless` | Not needed — every member runs headless on the grid |
-| `--author`, `--no-adaptive-heal`, `--dataset-id`, `--dataset-row` | Forwarded to grid member runs |
+| `--author`, `--no-adaptive-heal` | Forwarded to grid member runs |
 | `--username`, `--access-key` | Used for the grid login and the Test Manager upload |
 
 ## Web suites on the grid

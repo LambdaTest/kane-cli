@@ -61,7 +61,7 @@ kane-cli testrun run tests/ios/ --remote --device-name "iPhone 15" --os-version 
 - **`--parallel N`** becomes the job's concurrency for web and device suites alike (members auto-split across N grid tasks; a device task gets its own VM and device). **Web suites**: `--headless` is unnecessary; no `remote_device` event. Overhead ~15 s of setup plus the tests' own time (a mobile job adds a minute or more for device boot).
 - **One job = one runtime**: a selection mixing web and device members, emulator and simulator members, or emulator members on several Android versions is refused with a split suggestion. Simulator members may differ in iOS version as long as they land on one HyperExecute pool (`mobile_pool_split` otherwise).
 - **Mobile app on the grid**: a member's local build (`.apk` for emulator, `.zip` for simulator, anywhere on disk) is uploaded from the laptop at preflight and handed to the grid as `--app <id>` (one `remote_app` event per distinct build); an `APP…` id is used as-is. Nothing has to be inside the project or un-gitignored; `--dry-run` uploads nothing. Details in `kane-cli-mobile.md`.
-- Grid member flags include `--author`, `--no-adaptive-heal`, `--dataset-id`, and `--dataset-row`. `--name` labels suite metadata.
+- Grid member flags include `--author` and `--no-adaptive-heal`. `--name` labels suite metadata.
 
 Remote preflight refusals arrive as one `remote_error` per reason (then `testrun_done` failed, exit 2): `mobile_remote_mixed`, `mobile_remote_mixed_platform`, `mobile_os_version_split`, `mobile_pool_split`, `mobile_remote_unsupported`, `mobile_app_missing`, `mobile_app_not_uploadable`, `mobile_app_upload_failed`, `member_outside_payload`, `gitignored_inputs`, `on_grid`, `invalid_plan`, `project_authority_conflict` — each `detail` names the paths and the fix; relay it in plain language.
 
@@ -186,6 +186,6 @@ For dispatched runs, read through `remote_done` and process exit after `testrun_
 
 ## Evidence merge identity
 
-Default identity keys are `external_id.commit_id`, `external_id.test_id`, `external_id.dataset_row_id`, `environment.os`, `environment.os_version`, `environment.browser`, and `environment.browser_version`. Re-runs with the same identity nest as attempts; a different row or environment produces a separate sibling. Dataset metadata records `dataset_id`, `dataset_row_id`, and `dataset_version_id` in `external_id`.
+For ordinary runs, default merge identity distinguishes the test and commit (`external_id.test_id`, `external_id.commit_id`) and the environment (`environment.os`, `environment.os_version`, `environment.browser`, `environment.browser_version`). Re-runs with the same identity nest as attempts; a different environment produces a separate sibling.
 
 Explicit collision policies can change grouping; a custom `--rules` file replaces the default rules rather than extending them. Check the selected identity rules before interpreting two runs as retries of the same test.

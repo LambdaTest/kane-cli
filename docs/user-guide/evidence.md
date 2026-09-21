@@ -199,6 +199,6 @@ Runs that upload to Test Manager attach their sealed pack automatically. Replaye
 
 ## Evidence merge identity
 
-Default identity keys are `external_id.commit_id`, `external_id.test_id`, `external_id.dataset_row_id`, `environment.os`, `environment.os_version`, `environment.browser`, and `environment.browser_version`. Re-runs with the same identity nest as attempts; a different row or environment produces a separate sibling. Dataset metadata records `dataset_id`, `dataset_row_id`, and `dataset_version_id` in `external_id`.
+For ordinary runs, default merge identity distinguishes the test and commit (`external_id.test_id`, `external_id.commit_id`) and the environment (`environment.os`, `environment.os_version`, `environment.browser`, `environment.browser_version`). Re-runs with the same identity nest as attempts; a different environment produces a separate sibling.
 
 Explicit collision policies can change grouping; a custom `--rules` file replaces the default rules rather than extending them. Check the selected identity rules before interpreting two runs as retries of the same test.

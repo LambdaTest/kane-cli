@@ -371,6 +371,5 @@ The `run_end` parsing strategy applies to one-shot `run` only. For `testmd run`,
 
 Progress is for live display: count only `done`/`failed` completions, retaining child and execution context when step indices repeat.
 
-Data-driven execution: see [Dataset parameters](references/datasets.md) for `--dataset-id`, `--dataset-row`, root `dataset:` frontmatter, and `${column}` placeholders.
 
 For assertion mode, optional final validation, current-page `--analyzer-only` checks, streaming-network capture, and code-export defaults, read [Execution controls](references/execution-controls.md).

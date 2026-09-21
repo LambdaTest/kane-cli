@@ -330,6 +330,5 @@ Parse errors abort the run before any browser launch, auth call, or upload. The 
 - [Composition with @import](./composition.md) — break a long test into reusable helpers.
 - [Variables and context](../variables-and-context.md) — the full variables pipeline.
 
-Data-driven execution: see [Dataset parameters](../datasets.md) for `--dataset-id`, `--dataset-row`, root `dataset:` frontmatter, and `${column}` placeholders.
 
 For replay-only heading markers and balanced structured control flow (`@if`/`@end-if`, `@while`/`@end-while`), see [Replay policy and completion](./running.md#replay-policy-and-completion).

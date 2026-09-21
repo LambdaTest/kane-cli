@@ -182,5 +182,3 @@ kane-cli run "Run smoke tests" \
 ```
 
 If a context file is missing or empty, it is silently ignored — no error is raised.
-
-Data-driven execution: see [Dataset parameters](./datasets.md) for `--dataset-id`, `--dataset-row`, root `dataset:` frontmatter, and `${column}` placeholders.

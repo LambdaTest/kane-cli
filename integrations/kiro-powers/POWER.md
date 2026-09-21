@@ -352,5 +352,3 @@ Do not configure Kane CLI via environment variables — env-var passthrough is n
 ---
 
 **Package:** `@testmuai/kane-cli` (npm) · **Source:** https://github.com/LambdaTest/kane-cli · **Connection:** local CLI invoked via shell — no MCP server required.
-
-For dataset-driven execution (`--dataset-id`, `--dataset-row`, `${column}`), load `steering/kane-cli-datasets.md`.

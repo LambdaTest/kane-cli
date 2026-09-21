@@ -61,7 +61,7 @@ kane-cli testrun run tests/ios/ --remote --device-name "iPhone 15" --os-version 
 - **`--parallel N`** becomes the job's concurrency for web and device suites alike (members auto-split across N grid tasks; a device task gets its own VM and device). **Web suites**: `--headless` is unnecessary (always headless on the grid); there is no `remote_device` event. Overhead is ~15 s of setup plus the tests' own time; a mobile job adds a minute or more for device boot.
 - **One job = one runtime.** A selection that mixes web and device members, emulator and simulator members, or emulator members on several Android versions is refused with a split suggestion (`--match`/`--tags`). Simulator members may differ in iOS version as long as they land on one HyperExecute pool (`mobile_pool_split` otherwise).
 - **Mobile app on the grid**: a member's local build (`.apk` for emulator, `.zip` for simulator, anywhere on disk) is uploaded from the laptop at preflight and handed to the grid as `--app <id>` (one `remote_app` event per distinct build); an `APP…` id is used as-is. Nothing has to be inside the project or un-gitignored; `--dry-run` uploads nothing. Details and the preflight codes: `references/mobile.md` §Remote.
-- Grid member flags include `--author`, `--no-adaptive-heal`, `--dataset-id`, and `--dataset-row`. `--name` labels suite metadata.
+- Grid member flags include `--author` and `--no-adaptive-heal`. `--name` labels suite metadata.
 - The dispatch writes `.hyperexecute/`, `hyperexecute-cli.log`, and `.updatedhyperexecute.yaml` into the cwd — suggest gitignoring them; they are not inputs.
 
 Remote preflight refusals arrive as one `remote_error` per reason (then `testrun_done` failed, exit 2):
@@ -159,5 +159,3 @@ NDJSON selection uses stdin, not stdout: run `kane-cli testrun run <paths> < /de
 The audited dispatch does not forward `--bug-detection` to member commands and does not map `--on-failure` into the job template. Do not rely on these flags for remote bug-detection or fail-fast behavior until implementation owners confirm or fix the mapping. `--name` is suite metadata, not a forwarded member flag.
 
 For dispatched runs, read through `remote_done` and process exit after `testrun_done`; retain the remote status and session-log path. Preflight refusal and dry-run may terminate without `remote_done`.
-
-Data-driven execution: see [Dataset parameters](datasets.md) for `--dataset-id`, `--dataset-row`, root `dataset:` frontmatter, and `${column}` placeholders.
