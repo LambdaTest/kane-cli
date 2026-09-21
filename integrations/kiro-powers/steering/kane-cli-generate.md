@@ -287,8 +287,8 @@ kane-cli config project <project-id>      # or the interactive picker in TTY (OA
 kane-cli config folder  <folder-id>       # or the interactive picker in TTY
 kane-cli projects list   [--search <q>] [--limit <n>] [--offset <n>] --agent
 kane-cli projects create "<name>" [--description "<text>"] --agent
-kane-cli folders  list   [--search <q>] [--limit <n>] [--offset <n>] --agent
-kane-cli folders  create "<name>" [--description "<text>"] --agent
+kane-cli folders  list   --project <id> [--search <q>] [--limit <n>] [--offset <n>] --agent   # --project is required
+kane-cli folders  create "<name>" --project <id> [--description "<text>"] --agent               # --project is required
 ```
 
 If nothing is configured, the run-startup gate auto-defaults a project/folder before `generate_start` and emits `project_folder_auto_defaulted`. Pre-configure only when the user wants generated cases filed in a specific place. See the **`kane-cli-run`** steering file for full project/folder mechanics.

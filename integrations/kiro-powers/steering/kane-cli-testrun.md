@@ -75,27 +75,64 @@ All typed; stdout; one JSON object per line. **Local completion: `testrun_done`;
 |---|---|---|
 | `testrun_plan` | `members: [{path, test_id?, tags, failure?}]`, `valid`, `parallel`, `parallel_clamped?` | If `valid: false`, treat as immediate failure — report each member's `failure` reason and expect exit `2`. |
 | `testrun_start` | `execution_id`, `members` (paths), `parallel` | |
-| `testrun_member_start` | `path`, `test_id?` | |
-| `testrun_member_end` | `path`, `test_id?`, `status`, `duration_s` | `status` ∈ `passed \| failed \| broken \| interrupted` |
+| `testrun_member_start` | `path`, `test_id?`, *(0.8.17+)* `session_id`, `log_path` | A saved test started. `log_path` is the absolute path of that test's own event log (see **Each test's own log** below). |
+| `testrun_member_end` | `path`, `test_id?`, `status`, `duration_s`, *(0.8.17+)* `session_id`, `log_path`, `failure?: {message, step_index?}` | `status` ∈ `passed \| failed \| broken \| interrupted`. `failure` is present when the test did not pass: use it for the "where" and "why" of the failed-tests table. |
+| `testrun_authored_member_start` / `testrun_authored_member_end` | same fields as the two rows above | A test that had no recording yet is authored in a separate pass after the replays. Treat the end event exactly like `testrun_member_end`. `path` can be relative here and absolute elsewhere: match tests by file name. |
+| `testrun_progress` *(0.8.17+)* | `running: [paths]`, `pending`, `done`, `total` | Fires on every test start and end, never on a timer. It counts the replay pass only, so take the suite's size from `testrun_plan.members`, not from `total`. Informational: the rollup still comes from `testrun_summary`. |
 | `testrun_investigations_wait` | `count` | Failed replays left investigations running; the coordinator waits before sealing. Narrate as "investigating N failures". |
 | `testrun_evidence_ingest` | `status: "ok"\|"failed"`, `evidence_id`, `stage?` | Pack published to the dashboard. Absent when publish is skipped. |
-| `testrun_summary` | `totals: {tests, passed, failed, broken, skipped}`, `duration_s`, `upload`, `cancelled` | Build the rollup from this. |
+| `testrun_summary` | `totals: {tests, passed, failed, broken, skipped, authored}`, `duration_s`, `upload`, `cancelled`, `execution: {id, status}` | Build the rollup from this. |
 | `testrun_done` | `execution_id`, `overall_status: "passed"\|"failed"\|"cancelled"` | Local completion; remote runs continue through `remote_done`. |
 
 The wait-for-terminal rule from `kane-cli-run.md` applies unchanged — narrate while events stream, act only after `testrun_done` or process exit.
 
+## Each test's own log, and `--stream-members` (0.8.17+)
+
+A suite's stdout stays small on purpose: it reports each test's start and end, not the steps inside it. Every test's full event stream (the same events `testmd run` prints, see the saved-test stream in `kane-cli-testmd.md`) is written to its own log, and the start and end events name it in `log_path`.
+
+- **To diagnose a failed test, read only that test's `log_path`** (and its failure record in the evidence pack). That keeps Kiro's context small.
+- **Do not pass `--stream-members` by default.** The flag prints every test's events on the suite's stdout, each wrapped as `{"type":"testrun_member_event","member":{"index","path","test_id?"},"event":{...}}` (`member.index` is the 0-based position in `testrun_plan.members`). On a 12-test suite that is a few hundred lines to read for nothing. Use it only when the user explicitly wants the full stream, for example in a CI log.
+- Every line also carries `v` and `ts`, and the first line is `stream_start` (see the stream contract in `kane-cli-run.md`). Ignore fields and event types you do not know.
+
+## Remote additions (0.8.17+)
+
+- `remote_start` also carries `log_path`: the grid client's own log on this machine, useful when a dispatch fails before a job exists.
+- `remote_dispatched` arrives as soon as the job exists, not at the end, so the job link can be given to the user early.
+- The grid reports per-test detail **after the job ends**: `testrun_start`, then a start and end event per test in plan order, each with `post_hoc: true`, just before `testrun_summary`. Their `ts` is the grid's own time. They carry the same fields as local, including `log_path` and `failure`.
+- `testrun_progress` is not emitted on remote.
+
 # Presenting results
 
-Never expose event/field names. After `testrun_done`, render a suite rollup:
+Never expose event/field names. Like every session, a suite session starts with the ready check (POWER.md → Every session; add the grid plugin check for `--remote`). After completion and process exit (`remote_done` for dispatched remote runs), render the suite card. The rules for every card in `kane-cli-run.md` (Presenting results) apply here too.
 
 | | |
 |-------|-------|
-| 🟢 **Suite** | Passed (12/12) |
-| ⏱️ **Duration** | 284s |
-| 👣 **Tests** | 12 passed, 0 failed, 0 broken, 0 skipped |
-| 📦 **Evidence** | one sealed pack for the whole suite |
+| 🔴 **Suite** | 11 of 12 passed |
+| ⏱️ **Duration** | 4m 44s |
+| 🧪 **Tests** | 11 passed · 1 failed · 0 broken · 0 skipped |
+| 📁 **Evidence** | One pack for the whole suite · want to open it? |
+| ➡️ **Next** | I can open the failed test's log and diagnose it · Re-run just that test |
 
-For failures, add one line per failed member only (path + duration + status) — don't list passing members individually. If the pack published, mention the run is visible in the dashboard.
+Use 🟢 when every test passed. Then list **only** the tests that did not pass, with where and why from each test's failure detail (0.8.17+):
+
+| ❌ Failed test | Where | Why | Time |
+|---|---|---|---|
+| checkout_test.md | Step 3 | Cart total did not match | 41s |
+
+On kane-cli older than 0.8.17 the end event has no reason: read it from the evidence pack, or leave `Where` and `Why` as `see evidence`.
+
+**Cloud grid runs** add rows after 🧪:
+
+```markdown
+| 📱 **Device** | <device name> · <platform and OS version> · cloud grid |
+| ☁️ **Grid job** | [Open the job](<job link>) · <build file> uploaded |
+```
+
+A test that comes back broken with zero steps on the grid was refused before it launched: say so, point to the job link, and suggest checking that the app id belongs to this account.
+
+An invalid plan is a `🟡 Didn't start` card (see `kane-cli-run.md`) with one line per rejected test.
+
+Don't list passing tests individually. If the pack published, mention the run is visible in the dashboard. To diagnose a failed test, read that test's own log, not the whole suite's output.
 
 # Exit codes
 

@@ -211,7 +211,7 @@ Full agent guide with flow splitting, parallel execution patterns, and result-pr
 npx @testmuai/kane-cli-skill
 ```
 
-This installs the skill for Claude Code, Codex CLI, and Gemini CLI in one command.
+This installs the skill for Claude Code, Codex CLI, and Gemini CLI in one command. On your first request the agent checks that kane-cli is ready, runs it, and shows a result card. What to expect, your saved preferences and the live status strip are covered in [Using kane-cli from an AI coding agent](docs/user-guide/agents.md).
 
 ---
 
