@@ -90,7 +90,7 @@ How to ask:
 What the answers change:
 
 - `watch`: `visible` means no `--headless`. `quiet` and `results-only` mean `--headless`. With `results-only`, skip the progress summary and show the card only.
-- `purpose`: `suite` means offer to keep each passing run as a saved test (and keep the first run's `<slug>_test.md`). `one-off` means do not offer, and remove the first run's test file. `ask` means offer each time.
+- `purpose`: with `suite` or `ask`, **launch every one-off run with `--name <short-slug>`**, exactly like the first run, so it is recorded as it runs and keeping it costs nothing. `suite` means offer to keep each passing run as a saved test (and keep the first run's `<slug>_test.md`). `ask` means ask each time. If the person says no, delete that run's `<slug>_test.md` and its `output-<slug>/` folder. `one-off` means no `--name`, no offer, and remove the first run's test file. A run launched without a name cannot be kept afterwards: it would have to run again.
 - Wrote "a saved suite" on the first run? Say so: `This run is kept as <slug>_test.md. Replays need no AI.`
 
 Then save: `onboarding.completed_at`, `onboarding.asked: ["watch", "results", "purpose"]`, `onboarding.first_run_explained: true`, and the two preferences. The write is the only step that can hit a permission wall, which is why it sits after the result. If the write is refused, follow `references/agent-config.md` §4.

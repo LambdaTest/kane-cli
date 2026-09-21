@@ -96,7 +96,7 @@ How to ask:
 What the answers change:
 
 - `watch`: `visible` means no `--headless`. `quiet` and `results-only` mean `--headless`. With `results-only`, skip the progress narration and show the card only.
-- `purpose`: `suite` means offer to keep each passing run as a saved test (and keep the first run's `<slug>_test.md`). `one-off` means do not offer, and remove the first run's test file. `ask` means offer each time.
+- `purpose`: with `suite` or `ask`, **launch every one-off run with `--name <short-slug>`**, exactly like the first run, so it is recorded as it runs and keeping it costs nothing. `suite` means offer to keep each passing run as a saved test (and keep the first run's `<slug>_test.md`). `ask` means ask each time. If the user says no, delete that run's `<slug>_test.md` and its `output-<slug>/` folder. `one-off` means no `--name`, no offer, and remove the first run's test file. A run launched without a name cannot be kept afterwards: it would have to run again.
 - The user chose "a saved suite" on the first run? Say so: `This run is kept as <slug>_test.md. Replays need no AI.`
 
 Then save: `onboarding.completed_at`, `onboarding.asked: ["watch", "results", "purpose"]`, `onboarding.first_run_explained: true`, and the two preferences. The write is the only step that can hit a permission wall, which is why it sits after the result. If the write is refused, follow the hard-case rules below.
@@ -141,7 +141,7 @@ They follow the user across agents and projects. kane-cli itself does not read t
 | Key | Values | Meaning |
 |---|---|---|
 | `preferences.watch` | `visible` · `quiet` · `results-only` | `visible`: no `--headless`. `quiet`, `results-only`: `--headless`. `results-only` also skips the progress narration |
-| `preferences.purpose` | `one-off` · `suite` · `ask` | Whether to offer keeping passing runs as saved tests |
+| `preferences.purpose` | `one-off` · `suite` · `ask` | Whether to offer keeping passing runs as saved tests. With `suite` or `ask`, launch every one-off run with `--name <short-slug>` so keeping it costs nothing |
 | `preferences.narration` | `quiet` · `milestones` · `every-step` | How much of the run Kiro recounts afterwards. Default `milestones` |
 | `onboarding.asked` | list of `watch`, `results`, `purpose` | What was already asked. Never ask these again |
 | `onboarding.first_run_explained` | boolean | The tour was shown |

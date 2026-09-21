@@ -34,7 +34,7 @@ They follow the person across agents and projects, and they survive a skill rein
 | Key | Values | Meaning |
 |---|---|---|
 | `preferences.watch` | `visible` · `quiet` · `results-only` | `visible`: no `--headless`. `quiet`, `results-only`: `--headless`. `results-only` also skips the progress summary |
-| `preferences.purpose` | `one-off` · `suite` · `ask` | Whether to offer keeping passing runs as saved tests |
+| `preferences.purpose` | `one-off` · `suite` · `ask` | Whether to offer keeping passing runs as saved tests. With `suite` or `ask`, launch every one-off run with `--name <short-slug>` so keeping it costs nothing (`references/first-run.md` §4) |
 | `preferences.narration` | `quiet` · `milestones` · `every-step` | How much of the run you recount afterwards. Default `milestones` |
 | `onboarding.asked` | list of `watch`, `results`, `purpose` | What was already asked. Never ask these again |
 | `onboarding.first_run_explained` | boolean | The tour was shown |
