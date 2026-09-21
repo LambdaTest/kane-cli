@@ -143,7 +143,7 @@ A run ends with a timeout when it hits the wall-clock limit, and with a max-step
 
 You have three options:
 
-1. **Raise the limits.** Increase `--timeout <seconds>` and `--max-steps <n>` on `kane-cli run`. The default max-steps is `30`.
+1. **Raise the limits.** Increase `--timeout <seconds>` and `--max-steps <n>` on `kane-cli run`. The CLI default max-steps is `50`.
 2. **Break the work into smaller objectives.** Run several sequential `kane-cli run` invocations, each focused on one logical sub-task. The session keeps the same browser between runs, so state carries over.
 3. **Tighten the objective.** Vague objectives often cause the agent to wander; describe the target outcome and any required values up front.
 

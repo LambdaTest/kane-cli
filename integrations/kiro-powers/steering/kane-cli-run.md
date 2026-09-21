@@ -43,7 +43,7 @@ The objective string is the single most important input. It determines what the 
 | 🎯 **Action**     | "go to", "click", "type", "search", "fill", "scroll" | Performs browser actions |
 | ✅ **Assertion**  | "assert", "verify", "confirm", "check that"          | Validates a condition (pass / fail) |
 | 📦 **Extraction** | "store X as 'name'"                                   | Reads a value from the page and persists it in `final_state` |
-| 🔌 **API call**   | "call", "POST/GET a URL", a pasted `curl`            | Makes the HTTP request itself; "save the response as X", then assert/reference `{{X.status}}` / `{{X.response_body…}}` |
+| 🔌 **API call**   | "call", "POST/GET a URL", a pasted `curl`            | Makes the HTTP request itself; "save the response as X", then asserts on it in plain English: "assert the response status is 200", "store the id from the response body as 'order_id'" |
 
 ## The "store as" pattern is mandatory for extraction
 
@@ -71,10 +71,10 @@ The agent can make API calls itself — not just observe the requests a page mak
 
 ```
 "Call POST https://api.example.com/login with body {...}, save the response as login,
- assert {{login.status}} is 200"
+ assert the response status is 200"
 ```
 
-Reference the saved response as `{{login.status}}` and `{{login.response_body.<field>}}`; a pasted `curl` works too. API calls and browser actions mix in one objective — use a direct call to set up state (seed a record, hit a backend), and DevTools/Network (below) to **observe** the requests the page itself makes.
+Use the response in plain English (`the response status`, `store the id from the response body as 'order_id'`, later `the stored order_id value`); `{{name}}` is reserved for global variables and secrets. A pasted `curl` works too. API calls and browser actions mix in one objective — use a direct call to set up state (seed a record, hit a backend), and DevTools/Network (below) to **observe** the requests the page itself makes.
 
 ## Combining patterns
 
@@ -175,7 +175,7 @@ kane-cli run "<objective>" --agent [flags]
 |---|---|---|
 | `--agent` | **Required for Kiro.** Emit one JSON object per line on stdout. Without it, Kane CLI renders a TUI. | off |
 | `--headless` | Run Chrome without a window. | off |
-| `--max-steps <n>` | Cap agent reasoning steps. | `30` |
+| `--max-steps <n>` | Cap agent reasoning steps. | `50` |
 | `--timeout <s>` | Hard kill after N seconds. | none |
 | `--url <url>` | Start URL for the run. Overrides config `default_url`; bare domains get `https://`. | config `default_url` |
 | `--allow-missing-url` | Non-TTY only: start from the browser's current page instead of failing when no start URL resolves. | off |
@@ -185,7 +185,7 @@ kane-cli run "<objective>" --agent [flags]
 | `--local-context <file>` | Override project agent context. | `.testmuai/context.md` |
 | `--ws-endpoint <url>` | Remote browser via WebSocket (e.g. LambdaTest grid). | local Chrome |
 | `--cdp-endpoint <url>` | Connect to existing Chrome via CDP. | auto-launch Chrome |
-| `--code-export` | Generate a Playwright code export after upload. | off |
+| `--code-export` | Generate a Playwright code export after upload. | config (`true` by default) |
 | `--bug-detection <mode>` | Flag suspected product bugs while authoring: `off`/`stop`/`continue` (`stop` halts on a confirmed bug; `continue` records and keeps going). Overrides `config set-bug-detection`. | config value (`off`) |
 | `--name <slug>` | Persist this run as `<cwd>/.testmuai/tests/<slug>_test.md` on exit. Slug: `[a-zA-Z0-9_-]+`. | none — the run is ephemeral |
 
@@ -243,18 +243,19 @@ Override either per-run with `--global-context` / `--local-context`.
 
 ## Event types
 
-**Progress events** — most of stdout, one per agent step. They have **no `type` field**:
+**Progress events** — most of stdout, start and completion per agent step. They have **no `type` field**:
 
 ```json
-{"step": 1, "status": "passed", "remark": "Navigated to amazon.in"}
-{"step": 2, "status": "passed", "remark": "Typed 'laptop' in search box"}
+{"step": 1, "status": "running", "remark": "Navigate to amazon.in"}
+{"step": 1, "status": "done", "remark": "Navigated to amazon.in"}
+{"step": 2, "status": "done", "remark": "Typed 'laptop' in search box"}
 {"step": 3, "status": "failed", "remark": "Could not find Add to Cart button"}
 ```
 
 | Field | Type | Description |
 |---|---|---|
 | `step`   | number | Step index, 1-based |
-| `status` | string | `"passed"` or `"failed"` |
+| `status` | string | `"running"` at start; `"done"` or `"failed"` at completion |
 | `remark` | string | What the agent did or why it failed |
 
 **Typed events** — `type` field present:
@@ -287,7 +288,7 @@ for each line on stdout:
   if obj.step is set            → progress event (narrate it)
 ```
 
-Build automation on `run_end` — it is the only event with a stable schema across versions. Use progress events for live narration only.
+For one-shot `run`, build automation on `run_end` and process exit; other commands have their own completion events. Use progress events for live narration only.
 
 ## The wait-for-`run_end` rule
 
@@ -591,3 +592,19 @@ Every `run`, `testmd run`, and `generate` validates the cached project/folder be
 Self-healing: stale, deleted, revoked, or typo'd project IDs trigger 4xx from TMS and the gate re-resolves automatically — no need to clear them by hand.
 
 Project-local overrides live in `./.testmuai/` (`context.md`, `variables/*.json`). Global config and history live in `~/.testmuai/kaneai/`. Pass everything through flags — do **not** rely on environment variables for Kane CLI configuration.
+
+## Command-specific completion
+
+The `run_end` parsing strategy applies to one-shot `run` only. For `testmd run`, collect `test_md_done.overall_status`, `duration_s`, `session_id`, and optional `share_url`; embedded `run_end` events can finish individual steps. Local suites emit `testrun_done`; dispatched remote suites then emit `remote_done` (retain `status`, `exit`, `sessions_path`). `generate` emits `generate_done`. Assurance conversational agent streams end in `done`; review/read verbs have their own contracts. Always check process exit too: early refusal, invalid plan or dry-run can exit without the normal completion event.
+
+Progress is for live display: count only `done`/`failed` completions, retaining child and execution context when step indices repeat.
+
+## Assertion controls and current-page analysis
+
+`run` and `testmd run` support `--assertion-mode dom|visual` (default `dom` with vision fallback) and `--final-validation on|off` (default off). Persist with `config set-assertion-mode` and `config set-final-validation`. Final validation controls the synthesized `cp_final` checkpoint independently of action/testing mode; keep explicit terminal assertions in objectives.
+
+`run --analyzer-only --condition "<condition>"` checks the current desktop browser page without an objective, action steps or saved test. Repeat `--condition` for multiple checks. Use `--agent` or non-TTY input. Results contain `condition_results: boolean[]`; exit `0` means all conditions were judged, **not** that all are true. Exit `1` means a result was missing, and `3` means cancelled. This mode rejects mobile target/app/device options and code-export/name options.
+
+Experimental `run --network-ws` and `run --network-sse` enable WebSocket and SSE capture; both default off. Persist with `config set-network-ws on|off` and `config set-network-sse on|off`. SSE capture is Chromium-only. Do not copy these run-only flags onto `testmd` or `testrun` commands.
+
+Code export defaults to enabled, subject to saved configuration, and supports `python` (default) or `javascript`. `run`/`testmd run` use `--code-language`; `testmd export` uses `--language`. Upload eligibility is independent of action/testing mode.

@@ -85,8 +85,7 @@ kane-cli testrun run tests/app/ --remote --device-name "Pixel 7" --os-version 14
 | `--on-failure <mode>` | `continue` \| `fail-fast` | `continue` |
 | `--name <label>` | Run title | derived from the selection |
 | `--dry-run` | Plan + validate only, execute nothing | off |
-| `--retry` | On replay failure, restart with a shrinking replay window | off |
-| `--retry-count <n>` | Max replay restart attempts before a full re-author | `3` |
+| `--no-adaptive-heal` | Disable default adaptive healing after replay failure | healing enabled |
 | `--bug-detection <mode>` | `off` \| `stop` \| `continue` — see [Configuration](./configuration.md#bug-detection) | config value |
 | `--headless` | Run Chrome without a visible window | off |
 | `--remote [backend]` | Dispatch the suite to the cloud grid instead of local Chrome / local devices (default backend: `hyper`). Needs `kane-cli plugin install remote-execution`. See [Remote runs](./remote-execution.md) | off |
@@ -94,7 +93,7 @@ kane-cli testrun run tests/app/ --remote --device-name "Pixel 7" --os-version 14
 | `--os-version <version>` | OS version for the mobile members (`14`, `17.5`); alone = any device on that version | member's `os_version:` |
 | `--username <user>` / `--access-key <key>` | Basic auth (skips OAuth) | — |
 
-Each worker gets its **own isolated Chrome** with a fresh temporary profile, so parallel members never share cookies, logins, or tabs — and never fight over your real browser profile.
+Each desktop worker gets its **own isolated Chrome** with a fresh temporary profile, so parallel members never share cookies, logins, or tabs — and never fight over your real browser profile.
 
 `--on-failure` controls what a failed member does to the rest of the suite:
 
@@ -111,7 +110,7 @@ Each worker gets its **own isolated Chrome** with a fresh temporary profile, so 
 kane-cli testrun run --tags smoke --parallel 4 --dry-run
 ```
 
-Exit `0` means the plan is valid and a real run would proceed; exit `2` means it wouldn't, and the offender list shows why. The dry run and the real run share the same planner, so they can never disagree.
+Exit `0` means the plan is valid; exit `2` reports planning refusals. This does not prove runtime readiness: local dry-run returns before runtime authentication and browser/device startup. Remote dry-run also validates the grid catalog but does not upload apps or dispatch a job. A real run can still fail after a valid plan.
 
 ## Reading results
 
@@ -162,3 +161,11 @@ In agent / non-TTY mode, `testrun run` emits its own typed NDJSON events on stdo
 - [Writing test.md files](./testmd/overview.md) — the file format, including `tags:`.
 - [Running test.md files](./testmd/running.md) — single-test runs, replay, and flags.
 - [CI/CD recipes](./cicd.md) — pipeline patterns.
+
+## Execution constraints
+
+Local suites containing any mobile member require `--parallel 1`; larger values are refused. Isolated Chrome workers apply to desktop members only. Remote suites support grid concurrency via `--parallel N`.
+
+Healing is enabled by default (three shrinking replay windows, then re-authoring of authorable steps). `--no-adaptive-heal` disables it. Retired `--retry`/`--retry-count` only print a notice and have no effect. Replay-only recorded steps retain their recordings even during healing.
+
+NDJSON selection uses stdin, not stdout: run `kane-cli testrun run <paths> < /dev/null` for automation launched from a terminal. Dry-run validates a plan, not runtime authentication or browser/device readiness. Always observe process exit, including paths without a normal completion event.

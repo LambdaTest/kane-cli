@@ -24,7 +24,7 @@ kane-cli cover gaps                                          # 7. the coverage r
 
 # The pause loop — exit 3 is a pause, NOT a failure
 
-The conversational assurance commands (`context ingest`/`extract`, `design tests`, `maintain reconcile`) take **`--mode agent`** (never `--agent`; bare non-TTY exits 2 — the `cover` reads have no such gate). A high-risk question pauses the run: exit `3` + a `session_paused` event carrying the questions in full (options, recommended answer, risk, rationale) and the exact resume command. Never drop a pause:
+The conversational assurance commands (`context ingest`/`extract`, `design tests`, `maintain reconcile`) take **`--mode agent`** (never `--agent`; bare non-TTY exits 2 — the `cover` reads have no such gate). Every question pauses an agent-mode run: exit `3` + a `session_paused` event carrying the questions in full (options, recommended answer, risk, rationale) and the exact resume command. Never drop a pause:
 
 1. If your context clearly answers the question, answer it; otherwise ask the user, showing the options and the recommendation.
 2. Resume in **plain words**: `kane-cli context extract --resume <sid> --mode agent --message "<the answer>"` — or, on 0.7.1+, by id (`--answer q1=2 --answer q2="<typed value>"`) or by landing the source the agent needs (`--with-source <path|url>` — the pending questions defer while it reads, then only what's still open is re-asked).
@@ -55,3 +55,27 @@ It triages ADD / MODIFY / ARCHIVE rows on its own event stream; agent mode auto-
 # Present, don't transcribe
 
 Surface: pause questions, commits in plain language ("5 use-cases extracted, 3 promoted to trusted"), held items ("4 items are held for your review"), designed tests + **gaps + warnings** (first-class output), credit totals, and each checkpoint decision. At the checkpoints, present the material, not the counts: enumerate with `kane-cli context list --json --inferred` and pull item content with `kane-cli context explain <ref> --json`. Fold thinking/tool noise. Never show event names, cids, or raw NDJSON. `kane-cli design explain <ref>` answers "why does this test exist?" with zero AI cost.
+
+## Sharing a context store
+
+Use `kane-cli context sync setup` in a TTY for guided GitHub, S3 or folder setup. For automation, bind a location with `context sync add <name> <descriptor> --mode agent`; use a descriptor supplied by your team’s configured provider, not a guessed URL. `context clone <descriptor> <dir> --mode agent` creates a local store bound as `origin`.
+
+Inspect first:
+
+```bash
+kane-cli context sync list --mode agent
+kane-cli context sync status origin --mode agent
+kane-cli context sync doctor --mode agent
+```
+
+`status` never writes. `doctor` diagnoses the chain and open rebases without writing unless `--abort` or `--export` is requested. `context sync remove <name>` forgets the location but retains its witness.
+
+`context pull [name] --mode agent` imports verified records; `context push [name] --mode agent` publishes local work and refuses if remote work has not been pulled. `context sync [name] --mode agent` finishes an open rebase, pulls and publishes. These use the agent envelope with verb `sync` and final `done`; inspect the outcome and exit code.
+
+When both sides changed, `context pull [name] --rebase --yes --mode agent` explicitly permits replacing local records after their common position (saved first); it does not answer conflicts. For an open rebase, supply repeatable `--answer <decision-id>=keep-theirs|apply-mine|apply-mine-as-new` to `sync` or `pull`, choosing each answer from the reported decisions. Do not silently choose answers or delete records/locks. Use `sync status` and plain `sync doctor` before recovery. Provider-specific descriptor examples and interrupted-rebase recovery still need additional verification before being prescribed here.
+
+## Lifecycle automation contracts
+
+`context name`, `context retire`, and `context revert` accept `--mode agent` and emit an envelope ending in `done`. Destructive agent-mode operations require `--yes` even when stdin is a TTY. Other modes retain human output. Read commands use their documented `--json` flags; do not assume they all accept `--mode`.
+
+`context review --mode agent` / `--json` returns review outcome rows on success rather than the conversational `done` contract. Early agent-mode errors may emit `error` plus `done`; check command-specific output and process exit.

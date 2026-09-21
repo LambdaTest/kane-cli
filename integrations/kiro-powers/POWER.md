@@ -153,7 +153,7 @@ Three ways Kiro uses it:
 2. **Committable, replayable tests — `kane-cli testmd`.** Tests live as `_test.md` files in the repo. The first run authors each step (agent figures the page out); every later run replays from a cache — no agent, no LLM cost, much faster. Use this for regression suites, CI gates, and validation hooks.
 3. **AI test-case authoring — `kane-cli generate`.** Turns a plain-language description of *what to test* into structured Test Scenarios + typed Test Cases (Positive / Negative / Edge). **No browser is launched.** Reach for it whenever a task needs test cases written — don't hand-draft them in chat or a scratch file. `--save` writes Functional cases as runnable `_test.md`, which feeds straight into `kane-cli testmd run` (the generate → testmd pipeline).
 
-**Always invoke with `--agent`.** It makes Kane CLI emit structured NDJSON to stdout (progress events, then a terminal `run_end` / `generate_done` event) that Kiro can parse. Without `--agent` you get a TUI Kiro can't read.
+Use `--agent` for `run`, `testmd run`, and `generate`. `testrun run` has no `--agent`: it emits NDJSON when **stdin** is not a TTY (use `< /dev/null` for terminal automation). Assurance conversational commands use `--mode agent`.
 
 Other capabilities to know about:
 
@@ -164,7 +164,7 @@ Other capabilities to know about:
 - **Evidence packs** — every run seals a single `.evidence` file (a plain zip: test definition, results, per-step screenshots + annotated screenshots, per-step console/network logs, actions log, failure records). It is the **only** home of run artifacts — the legacy `runs/<n>/` session subdirectory is no longer created. The pack seals in `{session_dir}/evidence/`; saved runs also land in `<cwd>/.testmuai/evidence/`. View with `kane-cli evidence serve <pack>` (local-only server + hosted viewer link) or `unzip` it directly for debugging.
 - **Batch runs — `kane-cli testrun run`** — execute many authored `_test.md` files (web and mobile) as one execution with one evidence pack; select by paths, `--match` regex, or frontmatter `--tags`; isolate parallel workers with `--parallel N`; add `--remote` to run the suite as one HyperExecute job (grid browsers, or grid emulators/simulators from any machine).
 - **Bug detection** — `--bug-detection off|stop|continue` (default `off`) lets the agent flag suspected product bugs while authoring; `stop` halts on a confirmed bug, `continue` records it and keeps going. Persist with `kane-cli config set-bug-detection <mode>`.
-- **Optional Playwright code export** — pass `--code-export` to write a generated Playwright script alongside the session output. Off by default; enable explicitly when the user asks for it.
+- **Optional Playwright code export** — pass `--code-export` to write a generated Playwright script alongside the session output. Enabled by default; saved configuration can override it.
 
 Kane CLI requires a TestMu AI account. Configuration is per-flag — do not rely on environment variables; pass everything explicitly so runs stay reproducible.
 
@@ -173,7 +173,7 @@ Kane CLI requires a TestMu AI account. Configuration is per-flag — do not rely
 When the user's task makes one of these patterns relevant, load the matching steering file before composing the command:
 
 - **`steering/kane-cli-run.md`** — every `kane-cli run` invocation. Covers objective patterns (action / assertion / extraction), the full flag reference, NDJSON parsing, results presentation, failure diagnosis, parallel execution, and project/folder management.
-- **`steering/kane-cli-mobile.md`**: any time the user wants to drive a **native mobile app** (Android or iOS) instead of the browser — locally on **macOS Apple Silicon**, or on the **cloud grid from any machine**. Covers the `--target desktop|emulator|simulator` axis (desktop / browser stays the default), selecting a device (`--device-name` + `--os-version`, `kane-cli devices list [--remote]`) and the required app under test (`--app <build|APPid>`, `kane-cli apps list`), one-time local setup (Xcode / Android Studio plus `kane-cli doctor --target … --install`), the flat `_test.md` `target:` + `app:` (+ `device_name:`/`os_version:`) frontmatter keys, mobile members in `kane-cli testrun`, and `testrun run --remote` — the grid rules (one platform per job, uploaded `APP…` ids for simulators) and its preflight codes.
+- **`steering/kane-cli-mobile.md`**: any time the user wants to drive a **native mobile app** (Android or iOS) instead of the browser — locally on **macOS Apple Silicon**, or on the **cloud grid from any machine**. Covers the `--target desktop|emulator|simulator` axis (desktop / browser stays the default), selecting a device (`--device-name` + `--os-version`, `kane-cli devices list [--remote]`) and the required app under test (`--app <build|APPid>`, `kane-cli apps list`), one-time local setup (Xcode / Android Studio plus `kane-cli doctor --target … --install`), the flat `_test.md` `target:` + `app:` (+ `device_name:`/`os_version:`) frontmatter keys, mobile members in `kane-cli testrun`, and `testrun run --remote` — the grid rules (one platform per job; simulator `.zip` builds auto-upload on real runs, or use uploaded `APP…` ids) and its preflight codes.
 - **`steering/kane-cli-testmd.md`** — any time the user wants a committable test, or is reading / editing / running a `_test.md` file. Covers the `kane-cli testmd` commands, `_test.md` file format and frontmatter (including `tags:`), `@import` composition, the replay-vs-author cache model, `Result.md`, lock conflicts, and CI patterns.
 - **`steering/kane-cli-testrun.md`** — any time the user wants to run **several** saved `_test.md` tests as one batch ("run the suite", "run all the smoke tests", "nightly regression"), or asks about evidence packs (viewing, sharing, validating a run's `.evidence` file). Covers `kane-cli testrun run` (selection by paths / `--match` / `--tags`, preflight, `--parallel`, `--dry-run`), its typed NDJSON events, exit codes, and the `kane-cli evidence` commands.
 - **`steering/kane-cli-generate.md`** — any time the user wants test cases or scenarios **written** (no browser action). Covers the three generate modes (new / refine / save), clarification round-trips, the refine→save→run loop, the typed NDJSON event schema, and the generate → testmd handoff.
@@ -202,7 +202,7 @@ kane-cli run "<objective>" --agent [flags]
 | `--local-context <file>` | Override project context Markdown. | `.testmuai/context.md` |
 | `--cdp-endpoint <url>` | Connect to existing Chrome via CDP. | auto-launch Chrome |
 | `--ws-endpoint <url>` | Remote browser via WebSocket. | local Chrome |
-| `--code-export` | Generate Playwright code export after upload. | off |
+| `--code-export` | Generate Playwright code export after upload. | config (`true` by default) |
 
 Persist a one-shot run as a re-runnable test:
 
@@ -282,7 +282,7 @@ For `_test.md` examples and the full `kane-cli testmd` reference, load **`kane-c
 
 # Best practices
 
-- **Always pass `--agent`.** Without it, Kane CLI renders a TUI Kiro cannot parse.
+- Use `--agent` on `run`, `testmd run`, and `generate`; use non-TTY stdin for `testrun`, and `--mode agent` for conversational Assurance commands.
 - **Include the starting URL in the objective.** Don't assume the agent knows where to start.
 - **Use imperative verbs:** "go to", "click", "type", "store as", "assert".
 - **Use the `store … as '<name>'` pattern** for any value you want back. Vague phrasing won't persist.

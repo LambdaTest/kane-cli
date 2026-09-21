@@ -8,18 +8,19 @@ With `--agent`, kane-cli outputs one JSON object per line to **stdout**. Progres
 
 ## Event Types
 
-**Progress events** (bulk of the output — one per step):
+**Progress events** (a start and completion event per step):
 
 ```json
-{"step": 1, "status": "passed", "remark": "Navigated to amazon.in"}
-{"step": 2, "status": "passed", "remark": "Typed 'laptop' in search box"}
+{"step": 1, "status": "running", "remark": "Navigate to amazon.in"}
+{"step": 1, "status": "done", "remark": "Navigated to amazon.in"}
+{"step": 2, "status": "done", "remark": "Typed 'laptop' in search box"}
 {"step": 3, "status": "failed", "remark": "Could not find Add to Cart button"}
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `step` | number | Step index (1-based) |
-| `status` | string | `"passed"` or `"failed"` |
+| `status` | string | `"running"` at start; `"done"` or `"failed"` at completion |
 | `remark` | string | What the agent did or why it failed |
 
 These are **untyped** — they have no `type` field. Do **not** key on `event.type === 'step_start'` or `'step_end'`; those event types are not emitted.
@@ -38,7 +39,7 @@ These are **untyped** — they have no `type` field. Do **not** key on `event.ty
 | `test_md_bundle_sync` | `status: "ok"\|"failed"`, `commit_id`, `bytes?` (success) / `stage?` (failure) | `testmd run` / `testmd sync`: test bundle pushed to the cloud after an authored commit. Informational. |
 | `testrun_*` family | see `references/testrun.md` | Emitted only by `kane-cli testrun run`; terminal event is `testrun_done`, not `run_end`. |
 
-**Note:** There is no `run_start` event — the first line is either a `bifurcation` or a progress object.
+**Note:** The `run` stream has no `run_start` event; startup metadata or errors can precede progress.
 
 ### `error` with `code: "unresolved_variables"` (0.8.12+)
 
@@ -64,7 +65,7 @@ Terminal: do not re-run the same command. Supply values (`--variables`, or fill 
 
 **Note:** `ask_user` is auto-disabled when stdin is not a TTY. Since agents typically run kane-cli as a subprocess, ask_user events will not be emitted. Write objectives that don't require interactive input.
 
-## Parsing Strategy
+## Parsing Strategy for one-shot `run`
 
 Since progress events lack a `type` field, distinguish them from typed events like this:
 
@@ -76,9 +77,9 @@ for each line of NDJSON:
   if obj.step exists           → progress event (step/status/remark)
 ```
 
-**Build automation on `run_end`** — it is the only event guaranteed to have a stable schema across versions. Use progress events for live status display only.
+For one-shot `run`, build automation on `run_end` and process exit; other commands use the completion events listed below. Use progress events for live status display only.
 
-**Terminal event** (always the last line):
+**One-shot `run` completion event** (early refusals may exit without it):
 
 ```json
 {
@@ -129,3 +130,9 @@ To cancel a run:
 ```json
 {"type": "cancel"}
 ```
+
+## Command-specific completion
+
+The `run_end` parsing strategy applies to one-shot `run` only. For `testmd run`, collect `test_md_done.overall_status`, `duration_s`, `session_id`, and optional `share_url`; embedded `run_end` events can finish individual steps. Local suites emit `testrun_done`; dispatched remote suites then emit `remote_done` (retain `status`, `exit`, `sessions_path`). `generate` emits `generate_done`. Assurance conversational agent streams end in `done`; review/read verbs have their own contracts. Always check process exit too: early refusal, invalid plan or dry-run can exit without the normal completion event.
+
+Progress is for live display: count only `done`/`failed` completions, retaining child and execution context when step indices repeat.

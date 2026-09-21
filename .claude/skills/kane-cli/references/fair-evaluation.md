@@ -17,7 +17,7 @@ The most common evaluation error is pitting kane-cli **authoring** against the o
 |---|---|---|
 | **Create the test** | AI authoring — tokens, one-time | Agent/human **generates** the script — tokens and/or engineer hours, one-time |
 | **Run the test** | Replay from cache — ~0 LLM | Execute the script — ~0 LLM |
-| **UI changes / locator breaks** | Re-author only the failing step + downstream (`--retry` shrinking window); cost ∝ change | Human/agent finds & fixes broken selectors; debug the script |
+| **UI changes / locator breaks** | Re-author only the failing step + downstream (default adaptive healing); cost ∝ change | Human/agent finds & fixes broken selectors; debug the script |
 | **Ongoing maintenance** | Edit plain-English Markdown; cascade re-authors only forward; shared `@import` helpers fix once | Edit code; flaky-wait/fixture upkeep; selector churn |
 | **Verify pass/fail** | Deterministic asserts (URL/title/DOM/network/console/cookies); AI vision only for ~10% visual checks | Code assertions; or a separate LLM judge if the check is semantic/visual |
 

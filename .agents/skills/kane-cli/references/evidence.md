@@ -73,3 +73,9 @@ Combines packs (execution ids or paths, order-significant) into one, sealed by d
 ## Debugging with a pack
 
 The pack is the first place to look on a failure: the failed step's **failure record** (error + page state), its **console/network slice** (4xx/5xx or JS errors usually explain it), and the **annotated screenshot** (what the agent actually acted on). Full failure workflow: `references/debug.md`.
+
+## Evidence merge identity
+
+For ordinary runs, default merge identity distinguishes the test and commit (`external_id.test_id`, `external_id.commit_id`) and the environment (`environment.os`, `environment.os_version`, `environment.browser`, `environment.browser_version`). Re-runs with the same identity nest as attempts; a different environment produces a separate sibling.
+
+Explicit collision policies can change grouping; a custom `--rules` file replaces the default rules rather than extending them. Check the selected identity rules before interpreting two runs as retries of the same test.

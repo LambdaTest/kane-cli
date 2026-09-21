@@ -302,6 +302,6 @@ Once `--save` has written `_test.md` files, every later interaction with those f
 - Run them: `kane-cli testmd run <path> --agent`
 - List them: `kane-cli testmd list`
 - Inspect: `kane-cli testmd status <path>`
-- Re-export code: `kane-cli testmd export <path> --code-language python|javascript`
+- Re-export code: `kane-cli testmd export <path> --language python|javascript`
 
 **Switch to the `kane-cli-testmd` steering file** once the user moves from authoring to running. Generate's job ends at `--save`; testmd's job picks up from there.

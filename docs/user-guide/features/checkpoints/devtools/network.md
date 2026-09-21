@@ -65,3 +65,5 @@ Store all API request URLs
 ```
 If the /api/auth returned 200 then proceed to dashboard, else show error message
 ```
+
+Experimental WebSocket and SSE capture is available through `run --network-ws` and `run --network-sse`, both off by default; SSE is Chromium-only. Persist via `config set-network-ws on|off` or `config set-network-sse on|off`. These flags are not registered on `testmd run` or `testrun run`.

@@ -14,7 +14,7 @@ What makes a good objective:
 
 Two habits make an objective reliable enough to save and replay.
 
-**End every flow in a check of the result.** Close with an assertion about the resulting page state — `verify the cart shows 1 item` — not a bare `submit` or `confirm the dialog`. Without a closing check, "done" only means the agent believed it finished; with one, the run passes or fails on the real end state. Name the outcome, never the control that triggered it: `verify the Submit button is visible` fails exactly when the action worked, because the button disappears on success. If an objective has several phases (log in, then search, then check out), each phase ends in its own check.
+**End every flow in a check of the result.** Close with an assertion about the resulting page state — `verify the cart shows 1 item` — not a bare `submit` or `confirm the dialog`. Without a closing check, "done" only means the agent believed it finished; with one, the run passes or fails on the real end state. Name the outcome, never the control that triggered it: `verify the Submit button is visible` fails exactly when the action worked, because the button disappears on success. If an objective has several phases (log in, then search, then check out), each phase ends in its own check. Make the closing check something the agent can see on the screen the last action leaves it on, with no further click or navigation. If the proof lives on another page, get there with an explicit action first: `place the order, open Order History, then verify the newest order shows "Processing"`, not `verify the order succeeded by checking Order History`. A check that has to find its own way to the evidence is an action hiding inside an assertion, and the route it improvises can differ from run to run.
 
 **Say the goal, not the clicks.** Phrase actions as goals — `Log in as {{tester}}`, `Complete checkout with the saved card` — so a run absorbs a reordered form or a new popup instead of breaking on it. Keep exact values such as credentials, prices, and URLs literal or in `{{variables}}`. For a step that only sometimes appears, such as a cookie banner, write it as a condition (`if a cookie banner appears, dismiss it`) rather than assuming it away.
 
@@ -172,7 +172,7 @@ The customer-facing flags accepted by `kane-cli run`:
 | Flag | Description | Default |
 |------|-------------|---------|
 | `--headless` | Run Chrome in headless mode. | Off |
-| `--max-steps <n>` | Maximum agent steps. | `30` |
+| `--max-steps <n>` | Maximum agent steps. | `50` |
 | `--timeout <seconds>` | Kill the run after N seconds. | None |
 | `--url <url>` | Start URL for the run. Overrides the configured `default_url`; bare domains are normalized to `https://`. See [Default start URL](./configuration.md#default-start-url). | Config `default_url` |
 | `--allow-missing-url` | Non-TTY only: proceed from the browser's current page instead of failing when no start URL resolves (a provided `--url` is still used). | Off |
@@ -188,7 +188,7 @@ The customer-facing flags accepted by `kane-cli run`:
 | `--mode <name>` | Run mode: `action` (strict) or `testing` (lenient). | Config value, otherwise `testing` |
 | `--bug-detection <mode>` | Detect product bugs while authoring: `off`, `stop` (halt the run on a confirmed bug), or `continue` (record it and keep going). Overrides `config set-bug-detection`. See [Configuration](./configuration.md#bug-detection). | Config value, otherwise `off` |
 | `--agent` | Plain NDJSON output, no colors or UI. | Off |
-| `--code-export` | Generate code export after upload. | Off |
+| `--code-export` | Generate code export after upload. | config (`true` by default) |
 | `--code-language <lang>` | Code export language (currently `python`). | `python` |
 | `--skip-code-validation` | Skip post-codegen worker-side validation. | On |
 | `--no-skip-code-validation` | Force post-codegen worker-side validation. | Off |
@@ -226,7 +226,7 @@ The mobile run flags:
 - `--device-name <name>` + `--os-version <version>`: pick a device as `kane-cli devices list --target emulator|simulator` prints it (a name needs a version; a version alone matches any device on it). In the TUI/TTY, omitting them opens a one-time picker and the choice is saved; in non-interactive runs a device must already be set (via the flags or `kane-cli config set-device-name` / `set-os-version`) or the run exits with the fix spelled out.
 - `--app <path|APPid>`: the app under test, required for every mobile run. Pass a build (emulator: `.apk`, simulator: `.zip`) or an uploaded app id (`APP` followed by six or more digits; `kane-cli apps list --target <kind>` lists yours). On the `desktop` target, the device flags and `--app` are ignored.
 
-In the interactive TUI, a first run offers a Desktop / Emulator / Simulator chooser, and you can switch targets at any time with `/mobile` and `/desktop`. Run `/doctor` to check mobile tooling and devices.
+In the interactive TUI, a first run offers a Desktop / Emulator / Simulator chooser, and you can switch targets with `/mobile` and `/desktop` before the first dispatch; afterwards use `/new` before switching. Run `/doctor` to check mobile tooling and devices.
 
 For setup (Xcode or Android Studio, `kane-cli login`, and `kane-cli doctor --target emulator|simulator --install`) and the app formats each target accepts, see [Mobile testing](./mobile/overview.md).
 
@@ -286,3 +286,22 @@ The run is also captured as a sealed [evidence pack](./evidence.md) — screensh
 ## Feedback prompt
 
 After the result and links print, kane-cli prompts you to rate the session with thumbs up or thumbs down. Use the left and right arrow keys to choose, Enter to submit, or Esc to skip. The rating is sent to TestmuAI TMS for the active test case; see [./test-manager-integration.md](./test-manager-integration.md) for what is recorded.
+
+## Command-specific completion
+
+The `run_end` parsing strategy applies to one-shot `run` only. For `testmd run`, collect `test_md_done.overall_status`, `duration_s`, `session_id`, and optional `share_url`; embedded `run_end` events can finish individual steps. Local suites emit `testrun_done`; dispatched remote suites then emit `remote_done` (retain `status`, `exit`, `sessions_path`). `generate` emits `generate_done`. Assurance conversational agent streams end in `done`; review/read verbs have their own contracts. Always check process exit too: early refusal, invalid plan or dry-run can exit without the normal completion event.
+
+Progress is for live display: count only `done`/`failed` completions, retaining child and execution context when step indices repeat.
+
+In the interactive TUI, `/mobile` and `/desktop` can switch targets before the first dispatch. The target locks after dispatch; use `/new` to start a new session before switching.
+
+
+## Assertion controls and current-page analysis
+
+`run` and `testmd run` support `--assertion-mode dom|visual` (default `dom` with vision fallback) and `--final-validation on|off` (default off). Persist with `config set-assertion-mode` and `config set-final-validation`. Final validation controls the synthesized `cp_final` checkpoint independently of action/testing mode; keep explicit terminal assertions in objectives.
+
+`run --analyzer-only --condition "<condition>"` checks the current desktop browser page without an objective, action steps or saved test. Repeat `--condition` for multiple checks. Use `--agent` or non-TTY input. Results contain `condition_results: boolean[]`; exit `0` means all conditions were judged, **not** that all are true. Exit `1` means a result was missing, and `3` means cancelled. This mode rejects mobile target/app/device options and code-export/name options.
+
+Experimental `run --network-ws` and `run --network-sse` enable WebSocket and SSE capture; both default off. Persist with `config set-network-ws on|off` and `config set-network-sse on|off`. SSE capture is Chromium-only. Do not copy these run-only flags onto `testmd` or `testrun` commands.
+
+Code export defaults to enabled, subject to saved configuration, and supports `python` (default) or `javascript`. `run`/`testmd run` use `--code-language`; `testmd export` uses `--language`. Upload eligibility is independent of action/testing mode.

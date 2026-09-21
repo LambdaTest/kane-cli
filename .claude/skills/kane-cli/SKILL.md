@@ -5,7 +5,7 @@ description: Browser automation + AI test authoring via kane-cli - run browser o
 
 # Kane CLI — Browser Automation Skill
 
-Use `kane-cli` for **any task that requires a real browser**: navigating websites, clicking elements, filling forms, searching, testing web UI, taking screenshots, or verifying deployments. Do NOT use Playwright, Puppeteer, or Selenium directly. Always run with `--agent` so output is structured NDJSON you can parse.
+Use `kane-cli` for **any task that requires a real browser**: navigating websites, clicking elements, filling forms, searching, testing web UI, taking screenshots, or verifying deployments. Do NOT use Playwright, Puppeteer, or Selenium directly. Use `--agent` for `run`, `testmd run`, and `generate`. `testrun run` has no `--agent`: it emits NDJSON when **stdin** is not a TTY (use `< /dev/null` for terminal automation). Assurance conversational commands use `--mode agent`.
 
 **Authoring test cases or scenarios?** Never write them by hand — kane-cli has two authoring pipelines, and the routing matters:
 
@@ -36,7 +36,7 @@ After that, run kane-cli normally — the variable is inherited:
 kane-cli run "<objective>" --agent <other-flags>
 ```
 
-Bash blocks until kane-cli exits, then hands you the complete stdout. Parse it, summarize what happened, and present the results table. Same pattern for `kane-cli testmd run` and `kane-cli generate`.
+Bash blocks until kane-cli exits, then hands you the complete stdout. Parse it, summarize what happened, and present the results table. Wait for process completion on `testmd run` and `generate` too, but parse their own completion events: `test_md_done` and `generate_done`, respectively. An intermediate `run_end` does not finish a saved test.
 
 Set a generous timeout (up to 600000ms) since browser runs can take a while.
 
@@ -100,7 +100,7 @@ The terminal event has `type: "run_end"` and stable fields: `status`, `summary`,
 | 🟢 **Result** | Passed |
 | 🎯 **Task** | <one_liner> |
 | ⏱️ **Duration** | <duration>s |
-| 👣 **Steps taken** | <count of progress events> |
+| 👣 **Steps taken** | <count of completed progress events (done/failed), retaining child/execution context> |
 | 📝 **What happened** | <summary> |
 | 🔗 **View details** | [Open in KaneAI Dashboard](<test_url>) |
 ```
@@ -184,7 +184,7 @@ kane-cli run "<objective>" --agent [options]
 | `--variables <json>` | Inline variables JSON (for `{{key}}` in objective) | None |
 | `--variables-file <path>` | Load variables from a JSON file | None |
 | `--ws-endpoint <url>` | Remote browser (LambdaTest grid) | Local Chrome |
-| `--code-export` | Generate code export after upload | Off |
+| `--code-export` | Generate code export after upload | config (`true` by default) |
 | `--bug-detection <mode>` | Flag suspected product bugs while authoring: `off`/`stop`/`continue` (`stop` halts on a confirmed bug; `continue` records and keeps going) | config value (`off`) |
 
 Other flags (`--global-context`, `--local-context`, `--cdp-endpoint`, `--allow-missing-url`) and the full variables precedence chain live in `references/setup-and-config.md`.
@@ -222,11 +222,11 @@ How you phrase the objective string determines what the agent does. Four pattern
 | 🎯 **Action** | "go to", "click", "type", "search", "fill" | Performs browser actions |
 | ✅ **Assertion** | "assert", "verify", "confirm", "check that" | Pass/fail check on a condition |
 | 📦 **Extraction** | "store X as 'name'" | Persists a value into `run_end.final_state` |
-| 🔌 **API call** | "call", "POST/GET a URL", a pasted `curl` | The agent makes the HTTP request itself; "save the response as X", then assert/reference `{{X.status}}` / `{{X.response_body…}}` |
+| 🔌 **API call** | "call", "POST/GET a URL", a pasted `curl` | The agent makes the HTTP request itself; "save the response as X", then assert on it in plain English: "assert the response status is 200", "store the id from the response body as 'order_id'" |
 
 ### Two rules that make an objective replayable
 
-1. **End every flow in a terminal assertion.** Close with a check of the resulting page state (`verify the cart shows 1 item`), not a bare `submit` or `confirm the dialog`. A run only earns a replayable pass/fail from a verify/assert — a pure-action objective (`add a laptop to the cart`) gets none. If the objective has several phases, each ends in its own check. Two traps: `confirm the dialog` is an action, not a check; and `verify the Submit button is visible` fails exactly when the action worked (the control disappears on success) — assert the outcome, not the trigger.
+1. **End every flow in a terminal assertion.** Close with a check of the resulting page state (`verify the cart shows 1 item`), not a bare `submit` or `confirm the dialog`. A run only earns a replayable pass/fail from a verify/assert — a pure-action objective (`add a laptop to the cart`) gets none. If the objective has several phases, each ends in its own check. Phrase the closing check as what is on screen once the last action completes, so it verifies with no further click or navigation; if the evidence is elsewhere, make getting there an explicit action (`place the order, open Order History, then verify the newest order shows "Processing"`), never `verify the order succeeded by checking Order History`. Two traps: `confirm the dialog` is an action, not a check; and `verify the Submit button is visible` fails exactly when the action worked (the control disappears on success) — assert the outcome, not the trigger.
 2. **Intent for the actions, literal for the data.** Phrase actions as goals (`Log in with {{user}}`) so the run absorbs layout drift; keep exact values literal or in `{{variables}}`. An expected-optional branch (a sometimes-there cookie banner) goes in an `if/else`, not assumed away.
 
 **Shape:** an intent action carrying literal data, then a verify of an observable end state — `Search for "{{query}}" and open the first result, then verify the title contains "{{query}}"`. Full grammar in `references/objectives-cookbook.md §1`.
@@ -238,7 +238,7 @@ Vague phrasing like "read", "tell me", "report" does NOT reliably extract data �
 ❌ `"go to example.com and read the page title"`
 ✅ `"go to example.com, store the page title as 'page_title'"`
 
-Stored values appear in `run_end.final_state` and become the second results table per §1.4.
+Stored values appear in `run_end.final_state` and become the second results table per §1.4. Refer back to a stored value in plain English (`the stored price value`), never as `{{price}}`; `{{name}}` is for global variables and secrets only.
 
 ### Calling APIs directly
 
@@ -246,10 +246,10 @@ The agent can make API calls itself — not just observe the page's traffic. Phr
 
 ```text
 "Call POST https://api.example.com/login with body {...}, save the response as login,
- assert {{login.status}} is 200"
+ assert the response status is 200"
 ```
 
-Reference the saved response as `{{login.status}}`, `{{login.response_body}}`, or `{{login.response_body.<field>}}`; a pasted `curl` works too. Full grammar in `references/objectives-cookbook.md` §3.5.
+Use the response in plain English: `the response status`, `store the id from the response body as 'order_id'`, and later `the stored order_id value`. Never `{{login.status}}`: `{{name}}` is reserved for global variables and secrets. A pasted `curl` works too. Full grammar in `references/objectives-cookbook.md` §3.5.
 
 ### Chaining
 
@@ -269,18 +269,19 @@ Action → extraction → assertion in one objective:
 | Specific: "click the 'Add to Cart' button" | Vague: "add the item" |
 | Name extractions: "store X as 'price'" | Hope for values: "tell me the price" |
 | `{{variables}}` for credentials/URLs | Hardcode secrets in the objective |
+| Plain English for values the run produces: "the stored price value", "the response status" | `{{price}}` / `{{login.status}}` for a stored value or an API response |
 | Always include starting URL | Assume the agent knows where to start |
 | Split mega-objectives (>15 steps) into multiple runs | Cram everything into one |
 
 ---
 
-## 5. Parsing `--agent` output — essentials
+## 5. Parsing one-shot `run --agent` output — essentials
 
 > Internal reference only. Never expose these field names to the user — translate them per §1.
 
 Stdout is NDJSON, one event per line. There are two shapes:
 
-- **Progress events** (most events) have `step` (1-based), `status` (`passed`/`failed`), `remark` — and **no `type` field**.
+- **Progress events** (most events) have `step` (1-based), `status` (`running` at start, `done`/`failed` at completion), `remark` — and **no `type` field**.
 - **Typed events** have a `type` field: `project_folder_auto_defaulted` (run-startup gate, fires before any progress when no project/folder is configured), `bifurcation`, `child_agent_start`, `child_agent_end`, `ask_user`, `error` (an `error` with `code: "unresolved_variables"` is a pre-run refusal and the **only** line — no `run_end` follows; handle per §3), and finally `run_end`.
 
 Parsing strategy:
@@ -292,7 +293,7 @@ for each line:
   else if obj.step exists    → progress event → summarize per §1.3
 ```
 
-`run_end` is the only event with a stable cross-version schema — build all post-run logic on it.
+For one-shot `run`, build post-run logic on `run_end` and process exit. Saved tests and suites use their own completion events (see Command-specific completion below).
 
 For full event schemas (`bifurcation` flow fields, `child_agent_*`, `ask_user` semantics, `cancel`/`user_response` outbound events, complete `run_end` field list), Read `references/parsing.md`.
 
@@ -363,3 +364,12 @@ Internal event/field names (`generate_snapshot`, `request_id`, …) are for pars
 | Browse / create projects or folders, or parse the auto-default event | `references/test-manager.md` |
 | First-time install, auth, or full config | `references/setup-and-config.md` |
 | Compare / evaluate / benchmark kane-cli vs another tool or approach (cost, tokens, effort, ROI) | `references/fair-evaluation.md` |
+
+## Command-specific completion
+
+The `run_end` parsing strategy applies to one-shot `run` only. For `testmd run`, collect `test_md_done.overall_status`, `duration_s`, `session_id`, and optional `share_url`; embedded `run_end` events can finish individual steps. Local suites emit `testrun_done`; dispatched remote suites then emit `remote_done` (retain `status`, `exit`, `sessions_path`). `generate` emits `generate_done`. Assurance conversational agent streams end in `done`; review/read verbs have their own contracts. Always check process exit too: early refusal, invalid plan or dry-run can exit without the normal completion event.
+
+Progress is for live display: count only `done`/`failed` completions, retaining child and execution context when step indices repeat.
+
+
+For assertion mode, optional final validation, current-page `--analyzer-only` checks, streaming-network capture, and code-export defaults, read [Execution controls](references/execution-controls.md).

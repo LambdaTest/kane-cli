@@ -57,8 +57,8 @@ Every field in `tui-config.json`:
 | `folder_name` | string \| null | `null` | Display name of the selected folder (set automatically by the picker) | set by `kane-cli config folder` |
 | `mode` | `"action"` \| `"testing"` | `"testing"` | Agent behaviour when the run hits an authentication wall, blocked page, or error page. See below. | `kane-cli config set-mode <action\|testing>` |
 | `bug_detection` | `"off"` \| `"stop"` \| `"continue"` | `"off"` | Whether the agent flags suspected product bugs while authoring. See [Bug detection](#bug-detection). | `kane-cli config set-bug-detection <mode>`, or per-run `--bug-detection` |
-| `code_export.enabled` | boolean | `false` | Whether to generate a code export after the upload pipeline completes (requires a TMS upload). | TUI menu, or per-run `--code-export` flag |
-| `code_export.language` | `"python"` | `"python"` | Output language for the generated code. Only `python` is supported today. | per-run `--code-language <lang>` |
+| `code_export.enabled` | boolean | `true` | Whether to generate a code export after the upload pipeline completes (requires a TMS upload). | TUI menu, or per-run `--code-export` flag |
+| `code_export.language` | `"python"` \| `"javascript"` | `"python"` | Output language for the generated code. | per-run `--code-language <lang>` |
 | `code_export.skip_validation` | boolean | `true` | Skip the post-codegen worker-side validation step. | TUI menu, or per-run `--skip-code-validation` / `--no-skip-code-validation` |
 
 ## Updating settings
@@ -185,10 +185,10 @@ The `code_export` block enables and configures generated code output that is pro
 - **The TUI** — open the config menu, choose Code Export, and toggle the `enabled` and `skip_validation` switches. The TUI writes the change back to `tui-config.json`.
 - **Per-run flags** on `kane-cli run`:
   - `--code-export` to enable for this run only.
-  - `--code-language <lang>` to pick the output language (only `python` is supported today).
+  - `--code-language <lang>` to pick the output language (`python` or `javascript`; default `python`).
   - `--skip-code-validation` / `--no-skip-code-validation` to control post-codegen worker-side validation.
 
-Code export requires a TMS upload to run, so it is only meaningful when `mode` is `testing` and a project/folder are configured (or auto-defaulted). See [test-manager-integration.md](./test-manager-integration.md) for the full upload pipeline.
+Code export requires a TMS upload to run, and a configured or auto-defaulted project/folder. Upload is not gated by `mode`: action/testing controls agent behavior. See [test-manager-integration.md](./test-manager-integration.md) for the full upload pipeline.
 
 ## Chrome management
 
@@ -275,3 +275,11 @@ kane-cli will recreate the file with defaults the next time it writes a setting.
 - Variables under `~/.testmuai/kaneai/variables/` and `.testmuai/variables/`.
 - Chrome profiles under `~/.testmuai/kaneai/chrome-profiles/`.
 - Context sync credentials and caches under `~/.testmuai/kaneai/context-sync/` (use `kane-cli context sync remove <name>` to delete a location's keys).
+
+### Assertion and capture controls
+
+- `kane-cli config set-assertion-mode dom|visual`: default `dom`, with vision fallback. Override with `--assertion-mode dom|visual` on `run` or `testmd run`.
+- `kane-cli config set-final-validation on|off`: default off. Override with `--final-validation on|off` on `run` or `testmd run`. Controls the synthesized final checkpoint (`cp_final`) independently of action/testing mode; continue writing explicit terminal assertions.
+- `kane-cli config set-network-ws on|off` and `set-network-sse on|off`: experimental capture, both off by default. `run` also exposes `--network-ws` and `--network-sse`; SSE capture is Chromium-only. These flags are not registered on `testmd run` or `testrun run`.
+
+Code export is enabled by default; existing saved configuration can override this. The 0.2.11 migration enabled it for migrated profiles. Both Python and JavaScript exports are supported.

@@ -95,7 +95,7 @@ Code export runs server-side after the test case is finalised. kane-cli polls Te
 
 ### Enabling code export
 
-Code export is **off by default**. Turn it on either in your stored config or per-run on the CLI.
+Code export is **enabled by default**; stored configuration can override it. `--code-export` enables it for a run.
 
 In `~/.testmuai/kaneai/tui-config.json`, set the `code_export` block:
 
@@ -120,7 +120,7 @@ kane-cli run "Add an item to the cart" \
   --skip-code-validation
 ```
 
-`--no-skip-code-validation` forces validation on for that run. `--code-language` only accepts `python`.
+`--no-skip-code-validation` forces validation on for that run. `--code-language` accepts `python` (default) or `javascript`.
 
 ### Where to find the output
 

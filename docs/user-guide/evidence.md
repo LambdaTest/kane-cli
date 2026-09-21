@@ -196,3 +196,9 @@ Runs that upload to Test Manager attach their sealed pack automatically. Replaye
 - [Batch runs with testrun](./testrun.md) — many tests, one execution, one pack.
 - [Running test.md files](./testmd/running.md) — the testmd command family.
 - [Troubleshooting](./troubleshooting.md) — debugging flows and escape hatches.
+
+## Evidence merge identity
+
+For ordinary runs, default merge identity distinguishes the test and commit (`external_id.test_id`, `external_id.commit_id`) and the environment (`environment.os`, `environment.os_version`, `environment.browser`, `environment.browser_version`). Re-runs with the same identity nest as attempts; a different environment produces a separate sibling.
+
+Explicit collision policies can change grouping; a custom `--rules` file replaces the default rules rather than extending them. Check the selected identity rules before interpreting two runs as retries of the same test.

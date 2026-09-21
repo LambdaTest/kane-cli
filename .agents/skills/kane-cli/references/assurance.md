@@ -229,3 +229,13 @@ Never `context ingest` the new version first — reconcile does its own re-inges
 - **One stream.** The re-extract child's events ride the reconcile stream itself, stamped `verb: "reconcile"` — parse per `references/assurance-parsing.md`.
 
 For staleness that arrived outside a reconcile, `kane-cli maintain evolve` re-designs a use-case — it is interactive-only (the blast-radius confirmation is the point); suggest the user run it in a terminal rather than scripting around it.
+
+## Sharing a context store
+
+For location setup, sync, pull, push, clone and rebase recovery, see [Sharing the context store](context-sync.md).
+
+## Lifecycle automation contracts
+
+`context name`, `context retire`, and `context revert` accept `--mode agent` and emit an envelope ending in `done`. Destructive agent-mode operations require `--yes` even when stdin is a TTY. Other modes retain human output. Read commands use their documented `--json` flags; do not assume they all accept `--mode`.
+
+`context review --mode agent` / `--json` returns review outcome rows on success rather than the conversational `done` contract. Early agent-mode errors may emit `error` plus `done`; check command-specific output and process exit.
