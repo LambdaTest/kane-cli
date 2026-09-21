@@ -75,7 +75,7 @@ Set-Content -Path "$HOME\.testmuai\kaneai\agent-config\config.json" -Value @'
 Before you write, tell the person in one line what you are saving and where. Then:
 
 - **Read before you write**, and keep every key you do not recognize. A newer skill on another host may have put it there.
-- **Write once**, at the end of the three choices (`references/first-run.md`) or when the person changes a preference ("kane preferences").
+- **Write right after the first result**, with the defaults that run used, so the file exists even if the person never answers the choices. Write again when their answers arrive, and whenever they change a preference ("kane preferences"). Details: `references/first-run.md` §4.
 - **Two agents at once:** last write wins. Writes are rare, so this is fine.
 
 ## 4. Rules for the hard cases

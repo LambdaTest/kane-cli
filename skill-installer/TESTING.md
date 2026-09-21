@@ -28,7 +28,7 @@ Refresh the fixtures when the kane-cli stream changes: capture `kane-cli run`, `
 | Host | How it finds the skill | Asks with | Notes |
 |---|---|---|---|
 | Claude Code | `~/.claude/skills/kane-cli` (user level wins over a project copy) | Question tool | The only host with the live strip |
-| Codex CLI | `~/.agents/skills/kane-cli` | Chat | Its sandbox blocks network and writes outside the workspace. kane-cli needs both, so expect an approval per command, or a relaxed sandbox |
+| Codex CLI | `~/.agents/skills/kane-cli` (a project copy in `.agents/skills` wins inside a repo that has one) | A question tool that returns before the person answers | Its sandbox blocks network and writes outside the workspace. kane-cli needs both, so expect an approval per command, or a relaxed sandbox. Answers to the choices arrive as the next message |
 | Gemini CLI | `~/.gemini/skills/kane-cli` | Chat | Its file tools are confined to the workspace, so the preferences file must be written through the shell |
 | OpenCode | Auto-loads `~/.claude/skills` and `~/.agents/skills` | Chat | Nothing extra to install |
 | Hermes | Its own skill folders. **Not installed by our installer today** | Chat | Known gap. Its terminal can run in a container, where `~` is not the person's home |
@@ -77,8 +77,10 @@ Mark each cell pass, fail or not applicable. "Says" means in plain words: no eve
 | C2 | The tour | Word for word as in `references/first-run.md`, "you are here" on the right item, five working doc links |
 | C3 | The command | Tagged inline with the host's name, launched with `--name`, browser visible when there is a display |
 | C4 | First result card | Emoji table with credits, an evidence viewer link that opens, a Test Manager link, two next moves |
-| C5 | Choices after the result | Watch mode, results location, purpose. In Claude Code a fourth: the live strip, recommended first. Chat hosts get one numbered message where "ok" keeps the defaults |
-| C6 | Saving | One shell write to `agent-config/config.json`, announced first, existing keys kept |
+| C5 | Choices after the result | Watch mode, results location, purpose. In Claude Code a fourth: the live strip, recommended first. They are the **last thing on screen**, after the result card. Chat hosts get one numbered message where "ok" keeps the defaults |
+| C6 | Saving, part one | Right after the result card and before the questions, `agent-config/config.json` exists with the defaults this run used. Check the file even if you answer nothing |
+| C6b | Saving, part two | Answer the choices (in the same turn, or as your next message on Codex and chat hosts): the file is rewritten with your answers, existing keys kept |
+| C6c | Ignore the choices and ask for something else | Defaults kept, not asked again, and the next session shows no tour |
 | C7 | Write refused (Codex default sandbox) | Answers still apply this session, the `npx ... prefs` one-liner is shown once, no nagging |
 
 **D. Later sessions**

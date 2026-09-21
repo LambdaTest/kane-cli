@@ -99,7 +99,16 @@ What the answers change:
 - `purpose`: with `suite` or `ask`, **launch every one-off run with `--name <short-slug>`**, exactly like the first run, so it is recorded as it runs and keeping it costs nothing. `suite` means offer to keep each passing run as a saved test (and keep the first run's `<slug>_test.md`). `ask` means ask each time. If the user says no, delete that run's `<slug>_test.md` and its `output-<slug>/` folder. `one-off` means no `--name`, no offer, and remove the first run's test file. A run launched without a name cannot be kept afterwards: it would have to run again.
 - The user chose "a saved suite" on the first run? Say so: `This run is kept as <slug>_test.md. Replays need no AI.`
 
-Then save: `onboarding.completed_at`, `onboarding.asked: ["watch", "results", "purpose"]`, `onboarding.first_run_explained: true`, and the two preferences. The write is the only step that can hit a permission wall, which is why it sits after the result. If the write is refused, follow the hard-case rules below.
+**Ask last.** The choices are the final thing in your turn: result card first, then one line saying the defaults are saved, then the choices. Put nothing after them.
+
+**Save twice, so nothing depends on an answer.**
+
+1. Right after the result card, before you ask: write the config with `onboarding.completed_at`, `onboarding.first_run_explained: true`, `onboarding.asked: ["watch", "results", "purpose"]`, plus the defaults this run used (`preferences.watch` is what you ran with, `preferences.purpose` is `ask`). Say in one line that the defaults are saved. From this moment the tour and the choices never repeat.
+2. When the answers arrive: update the preferences and write the file again.
+
+If the answers do not come back in the same turn (you asked in chat, or the question tool returned with none), end your turn right after the questions. If the user's next message answers them ("ok", "1a 2c", an option's words), save then. If it is about something else, keep the defaults and do not ask again.
+
+The write is the only step that can hit a permission wall, which is why it sits after the result. If the write is refused, follow the hard-case rules below.
 
 Mobile and cloud grid requests add at most one more choice, and only when the answer cannot be detected. A machine that is not an Apple Silicon Mac is never asked "local or grid": the grid is the only path, so say that instead.
 

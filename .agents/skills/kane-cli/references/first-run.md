@@ -8,8 +8,9 @@ A person's first request should reach its first result with nothing standing in 
 2. Launch line plus the tour, in one message
 3. The run
 4. The payoff card, with two extra rows on this first run
-5. Three choices, asked once
-6. Save the answers (`references/agent-config.md`)
+5. Save that the first run happened, with the defaults you used (`references/agent-config.md`)
+6. The choices, asked once, as the very last thing in your turn
+7. Save the answers when they arrive: in this turn, or in the person's next message
 
 You are in a first session when the preflight's `## agent-config` section is `none`, or the file has no `onboarding.completed_at`.
 
@@ -74,7 +75,9 @@ From the second run on, the evidence viewer goes back to an offer.
 
 ## 4. Three choices, asked once, after the first result
 
-Ask these right after the first payoff card. They read as tailoring, not as a toll gate, because the person has already seen a result.
+Ask these after the first payoff card. They read as tailoring, not as a toll gate, because the person has already seen a result.
+
+**Ask last.** The choices are the final thing in your turn: result card first, then one line saying the defaults are saved, then the choices. Put nothing after them, not even a summary, or they scroll out of sight and the person never sees them.
 
 | # | Ask | Saved as |
 |---|---|---|
@@ -94,6 +97,20 @@ What the answers change:
 - `purpose`: with `suite` or `ask`, **launch every one-off run with `--name <short-slug>`**, exactly like the first run, so it is recorded as it runs and keeping it costs nothing. `suite` means offer to keep each passing run as a saved test (and keep the first run's `<slug>_test.md`). `ask` means ask each time. If the person says no, delete that run's `<slug>_test.md` and its `output-<slug>/` folder. `one-off` means no `--name`, no offer, and remove the first run's test file. A run launched without a name cannot be kept afterwards: it would have to run again.
 - Wrote "a saved suite" on the first run? Say so: `This run is kept as <slug>_test.md. Replays need no AI.`
 
-Then save: `onboarding.completed_at`, `onboarding.asked: ["watch", "results", "purpose"]`, `onboarding.first_run_explained: true`, and the two preferences. The write is the only step that can hit a permission wall, which is why it sits after the result. If the write is refused, follow `references/agent-config.md` §4.
+### Save twice, so nothing depends on an answer
+
+1. **Right after the result card, before you ask.** Write the config with `onboarding.completed_at`, `onboarding.first_run_explained: true`, `onboarding.asked: ["watch", "results", "purpose"]` (and `strip.<host>.offered_at` when you are about to ask the strip question), plus the defaults this run used: `preferences.watch` is what you ran with, `preferences.purpose` is `ask`. Tell the person in one line: `I've saved these defaults so I won't repeat the tour. Answer below to change them.` From this moment the tour and the choices never repeat, whatever happens next.
+2. **When the answers arrive.** Update the preferences and write the file again.
+
+The write is the only step that can hit a permission wall, which is why it sits after the result. If the write is refused, follow `references/agent-config.md` §4.
+
+### When the answers do not come back in the same turn
+
+Some hosts' question tools post the questions and hand control straight back, with no answers (Codex does this). Asking in chat works the same way. In both cases **end your turn right after the questions**. Then:
+
+- The person's next message answers them ("ok", "1a 2c", or an option's words): save those answers, confirm in one line, and carry on.
+- Their next message is about something else: keep the defaults, do the new request, and do not ask again. They can always say "kane preferences".
+
+A question tool that does wait (Claude Code) gives you the answers in the same turn: save them straight away.
 
 Mobile and cloud grid requests add at most one more choice, and only when you cannot detect the answer. A machine that is not an Apple Silicon Mac is never asked "local or grid": the grid is the only path, so say that instead.
