@@ -1,0 +1,60 @@
+<!-- Read this when the person asks to watch runs live, asks about the status line, or right after a first run in Claude Code (to offer the strip). Owns what the live strip is, where it works, how it is turned on and off, and what to say about it. -->
+
+# The live strip
+
+While a run executes you cannot speak. In hosts with a status bar, the live strip fills that silence: one line that names the current step as it happens.
+
+```text
+◆ kane run ▸ step 7 · clicking "Add to cart"          0:42
+◆ kane run ▸ step 8 · last: clicking "Add to cart"    0:47
+◆ kane test ▸ step 3 "Search for headphones" · replaying   0:12
+◆ kane suite ▸ 5 of 12 · 4 ✓ 1 ✗ · now: login_test.md      2:10
+◆ kane run ✓ passed · 12 steps · 1:54 · 58 credits
+◆ kane suite ✗ 11 of 12 · checkout_test.md failed at step 3 · 4:44
+```
+
+## 1. Where it works
+
+| Needs | Why |
+|---|---|
+| **Claude Code** | The only host with a scriptable status line today. Other hosts have no strip: do not offer it there |
+| **kane-cli 0.8.17 or newer** | Older versions do not write the run log the strip reads. Check the preflight's `## version` |
+| **Node 18 or newer** | The strip is a small Node script. Check `node=` in the preflight's `## env` |
+
+If any of these is missing, do not offer the strip. Nothing else changes: the strip is an extra, never a requirement.
+
+## 2. How it behaves
+
+- It **wraps the status line the person already has**: their line prints first, unchanged, and the kane line appears under it.
+- It appears **only while a run is live, and for five minutes after it ends**, and only for runs started from the current project. The rest of the time the person sees exactly what they had before.
+- It reads two things kane-cli writes on its own: a small pointer file for each live run, and that run's event log. It starts no process besides the person's original status line command, makes no network calls, and sends nothing anywhere.
+- **Typed text is never echoed.** A typing step shows as `typing in <field>`.
+- It refreshes every two seconds. It starts showing a run once kane-cli has created the session, which takes roughly 10 to 30 seconds after launch (the browser has to start first). Until then the person sees their normal status line. While a step is still working, the line shows the last finished action, marked `last:`.
+
+## 3. Offering it
+
+Offer it **once, right after the first run's payoff and the three choices**, when the person has just felt the wait:
+
+```text
+Next time, want to watch runs live in your status bar? It shows the current step while kane-cli works, keeps your existing status line, and turns off with one command.
+```
+
+Record the offer in the agent config (`strip.claude-code.offered_at`) so you never offer twice. Turn it on only after a clear yes.
+
+## 4. Turning it on and off
+
+These commands change the person's Claude Code settings, so run them only on their say-so. Tell them what will change first: `This edits ~/.claude/settings.json (a backup is kept) and adds one small script under ~/.testmuai/kaneai/bin/.`
+
+```bash
+npx @testmuai/kane-cli-skill strip enable      # turn it on
+npx @testmuai/kane-cli-skill strip status      # is it on?
+npx @testmuai/kane-cli-skill strip disable     # turn it off and restore the original status line
+```
+
+`enable` keeps a backup of the settings file, remembers the person's original status line, and restores it exactly on `disable`. The strip shows up in new Claude Code sessions, or after the person runs `/statusline` once or restarts.
+
+If the person's environment blocks the command, give it to them to run in their own terminal. In Claude Code they can type `! npx @testmuai/kane-cli-skill strip enable`.
+
+## 5. When the strip is on
+
+Nothing about how you launch or report runs changes. Keep using one blocking call and the default output, and keep the launch line and the cards. Do not pass `--stream-members` on suites to feed the strip: it reads each test's own log by itself, and the extra output would only fill your context.

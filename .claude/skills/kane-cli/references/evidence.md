@@ -42,6 +42,8 @@ After a successful agent-mode run, kane-cli prints one hint line to **stderr** (
 evidence: view locally with `kane-cli evidence serve <packPath>`
 ```
 
+**On a person's first run, do not just offer:** start the server and put the viewer link in the result card, so the tour's "evidence" becomes something they can click (`references/first-run.md` §3). From the second run on, go back to offering.
+
 When you see it (or when the user asks to see run evidence): **offer** — "Want to view the run evidence in your browser?" If yes, run the serve command via Bash (`run_in_background` so it keeps serving) and give the user the `viewer` URL from its stdout:
 
 ```

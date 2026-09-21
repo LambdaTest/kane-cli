@@ -39,7 +39,7 @@ In a non-TTY context (CI, pipes, every `--agent` caller), the no-arg form of `co
 
 ```bash
 kane-cli projects list [--search <q>] [--limit <n>] [--offset <n>] --agent
-kane-cli folders  list [--search <q>] [--limit <n>] [--offset <n>] --agent
+kane-cli folders  list --project <id> [--search <q>] [--limit <n>] [--offset <n>] --agent
 ```
 
 | Flag | Purpose |
@@ -49,7 +49,7 @@ kane-cli folders  list [--search <q>] [--limit <n>] [--offset <n>] --agent
 | `--offset <n>` | Skip the first N rows. |
 | `--agent` | Force NDJSON. Auto-on when stdout is piped/redirected, but pass it explicitly anyway. |
 
-`folders list` operates inside the currently configured project. If none is configured, list projects first or rely on §5.
+`folders list` and `folders create` need the project passed in: `--project <id>` is **required** on both. Take the id from `projects list`, or from `project_id` in `kane-cli config show`.
 
 ### Wire shape
 
@@ -93,10 +93,10 @@ Same pattern for `folders list`.
 
 ```bash
 kane-cli projects create "<name>" [--description "<text>"] --agent
-kane-cli folders  create "<name>" [--description "<text>"] --agent
+kane-cli folders  create "<name>" --project <id> [--description "<text>"] --agent
 ```
 
-NDJSON: one line describing the new id + name. `folders create` files the folder inside the currently configured project.
+NDJSON: one line describing the new id + name. `folders create` files the folder inside the project you pass with `--project <id>`.
 
 To use the result for subsequent runs, persist with `kane-cli config project <id>` / `kane-cli config folder <id>` — non-interactive when called with an explicit `<id>`.
 
@@ -129,11 +129,38 @@ Transient validation failures (`5xx`, network, timeout) are treated as **error**
 
 ### When you see the event
 
-Surface it as a one-line note, then continue parsing the run normally. If the user wants their runs in a different project, point them at the user guide's project/folder configuration page — the public `kane-cli config project [<id>]` / `kane-cli config folder [<id>]` commands cover the human flow.
+Surface it as a one-line note, then continue parsing the run normally. If the user wants their runs in a different project, walk them through §6.
 
 ---
 
-## 6. Exit codes (TMS subcommands only)
+## 6. Changing where results go (a global setting)
+
+The results project and folder belong to kane-cli, not to the agent config. A change applies to **every later kane-cli session for the current sign-in**: every project folder, every agent, and the terminal. Say so in the question itself, so the person's pick is their consent and no second confirmation is needed.
+
+**When to raise it.** The ready card always states the location with a standing offer that never stops the run (`references/ready-check.md`). Ask outright only once, after the first result (`references/first-run.md` §4), or whenever the person says "change project".
+
+**The flow.** Listing projects takes a few seconds, so do it only now, never in the preflight.
+
+1. `kane-cli projects list --limit 10 --agent`. Show the names with the current one marked. If the page says more exist, offer a search by name (`--search <text>`) instead of paging. Never promise a count: the CLI only says whether more exist.
+2. Let the person pick one, search, create a new one, or keep the current one. For a new project suggest the repo's name: `kane-cli projects create "<name>" --agent`.
+3. `kane-cli folders list --project <id> --agent`. Exactly one folder: take it without asking. Otherwise let them pick, or create one with `kane-cli folders create "<name>" --project <id> --agent`.
+4. Save the project first, then the folder, always as a pair, so the two never mismatch:
+
+   ```bash
+   kane-cli config project <project-id>
+   kane-cli config folder <folder-id>
+   ```
+
+5. Confirm in one line: `Results now go to <project> / <folder>, for every kane-cli session from here on.`
+6. In the agent config record only that you asked (`"results"` in `onboarding.asked`). The value stays with kane-cli.
+
+**Before switching, warn when it matters.** If the preflight's `## tests` section found saved tests in this folder, say first: cloud grid suites compare each test's project with the configured one and refuse on a mismatch, so switching can make an existing grid suite refuse until it is switched back. Tests that already ran keep their original project.
+
+**Always visible.** The one-line ready card shows the location at the start of every session, so a global setting never surprises anyone.
+
+---
+
+## 7. Exit codes (TMS subcommands only)
 
 | Code | Meaning |
 |---|---|

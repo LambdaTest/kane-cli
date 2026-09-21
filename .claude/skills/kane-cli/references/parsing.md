@@ -6,6 +6,32 @@
 
 With `--agent`, kane-cli outputs one JSON object per line to **stdout**. Progress UI renders to **stderr**.
 
+## The stream contract (0.8.17+)
+
+On `run`, `testmd run` and `testrun run`, every stdout line carries two extra fields, and nothing that existed before changed:
+
+| Field | Meaning |
+|---|---|
+| `v` | Contract version, `1`. It only bumps on a breaking change |
+| `ts` | ISO timestamp of when the event was emitted |
+
+The first line on every surface is an opening event:
+
+```json
+{"type":"stream_start","cli_version":"0.8.17","surface":"run","pid":16664,"v":1,"ts":"2026-09-21T08:47:26.889Z"}
+```
+
+`surface` is `run`, `testmd` or `testrun`. Use `cli_version` to tell whether a newer event or flag is available. `session_dir` may also be present when a session already exists.
+
+Rules a parser must follow:
+
+- **Ignore unknown fields and unknown event types.** New ones can appear in any release without a `v` bump.
+- **Never assume the first line is a progress line**, and skip any line that is not JSON.
+- Step lines on `run` stay **typeless** (below). Do not look for `type: "step"`.
+- The documented completion event is always the last line: `run_end` for `run`, `test_md_done` for `testmd run`, `testrun_done` for `testrun run` (then `remote_done` on cloud grid runs).
+
+**The same stream is also written to disk**, line by line as it happens: `<session_dir>/events.ndjson`, byte for byte what stdout printed. While a run is live, kane-cli keeps a small pointer file at `~/.testmuai/kaneai/sessions/active/<pid>.json` (`pid`, `cwd`, `surface`, `session_dir`, `started`, `cli_version`, `host_agent`) and removes it on exit. You normally need neither: one blocking call hands you the whole stdout. They exist for watchers such as the live strip (`references/live-strip.md`), and the log is where a suite keeps each test's own events (`references/testrun.md`). The log holds exactly what stdout held, so treat it with the same care.
+
 ## Event Types
 
 **Progress events** (a start and completion event per step):
@@ -19,7 +45,7 @@ With `--agent`, kane-cli outputs one JSON object per line to **stdout**. Progres
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `step` | number | Step index (1-based) |
+| `step` | number | Step index. It can run one ahead of the step the person would count (a `bifurcation` takes the first slot), so count completed `done`/`failed` lines for "steps taken" rather than reading the last index |
 | `status` | string | `"running"` at start; `"done"` or `"failed"` at completion |
 | `remark` | string | What the agent did or why it failed |
 
@@ -89,7 +115,7 @@ For one-shot `run`, build automation on `run_end` and process exit; other comman
   "one_liner": "Searched for laptop on Amazon and added to cart",
   "reason": "Objective completed",
   "duration": 45.2,
-  "credits": 12,
+  "credits_consumed": 11.9,
   "final_state": {
     "price": "$29.99",
     "product_name": "Wireless Headphones"
@@ -110,7 +136,7 @@ Key `run_end` fields:
 - `summary` — what the agent did
 - `one_liner` — short summary for display
 - `reason` — why it stopped
-- `credits` — credits consumed by the run (when reported)
+- `credits_consumed`: credits the run used, a decimal number (when reported). Round it for display. Older releases and docs called this `credits`
 - `final_state` — extracted values from "store as" objectives
 - `test_url` — link to KaneAI dashboard (if upload succeeded)
 - `session_dir` — session directory (session log + the sealed evidence pack under `evidence/`)

@@ -89,22 +89,33 @@ All typed; stdout; one JSON object per line. **Local completion: `testrun_done`.
 |---|---|---|
 | `testrun_plan` | `members: [{path, test_id?, tags, failure?}]`, `valid`, `parallel`, `parallel_clamped?` | If `valid: false`, treat as immediate failure — report each member's `failure` reason and stop expecting more events. *(0.8.12+)* `failure: "unresolved_variables"` means a member references a `{{name}}` with no value; one `error` event with `code: "unresolved_variables"` follows the plan (schema in `references/parsing.md`) and lists every such name across members — surface it, do not retry. |
 | `testrun_start` | `execution_id`, `members` (paths), `parallel` | |
-| `testrun_member_start` | `path`, `test_id?` | |
-| `testrun_member_end` | `path`, `test_id?`, `status`, `duration_s` | `status` ∈ `passed \| failed \| broken \| interrupted` |
+| `testrun_member_start` | `path`, `test_id?`, *(0.8.17+)* `session_id`, `log_path` | A saved test started. `log_path` is the absolute path of that test's own event log (see **Each test's own log** below). |
+| `testrun_member_end` | `path`, `test_id?`, `status`, `duration_s`, *(0.8.17+)* `session_id`, `log_path`, `failure?: {message, step_index?}` | `status` ∈ `passed \| failed \| broken \| interrupted`. `failure` is present when the test did not pass: use it for the "where" and "why" of the failed-tests table. |
+| `testrun_authored_member_start` / `testrun_authored_member_end` | same fields as the two rows above | A test that had no recording yet is authored in a separate pass after the replays. Treat the end event exactly like `testrun_member_end`. `path` can be relative here and absolute elsewhere: match tests by file name. |
+| `testrun_progress` *(0.8.17+)* | `running: [paths]`, `pending`, `done`, `total` | Fires on every test start and end, never on a timer. It counts the replay pass only, so take the suite's size from `testrun_plan.members`, not from `total`. Informational: the rollup still comes from `testrun_summary`. |
 | `testrun_investigations_wait` | `count` | Failed replays left investigations running; the coordinator waits before sealing. Narrate as "investigating N failures". |
 | `testrun_evidence_ingest` | `status: "ok"\|"failed"`, `evidence_id`, `stage?` | Pack published to the dashboard. Absent when publish is skipped. |
-| `testrun_summary` | `totals: {tests, passed, failed, broken, skipped}`, `duration_s`, `upload`, `cancelled` | Build the rollup table from this. |
+| `testrun_summary` | `totals: {tests, passed, failed, broken, skipped, authored}`, `duration_s`, `upload`, `cancelled`, `execution: {id, status}` | Build the rollup table from this. |
 | `testrun_done` | `execution_id`, `overall_status: "passed"\|"failed"\|"cancelled"` | Local completion; remote runs continue through `remote_done`. |
+
+### Each test's own log, and `--stream-members` (0.8.17+)
+
+A suite's stdout stays small on purpose: it reports each test's start and end, not the steps inside it. Every test's full event stream (the same events `testmd run` prints, `references/testmd.md`) is written to its own log, and the start and end events name it in `log_path`.
+
+- **To diagnose a failed test, read only that test's `log_path`** (and its failure record in the evidence pack). That keeps your context small.
+- **Do not pass `--stream-members` by default.** The flag prints every test's events on the suite's stdout, each wrapped as `{"type":"testrun_member_event","member":{"index","path","test_id?"},"event":{...}}` (`member.index` is the 0-based position in `testrun_plan.members`). On a 12-test suite that is a few hundred lines you would have to read for nothing. Use it only when the person explicitly wants the full stream, for example in a CI log.
+- Every line also carries `v` and `ts`, and the first line is `stream_start` (`references/parsing.md`).
 
 With `--remote`, the stream is wrapped in typed `remote_*` events (all on stdout):
 
 | `type` | Payload | Notes |
 |---|---|---|
-| `remote_start` | `backend`, `env` | Dispatch begins |
+| `remote_start` | `backend`, `env`, *(0.8.17+)* `log_path` | Dispatch begins. `log_path` is the grid client's own log on this machine, useful when a dispatch fails before a job exists |
 | `remote_device` | `platform`, `slug`, `name`, `os_version`, `avd_id?`, `pool?` | The resolved grid device (mobile). Present it as the device line. |
 | `remote_device_hint` | `reason: device_name_ignored\|catalog_stale`, `detail` | Informational; `device_name_ignored` is emulator-only |
 | `remote_app` | `path`, `app_id`, `source: uploaded\|cache\|dry-run` | One per distinct local build uploaded from the laptop (mobile); `app_id` is empty on a dry run |
 | `remote_dispatched` | `job_id`, `job_url` | The HyperExecute job exists — give the user `job_url` |
+| *(0.8.17+)* member events on remote | `testrun_start`, then a start and end event per test, each with `post_hoc: true` | The grid reports per-test detail **after the job ends**, in plan order, just before `testrun_summary`. Their `ts` is the grid's own time. Same fields as local, including `log_path` and `failure`. `testrun_progress` is not emitted on remote. On 0.8.17+ `remote_dispatched` arrives as soon as the job exists, not at the end |
 | `remote_error` | `code`, `detail` | Remote preflight refused (table above); expect `testrun_done` failed + exit 2 |
 | `remote_import_tape`, `remote_exec_sync`, `remote_coverage` | `status`, `reason`, `detail?` | Informational; sync/coverage are `skipped` when the project has no `.context` store |
 | `remote_done` | `status`, `exit`, `job_id`, `sessions_path` | Follows `testrun_done`; `sessions_path` holds the members' grid session logs |
@@ -125,18 +136,19 @@ for each line:
 
 ## Presenting results (same discipline as SKILL.md §1)
 
-Never expose event/field names. After completion and process exit (`remote_done` for dispatched remote runs), render a suite rollup:
+Never expose event/field names. After completion and process exit (`remote_done` for dispatched remote runs), render the **suite card from `references/cards.md` §8**: the rollup table, then a failed-tests table that lists only the tests that did not pass, with where and why from each end event's `failure` (0.8.17+). Cloud grid runs add the device and job rows.
 
 ```markdown
 | | |
 |-------|-------|
-| 🟢 **Suite** | Passed (12/12) |
-| ⏱️ **Duration** | 284s |
-| 👣 **Tests** | 12 passed, 0 failed, 0 broken, 0 skipped |
-| 📦 **Evidence** | one sealed pack for the whole suite |
+| 🟢 **Suite** | 12 of 12 passed |
+| ⏱️ **Duration** | 4m 44s |
+| 🧪 **Tests** | 12 passed · 0 failed · 0 broken · 0 skipped |
+| 📁 **Evidence** | One pack for the whole suite · want to open it? |
+| ➡️ **Next** | <two things you can do right now> |
 ```
 
-For failures, add one line per failed member only (path + duration + status) — don't list passing members individually. If the pack published, mention the run is visible in the dashboard.
+Don't list passing tests individually. If the pack published, mention the run is visible in the dashboard. To diagnose a failed test, read that test's own `log_path`, not the whole suite's output.
 
 ## Exit codes
 
