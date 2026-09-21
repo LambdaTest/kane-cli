@@ -1,0 +1,9 @@
+{
+  "pid": 16664,
+  "cwd": "/home/dev/acme-web",
+  "surface": "run",
+  "session_dir": "/home/dev/.testmuai/kaneai/sessions/009fcad2-9b47-479a-896c-0e673227c95e",
+  "started": "2026-09-21T08:47:39.436Z",
+  "cli_version": "0.8.17-beta.1",
+  "host_agent": "claude-code"
+}
