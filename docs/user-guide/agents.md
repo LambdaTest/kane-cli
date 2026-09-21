@@ -74,7 +74,8 @@ npx @testmuai/kane-cli-skill strip disable     # turn it off
 
 What to know:
 
-- **It keeps your existing status line.** Yours prints first, unchanged. The kane line appears under it only while a run is live and for five minutes afterwards, and only for runs started from the current project.
+- **It keeps your existing status line.** Yours prints first, unchanged. The kane line appears under it only while a run is live and for five minutes afterwards.
+- **Only the session that started the run shows it.** If you have several Claude Code sessions open, even in the same project, the others stay as they are. (On Windows, every session open in the run's project shows it for now.)
 - **Turning it on edits `~/.claude/settings.json`.** A backup is kept next to it, and `strip disable` restores your original status line exactly.
 - **It needs kane-cli 0.8.17 or newer and Node 18 or newer.**
 - **It stays on your machine.** The strip reads two things kane-cli writes locally while it runs, a small pointer file for each live run and that run's event log. It makes no network calls.

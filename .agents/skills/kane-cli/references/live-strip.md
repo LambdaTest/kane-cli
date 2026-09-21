@@ -26,7 +26,8 @@ If any of these is missing, do not offer the strip. Nothing else changes: the st
 ## 2. How it behaves
 
 - It **wraps the status line the person already has**: their line prints first, unchanged, and the kane line appears under it.
-- It appears **only while a run is live, and for five minutes after it ends**, and only for runs started from the current project. The rest of the time the person sees exactly what they had before.
+- It appears **only while a run is live, and for five minutes after it ends**. The rest of the time the person sees exactly what they had before.
+- It appears **only in the Claude Code session that started the run**. Other sessions show nothing, even when they are open in the same project. The reader tells sessions apart by checking that the run descends from the same session process it was started by. A run the person starts by hand in a terminal is not shown. On Windows, where that check is not available yet, every session open in the run's project shows it.
 - It reads two things kane-cli writes on its own: a small pointer file for each live run, and that run's event log. It starts no process besides the person's original status line command, makes no network calls, and sends nothing anywhere.
 - **Typed text is never echoed.** A typing step shows as `typing in <field>`.
 - It refreshes every two seconds. It starts showing a run once kane-cli has created the session, which takes roughly 10 to 30 seconds after launch (the browser has to start first). Until then the person sees their normal status line. While a step is still working, the line shows the last finished action, marked `last:`.

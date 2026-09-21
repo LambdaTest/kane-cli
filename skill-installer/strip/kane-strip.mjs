@@ -17,6 +17,7 @@ const LINGER_MS = 5 * 60 * 1000;
 const STATE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const STATE_WRITE_GAP_MS = 10 * 1000;
 const STDIN_WAIT_MS = 1000;
+const PROCESS_TABLE_TIMEOUT_MS = 1000;
 const ORIGINAL_TIMEOUT_MS = 1500;
 const HOST = 'claude-code';
 
@@ -508,12 +509,67 @@ function validPointer(p) {
     && typeof p.session_dir === 'string' && p.session_dir !== '';
 }
 
+// ---------------------------------------------------------------------------
+// One strip per session
+// ---------------------------------------------------------------------------
+//
+// Every Claude Code session is its own process. It starts both the status line
+// command (this reader) and, through its shell, kane-cli. So a run belongs to
+// this session when it descends from the same host process this reader does.
+
+const SHELLS = new Set(['sh', 'bash', 'zsh', 'dash', 'ash', 'ksh', 'fish', 'tcsh', 'csh', 'cmd', 'cmd.exe', 'powershell', 'powershell.exe', 'pwsh', 'pwsh.exe']);
+
+// Output of `ps -A -o pid=,ppid=,comm=`. The command can contain spaces.
+export function parseProcessTable(text) {
+  const table = new Map();
+  if (typeof text !== 'string') return table;
+  for (const line of text.split('\n')) {
+    const match = /^\s*(\d+)\s+(\d+)\s+(.+?)\s*$/.exec(line);
+    if (!match) continue;
+    table.set(Number(match[1]), { ppid: Number(match[2]), comm: match[3] });
+  }
+  return table;
+}
+
+function isShell(comm) {
+  // A login shell shows up as "-zsh". Paths keep only their last part.
+  const name = String(comm || '').split(/[\\/]/).pop().replace(/^-/, '').toLowerCase();
+  return SHELLS.has(name);
+}
+
+// The first process at or above `startPid` that is not a shell. For a status
+// line command that is the session's own process, whether it was started
+// directly or through `sh -c`.
+export function hostProcess(table, startPid) {
+  let pid = startPid;
+  for (let hops = 0; hops < 8; hops += 1) {
+    const row = table.get(pid);
+    if (!row) return undefined;
+    if (!isShell(row.comm)) return pid;
+    pid = row.ppid;
+  }
+  return undefined;
+}
+
+export function isDescendant(table, pid, ancestor) {
+  let current = pid;
+  for (let hops = 0; hops < 64 && current > 0; hops += 1) {
+    if (current === ancestor) return true;
+    const row = table.get(current);
+    if (!row) return false;
+    current = row.ppid;
+  }
+  return false;
+}
+
 // The most recently started live pointer for this project, or else the last
 // session this project was seen running (kept in the state file).
 export function findRun(opts) {
-  const { activeDir, projectDir, stateFile, isAlive, nowMs, readFile, listDir } = opts || {};
+  const { activeDir, projectDir, stateFile, isAlive, nowMs, readFile, listDir, belongs, stateKey } = opts || {};
   const project = normalizeDir(projectDir);
   if (!project) return null;
+  // Finished runs are remembered per session when the host gives a session id.
+  const key = typeof stateKey === 'string' && stateKey ? stateKey : project;
 
   let names = [];
   try {
@@ -538,6 +594,16 @@ export function findRun(opts) {
       alive = false;
     }
     if (!alive) continue;
+    // Another session's run: not ours to show.
+    let own = true;
+    if (typeof belongs === 'function') {
+      try {
+        own = Boolean(belongs(pointer.pid));
+      } catch {
+        own = true;
+      }
+    }
+    if (!own) continue;
     const started = Date.parse(pointer.started);
     const rank = Number.isFinite(started) ? started : 0;
     if (!best || rank > best.rank) best = { pointer, rank };
@@ -546,7 +612,7 @@ export function findRun(opts) {
 
   try {
     const saved = JSON.parse(readFile(stateFile));
-    const entry = saved && typeof saved === 'object' ? saved[project] : null;
+    const entry = saved && typeof saved === 'object' ? saved[key] : null;
     if (!entry || typeof entry !== 'object' || typeof entry.session_dir !== 'string' || !entry.session_dir) return null;
     const seenMs = Date.parse(entry.seen);
     if (Number.isFinite(seenMs) && num(nowMs) !== undefined && nowMs - seenMs > STATE_MAX_AGE_MS) return null;
@@ -623,8 +689,7 @@ function writeJson(file, value) {
   }
 }
 
-function rememberRun(stateFile, projectDir, pointer, nowMs) {
-  const key = normalizeDir(projectDir);
+function rememberRun(stateFile, key, pointer, nowMs) {
   const saved = readJson(stateFile);
   const entry = saved[key];
   const seenMs = entry && typeof entry === 'object' ? Date.parse(entry.seen) : NaN;
@@ -643,12 +708,43 @@ function rememberRun(stateFile, projectDir, pointer, nowMs) {
   writeJson(stateFile, saved);
 }
 
-function forgetRun(stateFile, projectDir) {
+function forgetRun(stateFile, key) {
   const saved = readJson(stateFile);
-  const key = normalizeDir(projectDir);
   if (!(key in saved)) return;
   delete saved[key];
   writeJson(stateFile, saved);
+}
+
+// Returns the test "did this session start that run?". The process table is
+// read once, and only when a live run for this project has to be checked. Where
+// it cannot be read (no `ps`, as on Windows), every run in the project counts,
+// which is how the strip behaved before sessions were told apart.
+function ownRun() {
+  let table;
+  let host;
+  return (pid) => {
+    if (table === undefined) {
+      table = null;
+      try {
+        const result = spawnSync('ps', ['-A', '-o', 'pid=,ppid=,comm='], {
+          timeout: PROCESS_TABLE_TIMEOUT_MS,
+          encoding: 'utf8',
+          windowsHide: true,
+        });
+        if (!result.error && result.status === 0 && typeof result.stdout === 'string') {
+          const parsed = parseProcessTable(result.stdout);
+          if (parsed.size) {
+            table = parsed;
+            host = hostProcess(parsed, process.ppid);
+          }
+        }
+      } catch {
+        table = null;
+      }
+    }
+    if (!table || host === undefined) return true;
+    return isDescendant(table, pid, host);
+  };
 }
 
 function originalStatusLine(base, raw) {
@@ -683,18 +779,23 @@ function stripLine(base, raw) {
     .find((dir) => typeof dir === 'string' && dir !== '') || process.cwd();
 
   const stateFile = path.join(base, 'agent-config', 'strip-state.json');
+  const stateKey = typeof input.session_id === 'string' && input.session_id
+    ? `session:${input.session_id}`
+    : normalizeDir(projectDir);
   const nowMs = Date.now();
   const found = findRun({
     activeDir: path.join(base, 'sessions', 'active'),
     projectDir,
     stateFile,
+    stateKey,
+    belongs: ownRun(),
     isAlive: pidAlive,
     nowMs,
     readFile: (file) => fs.readFileSync(file, 'utf8'),
     listDir: (dir) => fs.readdirSync(dir),
   });
   if (!found || !found.sessionDir) return '';
-  if (found.alive) rememberRun(stateFile, projectDir, found.pointer, nowMs);
+  if (found.alive) rememberRun(stateFile, stateKey, found.pointer, nowMs);
 
   let text = '';
   try {
@@ -714,7 +815,7 @@ function stripLine(base, raw) {
     alive: found.alive,
     color: !process.env.NO_COLOR,
   });
-  if (!line && !found.alive) forgetRun(stateFile, projectDir);
+  if (!line && !found.alive) forgetRun(stateFile, stateKey);
   return line;
 }
 

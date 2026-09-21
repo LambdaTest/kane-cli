@@ -13,6 +13,9 @@ import {
   renderLine,
   findRun,
   main,
+  parseProcessTable,
+  hostProcess,
+  isDescendant,
 } from '../strip/kane-strip.mjs';
 
 const STRIP_PATH = fileURLToPath(new URL('../strip/kane-strip.mjs', import.meta.url));
@@ -483,4 +486,125 @@ test('while a step is in flight the line keeps the last finished action, labelle
   const state = summarize(cut);
   assert.equal(state.step, 2);
   assert.equal(state.now, 'last: navigate to https://example.com');
+});
+
+// ---------------------------------------------------------------------------
+// One strip per session: a run shows only in the session that launched it
+// ---------------------------------------------------------------------------
+
+const PS_TABLE = [
+  '    1     0 /sbin/launchd',
+  ' 1072     1 /Applications/iTerm.app/Contents/MacOS/iTerm2',
+  ' 1292  1072 /home/dev/Library/Application Support/iTerm2/iTermServer-3.6.11',
+  // session A: login shell, claude, its tool shell, kane-cli under it
+  ' 2100  1292 -zsh',
+  ' 2200  2100 claude',
+  ' 2300  2200 /bin/zsh',
+  ' 2400  2300 node',
+  // session A's status line: claude runs it through sh
+  ' 2500  2200 sh',
+  ' 2600  2500 node',
+  // session B: another claude in another tab
+  ' 3100  1292 -zsh',
+  ' 3200  3100 claude',
+  ' 3500  3200 sh',
+  ' 3600  3500 node',
+].join('\n');
+
+test('parseProcessTable keeps commands that contain spaces', () => {
+  const table = parseProcessTable(PS_TABLE);
+  assert.equal(table.get(2200).ppid, 2100);
+  assert.equal(table.get(2200).comm, 'claude');
+  assert.equal(table.get(1292).comm, '/home/dev/Library/Application Support/iTerm2/iTermServer-3.6.11');
+  assert.equal(parseProcessTable('garbage\n\n  x y z').size, 0);
+});
+
+test('hostProcess is the first ancestor that is not a shell', () => {
+  const table = parseProcessTable(PS_TABLE);
+  // the reader (2600) was started by sh (2500), which claude (2200) started
+  assert.equal(hostProcess(table, 2500), 2200);
+  // started by claude directly
+  assert.equal(hostProcess(table, 2200), 2200);
+  // a login shell ("-zsh") counts as a shell
+  assert.equal(hostProcess(table, 2100), 1292);
+  assert.equal(hostProcess(table, 99999), undefined);
+});
+
+test('isDescendant tells one session from another', () => {
+  const table = parseProcessTable(PS_TABLE);
+  assert.equal(isDescendant(table, 2400, 2200), true);   // kane-cli under session A
+  assert.equal(isDescendant(table, 2400, 3200), false);  // not under session B
+  assert.equal(isDescendant(table, 2200, 2200), true);
+  assert.equal(isDescendant(table, 2400, 1292), true);   // the terminal is everyone's ancestor
+  assert.equal(isDescendant(table, 424242, 2200), false);
+});
+
+test('findRun skips runs that belong to another session, and keeps finished runs per session', () => {
+  const files = {
+    '/h/active/2400.json': JSON.stringify({ ...pointer, pid: 2400, cwd: '/home/dev/acme-web', session_dir: '/h/s/one' }),
+    '/h/state.json': JSON.stringify({
+      'session:aaa': { session_dir: '/h/s/old-a', surface: 'run', started: '2026-09-21T08:00:00.000Z', seen: '2026-09-21T08:50:00.000Z' },
+    }),
+  };
+  const base = {
+    activeDir: '/h/active',
+    projectDir: '/home/dev/acme-web',
+    stateFile: '/h/state.json',
+    isAlive: () => true,
+    nowMs: at('2026-09-21T08:51:00.000Z'),
+    readFile: (f) => { if (!(f in files)) throw new Error('missing'); return files[f]; },
+    listDir: () => ['2400.json'],
+  };
+  const table = parseProcessTable(PS_TABLE);
+  const mine = findRun({ ...base, stateKey: 'session:aaa', belongs: (pid) => isDescendant(table, pid, 2200) });
+  assert.equal(mine.alive, true);
+  assert.equal(mine.sessionDir, '/h/s/one');
+
+  // session B sees the same pointer file but the run is not its own
+  const theirs = findRun({ ...base, stateKey: 'session:bbb', belongs: (pid) => isDescendant(table, pid, 3200) });
+  assert.equal(theirs, null);
+
+  // session A with no live run falls back to its own finished run, session B has none
+  const idle = { ...base, listDir: () => [] };
+  assert.equal(findRun({ ...idle, stateKey: 'session:aaa' }).sessionDir, '/h/s/old-a');
+  assert.equal(findRun({ ...idle, stateKey: 'session:bbb' }), null);
+});
+
+test('main ignores a live run that another process tree started', () => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'kane-strip-home-'));
+  try {
+    const base = path.join(home, '.testmuai', 'kaneai');
+    const projectDir = path.join(home, 'acme-web');
+    const sessionDir = path.join(base, 'sessions', 'session-one');
+    const activeDir = path.join(base, 'sessions', 'active');
+    for (const dir of [projectDir, sessionDir, activeDir]) fs.mkdirSync(dir, { recursive: true });
+    const stamp = new Date().toISOString();
+    const lines = fixture('run.ndjson').split('\n').filter(Boolean)
+      .map((l) => JSON.stringify({ ...JSON.parse(l), ts: stamp }));
+    fs.writeFileSync(path.join(sessionDir, 'events.ndjson'), `${lines.slice(0, 5).join('\n')}\n`);
+    const run = (pid, sessionId) => {
+      fs.writeFileSync(path.join(activeDir, 'p.json'), JSON.stringify({
+        ...pointer, pid, cwd: projectDir, session_dir: sessionDir, started: stamp,
+      }));
+      return spawnSync(process.execPath, [STRIP_PATH], {
+        input: JSON.stringify({ session_id: sessionId, workspace: { project_dir: projectDir, current_dir: projectDir } }),
+        encoding: 'utf8',
+        env: { ...process.env, HOME: home, USERPROFILE: home, NO_COLOR: '1' },
+      });
+    };
+    // This test process starts the reader, so it is the reader's host. A run whose
+    // pid is this process belongs to it. The process that started the tests does not.
+    assert.match(run(process.pid, 'sess-1').stdout, /^◆ kane run ▸ step 1/);
+    const saved = JSON.parse(fs.readFileSync(path.join(base, 'agent-config', 'strip-state.json'), 'utf8'));
+    assert.deepEqual(Object.keys(saved), ['session:sess-1']);
+    // Another session looks at the same project while that run is live. The run
+    // was started outside its process tree, so it shows nothing and remembers nothing.
+    if (process.platform !== 'win32') {
+      assert.equal(run(process.ppid, 'sess-2').stdout, '');
+      const after = JSON.parse(fs.readFileSync(path.join(base, 'agent-config', 'strip-state.json'), 'utf8'));
+      assert.deepEqual(Object.keys(after), ['session:sess-1']);
+    }
+  } finally {
+    fs.rmSync(home, { recursive: true, force: true });
+  }
 });
