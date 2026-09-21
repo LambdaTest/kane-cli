@@ -141,7 +141,7 @@ Exit code 2 means nothing ran: that is a `🟡 Didn't start` card, not a failure
 
 ### 1.7 After the first result: three choices, then save
 
-On a first session only, right after the first result card, ask the three choices from `references/first-run.md` §4 (watch mode, where results go, one-off or saved suite) and save the answers as `references/agent-config.md` describes. In Claude Code, once that is done, offer the live status strip once (`references/live-strip.md`). On every later session none of this is asked again.
+On a first session only, right after the first result card, ask the three choices from `references/first-run.md` §4 (watch mode, where results go, one-off or saved suite) and save the answers as `references/agent-config.md` describes. In Claude Code the live status strip is a fourth choice in the same round: recommended, asked once, and never turned on without a yes (`references/live-strip.md`). On every later session none of this is asked again.
 
 ---
 

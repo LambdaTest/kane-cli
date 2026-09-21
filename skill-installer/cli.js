@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 
 import { ALLOWED, configPath, mergePrefs, readConfig, seedConfig, writeConfig } from "./lib/agent-config.mjs";
 import { disableStrip, enableStrip, stripStatus } from "./lib/strip-install.mjs";
+import { STRIP_QUESTION, askLine, parseYesNo, recordOffer, shouldAskStrip } from "./lib/strip-prompt.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -29,7 +30,7 @@ const TARGETS = [
 
 const HOST_NAMES = { "claude-code": "Claude Code" };
 
-function install() {
+async function install() {
   if (!existsSync(SOURCE_DIR)) {
     console.error("Error: skills directory not found in package.");
     process.exit(1);
@@ -77,6 +78,43 @@ function install() {
   console.log('  "check that the home page loads on my app"');
   console.log("Your agent will check that kane-cli is ready, run it, and show you the result.");
   console.log("Preferences live in ~/.testmuai/kaneai/agent-config/");
+
+  await offerStrip();
+}
+
+// The live strip is never on by default. A person at a terminal is asked once,
+// with yes as the recommended answer. Unattended installs skip this entirely.
+async function offerStrip() {
+  let ask = false;
+  try {
+    ask = shouldAskStrip({
+      stdinTTY: Boolean(process.stdin.isTTY),
+      stdoutTTY: Boolean(process.stdout.isTTY),
+      env: process.env,
+      claudeInstalled: existsSync(join(HOME, ".claude")),
+      config: readConfig(HOME),
+    });
+  } catch {
+    ask = false;
+  }
+  if (!ask) return;
+
+  console.log();
+  console.log(STRIP_QUESTION);
+  const answer = await askLine("Turn it on? (recommended) [Y/n] ");
+  try {
+    if (answer !== null && parseYesNo(answer)) {
+      const { backup } = enableStrip({ home: HOME, host: "claude-code", binSource: STRIP_SOURCE, nodePath: process.execPath });
+      console.log("The live strip is on for Claude Code. It shows in new sessions while kane-cli runs.");
+      if (backup) console.log(`A copy of your settings from before this change is at ${backup}`);
+      console.log(`To undo: npx ${PACKAGE} strip disable`);
+    } else {
+      recordOffer(HOME);
+      console.log(`Left off. To turn it on later: npx ${PACKAGE} strip enable`);
+    }
+  } catch (err) {
+    console.log(`The live strip was not turned on: ${err.message}`);
+  }
 }
 
 function uninstall() {
@@ -219,7 +257,10 @@ const rest = process.argv.slice(3);
 
 switch (command) {
   case "install":
-    install();
+    install().catch((err) => {
+      console.error(err && err.message ? err.message : String(err));
+      process.exit(1);
+    });
     break;
   case "uninstall":
   case "remove":

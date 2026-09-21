@@ -39,7 +39,7 @@ They follow the person across agents and projects, and they survive a skill rein
 | `onboarding.asked` | list of `watch`, `results`, `purpose` | What was already asked. Never ask these again |
 | `onboarding.first_run_explained` | boolean | The tour was shown |
 | `onboarding.completed_at` | ISO timestamp | Absent means this is a first session |
-| `strip.<host>` | object | Live status strip consent, per host. `<host>` is your `KANE_CLI_USER_AGENT` value. See `references/live-strip.md` |
+| `strip.<host>` | object | Live status strip consent, per host. `<host>` is your `KANE_CLI_USER_AGENT` value. Off by default. `offered_at` set means the person was already asked: never ask again. See `references/live-strip.md` |
 
 **The CLI owns its own settings.** The results project and folder, the target, the device and the app live in kane-cli's config and are changed with `kane-cli config ...`. Never copy them here. For the results location this file records only that you asked (`"results"` in `asked`).
 

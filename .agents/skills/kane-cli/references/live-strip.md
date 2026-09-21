@@ -32,19 +32,28 @@ If any of these is missing, do not offer the strip. Nothing else changes: the st
 - **Typed text is never echoed.** A typing step shows as `typing in <field>`.
 - It refreshes every two seconds. It starts showing a run once kane-cli has created the session, which takes roughly 10 to 30 seconds after launch (the browser has to start first). Until then the person sees their normal status line. While a step is still working, the line shows the last finished action, marked `last:`.
 
-## 3. Offering it
+## 3. Asking for it: never on by default
 
-Offer it **once, right after the first run's payoff and the three choices**, when the person has just felt the wait:
+The strip is **off until the person says yes**. Nothing turns it on for them: not the installer running unattended, not you. It is a recommended choice, and you ask it as one.
+
+**When to ask.** Once, in Claude Code, when section 1's needs are met and the agent config shows `strip.claude-code.offered_at` is empty:
+
+- On a first session it is the **fourth choice**, asked together with the three in `references/first-run.md` §4, right after the first result, when the person has just felt the wait.
+- For someone who finished onboarding before the strip existed, ask once after their next result card.
+
+**How to ask.** With your question tool, recommended option first:
 
 ```text
-Next time, want to watch runs live in your status bar? It shows the current step while kane-cli works, keeps your existing status line, and turns off with one command.
+Want to watch runs live in your status bar?
+  1. Turn it on (Recommended): one line names the current step while kane-cli works. It keeps your current status line, shows only in the session that started the run, and turns off with one command. It edits ~/.claude/settings.json and keeps a backup.
+  2. Not now
 ```
 
-Record the offer in the agent config (`strip.claude-code.offered_at`) so you never offer twice. Turn it on only after a clear yes.
+**Then.** On yes, run `strip enable` (section 4). On no, do nothing. Either way record `strip.claude-code.offered_at` in the agent config, so you never ask twice. The person can always turn it on later by asking, or with the command in section 4. If the installer already asked (it does so when run by hand in a terminal), `offered_at` is set and you do not ask again.
 
 ## 4. Turning it on and off
 
-These commands change the person's Claude Code settings, so run them only on their say-so. Tell them what will change first: `This edits ~/.claude/settings.json (a backup is kept) and adds one small script under ~/.testmuai/kaneai/bin/.`
+These commands change the person's Claude Code settings, so run them only after a clear yes. If you did not just ask the question above, tell them what will change first: `This edits ~/.claude/settings.json (a backup is kept) and adds one small script under ~/.testmuai/kaneai/bin/.`
 
 ```bash
 npx @testmuai/kane-cli-skill strip enable      # turn it on

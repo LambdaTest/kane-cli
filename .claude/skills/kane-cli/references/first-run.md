@@ -81,10 +81,11 @@ Ask these right after the first payoff card. They read as tailoring, not as a to
 | 1 | "That ran with the browser visible. Keep it that way?" Options: keep showing the window · run quietly in the background · just show me results | `preferences.watch` = `visible` · `quiet` · `results-only` |
 | 2 | "Results went to <project> / <folder>. Keep it there?" Options: yes · change it (applies to every kane-cli session from now on) | Nothing here. A change goes through the flow in `references/test-manager.md`. Record only that you asked |
 | 3 | "One-off checks while you code, or a saved suite you re-run?" Options: one-off checks · a saved suite · ask me each time | `preferences.purpose` = `one-off` · `suite` · `ask` |
+| 4, Claude Code only | "Want to watch runs live in your status bar?" Options: turn it on (Recommended) · not now. Ask it only when `references/live-strip.md` §1 is met and it was never asked | On yes, turn the strip on. Record `strip.claude-code.offered_at` either way. It is never on by default |
 
 How to ask:
 
-- **Your environment has a question tool:** use it, all three in one call, with the current value as the first option.
+- **Your environment has a question tool:** use it, all of them in one call, with the current value as the first option (for the live strip, the recommended option first).
 - **Chat only:** one message, numbered, with the default marked on each, and say that replying "ok" keeps all three.
 
 What the answers change:
