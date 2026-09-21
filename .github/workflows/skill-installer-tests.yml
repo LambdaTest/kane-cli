@@ -1,0 +1,59 @@
+name: Skill installer tests
+
+# Runs the skill installer's test suite on every OS people install it on.
+# It covers the installer commands, the live strip reader, and both preflight
+# scripts: preflight.sh on Linux and macOS, preflight.ps1 on Windows.
+
+on:
+  pull_request:
+    paths:
+      - "skill-installer/**"
+      - ".github/workflows/skill-installer-tests.yml"
+  push:
+    branches: [main]
+    paths:
+      - "skill-installer/**"
+      - ".github/workflows/skill-installer-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: ${{ matrix.os }} · node ${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: ["18", "22"]
+    defaults:
+      run:
+        working-directory: skill-installer
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Run tests
+        run: npm test
+
+      - name: The three skill copies are identical
+        if: runner.os != 'Windows'
+        working-directory: .
+        run: |
+          diff -r skill-installer/skills .claude/skills/kane-cli
+          diff -r skill-installer/skills .agents/skills/kane-cli
+
+      - name: Package contents
+        if: runner.os != 'Windows'
+        run: |
+          npm pack --dry-run 2>&1 | tee pack.txt
+          grep -q "strip/kane-strip.mjs" pack.txt
+          grep -q "lib/strip-install.mjs" pack.txt
+          grep -q "skills/scripts/preflight.sh" pack.txt
+          grep -q "skills/scripts/preflight.ps1" pack.txt
+          if grep -q " test/" pack.txt; then echo "tests must not ship"; exit 1; fi

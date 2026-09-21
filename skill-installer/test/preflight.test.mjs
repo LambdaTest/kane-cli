@@ -11,6 +11,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+// preflight.sh needs a POSIX shell. On Windows its twin, preflight.ps1, is
+// covered by preflight-ps1.test.mjs instead.
+const posix = process.platform === 'win32' ? test.skip : test;
 const SCRIPT = path.resolve(here, '..', 'skills', 'scripts', 'preflight.sh');
 const SYSTEM_PATH = '/usr/bin:/bin:/usr/sbin:/sbin';
 const BASE_SECTIONS = [
@@ -93,7 +96,7 @@ function listen(port) {
   });
 }
 
-test('prints the nine base sections in order, with raw output and exit codes', (t) => {
+posix('prints the nine base sections in order, with raw output and exit codes', (t) => {
   const sb = sandbox(t);
   const res = run(sb);
   assert.equal(res.status, 0, res.stderr);
@@ -107,7 +110,7 @@ test('prints the nine base sections in order, with raw output and exit codes', (
   assert.deepEqual(body.settings, ['{"fake":"settings"}', 'exit=0']);
 });
 
-test('runs clean under dash when it is installed', (t) => {
+posix('runs clean under dash when it is installed', (t) => {
   if (!fs.existsSync('/bin/dash')) return t.skip('no /bin/dash');
   const sb = sandbox(t);
   const res = run(sb, ['--mobile', 'simulator', '--grid'], { shell: '/bin/dash' });
@@ -116,7 +119,7 @@ test('runs clean under dash when it is installed', (t) => {
   assert.deepEqual(parse(res.stdout).order, [...BASE_SECTIONS, 'mobile', 'grid']);
 });
 
-test('a missing kane-cli prints missing, keeps every section and exits 0', (t) => {
+posix('a missing kane-cli prints missing, keeps every section and exits 0', (t) => {
   const sb = sandbox(t, { withCli: false });
   const probe = spawnSync('/bin/sh', ['-c', 'command -v kane-cli'], { env: { PATH: sb.path } });
   if (probe.status === 0) return t.skip('a real kane-cli lives on the system PATH');
@@ -131,7 +134,7 @@ test('a missing kane-cli prints missing, keeps every section and exits 0', (t) =
   assert.ok(body.tests.includes('count=0'));
 });
 
-test('--mobile emulator adds the mobile section with the doctor output', (t) => {
+posix('--mobile emulator adds the mobile section with the doctor output', (t) => {
   const sb = sandbox(t);
   const res = run(sb, ['--mobile', 'emulator']);
   assert.equal(res.status, 0, res.stderr);
@@ -140,7 +143,7 @@ test('--mobile emulator adds the mobile section with the doctor output', (t) => 
   assert.deepEqual(body.mobile, ['FAKE-DOCTOR target=emulator', 'exit=0']);
 });
 
-test('--mobile with an unknown target prints invalid target', (t) => {
+posix('--mobile with an unknown target prints invalid target', (t) => {
   const sb = sandbox(t);
   const { order, body } = parse(run(sb, ['--mobile', 'tablet']).stdout);
   assert.deepEqual(order, [...BASE_SECTIONS, 'mobile']);
@@ -150,7 +153,7 @@ test('--mobile with an unknown target prints invalid target', (t) => {
   assert.deepEqual(bare.body.mobile, ['invalid target']);
 });
 
-test('--grid adds the grid section with the plugin doctor output', (t) => {
+posix('--grid adds the grid section with the plugin doctor output', (t) => {
   const sb = sandbox(t);
   const res = run(sb, ['--grid']);
   assert.equal(res.status, 0, res.stderr);
@@ -159,14 +162,14 @@ test('--grid adds the grid section with the plugin doctor output', (t) => {
   assert.deepEqual(body.grid, ['FAKE-GRID plugin=remote-execution', 'exit=4']);
 });
 
-test('unknown flags are ignored', (t) => {
+posix('unknown flags are ignored', (t) => {
   const sb = sandbox(t);
   const res = run(sb, ['--bogus', 'value', '-x']);
   assert.equal(res.status, 0, res.stderr);
   assert.deepEqual(parse(res.stdout).order, BASE_SECTIONS);
 });
 
-test('agent-config prints none when absent and the file content when present', (t) => {
+posix('agent-config prints none when absent and the file content when present', (t) => {
   const sb = sandbox(t);
   assert.deepEqual(parse(run(sb).stdout).body['agent-config'], ['none']);
 
@@ -179,7 +182,7 @@ test('agent-config prints none when absent and the file content when present', (
   assert.deepEqual(JSON.parse(body['agent-config'].join('\n')), config);
 });
 
-test('whoami, balance and settings run in parallel', (t) => {
+posix('whoami, balance and settings run in parallel', (t) => {
   const sb = sandbox(t);
   const res = run(sb);
   assert.equal(res.status, 0, res.stderr);
@@ -187,7 +190,7 @@ test('whoami, balance and settings run in parallel', (t) => {
   assert.ok(res.ms < 3000, `expected under 3000 ms, got ${res.ms} ms`);
 });
 
-test('tests section counts *_test.md files and skips node_modules and .git', (t) => {
+posix('tests section counts *_test.md files and skips node_modules and .git', (t) => {
   const sb = sandbox(t);
   const files = [
     'login_test.md',
@@ -205,7 +208,7 @@ test('tests section counts *_test.md files and skips node_modules and .git', (t)
   assert.deepEqual(parse(run(sb).stdout).body.tests, ['count=2']);
 });
 
-test('the temp work dir lives under TMPDIR and is removed afterwards', (t) => {
+posix('the temp work dir lives under TMPDIR and is removed afterwards', (t) => {
   const sb = sandbox(t);
   const res = run(sb);
   assert.equal(res.status, 0, res.stderr);
@@ -215,7 +218,7 @@ test('the temp work dir lives under TMPDIR and is removed afterwards', (t) => {
   assert.deepEqual(after, []);
 });
 
-test('env section reports ci, ssh, display, os, arch and node', (t) => {
+posix('env section reports ci, ssh, display, os, arch and node', (t) => {
   const sb = sandbox(t);
   const plain = parse(run(sb).stdout).body.env;
   assert.deepEqual(plain.map((line) => line.split('=')[0]), ['ci', 'ssh', 'display', 'os', 'arch', 'node']);
@@ -234,7 +237,7 @@ test('env section reports ci, ssh, display, os, arch and node', (t) => {
   }
 });
 
-test('chrome section prefers KANE_CLI_CHROME_PATH and echoes the override', (t) => {
+posix('chrome section prefers KANE_CLI_CHROME_PATH and echoes the override', (t) => {
   const sb = sandbox(t);
   const none = parse(run(sb).stdout).body.chrome;
   assert.equal(none.length, 2);
@@ -264,7 +267,7 @@ test('preflight.ps1 declares the same sections and keys, in the same order', () 
   assert.ok(!/[^\x00-\x7f]/.test(ps1), 'preflight.ps1 must be plain ASCII');
 });
 
-test('app section lists a listening dev port', async (t) => {
+posix('app section lists a listening dev port', async (t) => {
   const sb = sandbox(t);
   const probe = spawnSync('/bin/sh', ['-c', 'command -v lsof || command -v ss || command -v netstat'], {
     env: { PATH: sb.path },
