@@ -118,6 +118,7 @@ Mark each cell pass, fail or not applicable. "Says" means in plain words: no eve
 | # | Case | Expected |
 |---|---|---|
 | G1 | Default | Off. Only ever on after a yes |
+| G1b | Onboarding done in another agent first (run Codex, then open Claude Code) | Claude Code shows no tour and no three choices, but asks the strip question once after its first result, recommended option first. `strip.claude-code.offered_at` is set afterwards, and a third session asks nothing |
 | G2 | Turn on with an existing custom status line | Yours prints first, unchanged. Backup file written once |
 | G3 | During a run | Line appears 10 to 30 seconds in, names steps, never shows typed text |
 | G4 | **Two sessions open in the same project** | Only the session that started the run shows the line. On Windows both show it for now |

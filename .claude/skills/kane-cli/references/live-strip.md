@@ -36,10 +36,10 @@ If any of these is missing, do not offer the strip. Nothing else changes: the st
 
 The strip is **off until the person says yes**. Nothing turns it on for them: not the installer running unattended, not you. It is a recommended choice, and you ask it as one.
 
-**When to ask.** Once, in Claude Code, when section 1's needs are met and the agent config shows `strip.claude-code.offered_at` is empty:
+**When to ask.** Once, in Claude Code, in **any session** where section 1's needs are met and the agent config shows no `strip.claude-code.offered_at`. Do not tie it to the first session: onboarding is shared by every agent, so the person may have finished it in Codex or another host that has no status bar, and was never asked.
 
 - On a first session it is the **fourth choice**, asked together with the three in `references/first-run.md` §4, right after the first result, when the person has just felt the wait.
-- For someone who finished onboarding before the strip existed, ask once after their next result card.
+- On any later session (onboarding done in another agent, or before the strip existed), ask it on its own after that session's first result card, as the last thing in your turn.
 
 **How to ask.** With your question tool, recommended option first:
 

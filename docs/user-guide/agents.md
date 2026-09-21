@@ -64,7 +64,7 @@ In Claude Code you can turn on a live status strip. While a run works, one line 
 ◆ kane run ✓ passed · 12 steps · 1:54 · 58 credits
 ```
 
-It is off until you say yes. Your agent asks once, after your first run, and recommends it. The installer asks the same question when you run it by hand in a terminal. You can also manage it yourself:
+It is off until you say yes. Claude Code asks once, after your first result in it, and recommends it. That holds even if you did your first kane-cli run in another agent. The installer asks the same question when you run it by hand in a terminal. You can also manage it yourself:
 
 ```bash
 npx @testmuai/kane-cli-skill strip enable      # turn it on
