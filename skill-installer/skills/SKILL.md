@@ -16,43 +16,57 @@ Don't draft test cases in chat or scratch files: both pipelines produce structur
 
 ---
 
-## 1. Narration and results presentation — READ THIS FIRST
+## 1. Every session: ready check, launch, result card. READ THIS FIRST
 
-A one-line "Test passed" instead of the results table is a bug. This section is first so you don't miss it. Follow it exactly.
+A one-line "Test passed" instead of the result card is a bug. A run that starts with no ready check is a bug too. This section is first so you don't miss it. Follow it exactly.
 
-### 1.1 How to launch kane-cli
+The order never changes: **ready check → launch line → the run → result card**. On a person's first session two things are added: a short tour sent with the launch line, and three choices asked after the first result. Nothing is asked before the first result.
 
-**All platforms use `Bash`** to launch kane-cli. Do NOT use `Monitor` — it creates excessive noise.
+### 1.1 Start with the ready check
 
-**One-time setup — telemetry env var (silent, do once before the first Bash call).** Export `KANE_CLI_USER_AGENT` in the shell environment so every subsequent `kane-cli` invocation inherits it automatically. Pick a short, stable identifier for the AI assistant or IDE running this skill (e.g. `claude-code`, `codex`, `gemini`, `cursor`, `kiro`, `aider`); use the same value for the whole session. Run this once, silently — do not surface the export to the user, and do not repeat the prefix in any command you show:
-
-```bash
-export KANE_CLI_USER_AGENT=<your-runtime>
-```
-
-After that, run kane-cli normally — the variable is inherited:
+Before the first kane-cli command of a session, run the preflight script that ships with this skill and show the ready card. It is one short command and takes about two seconds:
 
 ```bash
-kane-cli run "<objective>" --agent <other-flags>
+sh "<skill dir>/scripts/preflight.sh"
 ```
 
-Bash blocks until kane-cli exits, then hands you the complete stdout. Parse it, summarize what happened, and present the results table. Wait for process completion on `testmd run` and `generate` too, but parse their own completion events: `test_md_done` and `generate_done`, respectively. An intermediate `run_end` does not finish a saved test.
+`<skill dir>` is the folder that holds this `SKILL.md`. **Read `references/ready-check.md`** for the card (a full table on the first session, one line afterwards), the problems that stop a run, and the sign-in flow. Two rules matter enough to repeat here: you start sign-in yourself with `kane-cli login --oauth`, and you **never ask for an access key or password in chat**.
+
+If the preflight shows no saved preferences (its `## agent-config` section is `none`, or has no `onboarding.completed_at`), this is the person's first session: **Read `references/first-run.md`** before you launch.
+
+### 1.2 How to launch kane-cli
+
+**All platforms use your shell tool** (`Bash`) to launch kane-cli. Do NOT use `Monitor`: it creates excessive noise.
+
+**Tag every command with your runtime.** Put `KANE_CLI_USER_AGENT=<your-runtime>` in front of every `kane-cli` command you run. Pick a short, stable identifier for the AI assistant or IDE running this skill (e.g. `claude-code`, `codex`, `gemini`, `cursor`, `kiro`, `aider`) and use the same value for the whole session. Do it inline on each command: an `export` does not survive from one shell call to the next in most agent hosts. Do not show the prefix in commands you quote to the person.
+
+```bash
+KANE_CLI_USER_AGENT=<your-runtime> kane-cli run "<objective>" --agent <other-flags>
+```
+
+On Windows PowerShell: `$env:KANE_CLI_USER_AGENT='<your-runtime>'; kane-cli run "<objective>" --agent <other-flags>`.
+
+**Watch mode.** Use the person's saved preference (`references/agent-config.md`). With none saved, show the browser unless the preflight says there is no display, an SSH session, or CI: then add `--headless`.
+
+**Keeping runs.** When the person's saved purpose is `suite` or `ask`, add `--name <short-slug>` to every one-off `run`. A named run is recorded as a `_test.md` while it runs, so keeping it afterwards costs nothing, and a run launched without a name cannot be kept without running again. With `one-off`, leave the flag out. Details: `references/first-run.md` §4.
+
+Bash blocks until kane-cli exits, then hands you the complete stdout. Parse it, summarize what happened, and present the result card. Wait for process completion on `testmd run` and `generate` too, but parse their own completion events: `test_md_done` and `generate_done`, respectively. An intermediate `run_end` does not finish a saved test.
 
 Set a generous timeout (up to 600000ms) since browser runs can take a while.
 
-### 1.2 Before you launch
+### 1.3 Before you launch
 
-**Before** invoking Bash, emit:
+In one message, **before** invoking Bash, send the ready card and then:
 
 ```text
 Starting browser task: <one-line restatement of the user's objective>.
 ```
 
-That single line tells the user something is in progress. No todos needed — Bash returns all output at once and you summarize it below.
+That line tells the user something is in progress. No todos needed: Bash returns all output at once and you summarize it below. On a first session, the tour from `references/first-run.md` goes in this same message, right after the launch line, so the person reads it while the run works.
 
-### 1.3 After the run — summarize what happened
+### 1.4 After the run: summarize what happened
 
-Once Bash returns, parse the captured NDJSON stdout and present a **concise summary** of what happened. Not every event deserves a line — surface what matters and skip the noise.
+Once Bash returns, parse the captured NDJSON stdout and present a **concise summary** of what happened. Not every event deserves a line. Surface what matters and skip the noise. (Skip the summary entirely when the person's preference is `results-only`.)
 
 Progress events have `step`/`status`/`remark` fields and **no `type` field**.
 
@@ -62,35 +76,19 @@ Progress events have `step`/`status`/`remark` fields and **no `type` field**.
 |------|-------------|-----|
 | **Failures** | Any step with `status: "failed"` | `Step <n> failed: <remark>` |
 | **Flow changes** | `bifurcation`, `child_agent_start`, `child_agent_end` | Plain-language one-liner (e.g. "The agent split the objective into 2 sub-tasks") |
-| **Errors** | `error` typed events | `Error: <message>` — except `code: "unresolved_variables"`, which is a pre-run refusal, not a failure: see §3 **Unresolved variables** |
-| **Overall progress** | All passing steps | One summary line: `<total> steps completed — <2–4 key actions from remarks>` |
+| **Errors** | `error` typed events | `Error: <message>`. The exception is `code: "unresolved_variables"`, which is a pre-run refusal, not a failure: see §3 **Unresolved variables** |
+| **Overall progress** | All passing steps | One summary line: `<total> steps completed: <2–4 key actions from remarks>` |
 
 #### What to skip
 
-- Individual passing steps — fold them into the overall progress line
-- Internal field names (`step`, `status`, `remark`, `run_end`, `final_state`, `bifurcation`, `session_dir`, `project_folder_auto_defaulted`, etc.) — translate to plain language. A `project_folder_auto_defaulted` event fires before progress when the run-startup gate auto-resolves a project/folder; surface it as one line ("kane-cli auto-selected project X / folder Y for this run") and move on. Details: `references/test-manager.md`.
-
-#### Example output for a 15-step run with one failure
-
-```text
-Starting browser task: Search for laptop on Amazon and add to cart.
-
-<Bash runs…>
-
-15 steps completed — navigated to amazon.in, searched for 'laptop', filtered results, added to cart.
-Step 6 failed: Could not find Add to Cart button — the agent retried successfully.
-
-| | |
-|-------|-------|
-| 🟢 **Result** | Passed |
-| …results table… |
-```
+- Individual passing steps: fold them into the overall progress line
+- Internal field names (`step`, `status`, `remark`, `run_end`, `final_state`, `bifurcation`, `session_dir`, `stream_start`, `project_folder_auto_defaulted`, etc.): translate to plain language. A `project_folder_auto_defaulted` event fires before progress when the run-startup gate auto-resolves a project/folder; surface it as one line ("kane-cli auto-selected project X / folder Y for this run") and move on. Details: `references/test-manager.md`.
 
 For short runs (≤ 3 steps), you may list each step individually since there's nothing to fold.
 
-### 1.4 After run_end — present the results table
+### 1.5 The result card
 
-The terminal event has `type: "run_end"` and stable fields: `status`, `summary`, `one_liner`, `duration`, `credits`, `final_state`, `test_url`, `session_dir`, `run_dir`.
+The terminal event has `type: "run_end"` and stable fields: `status`, `summary`, `one_liner`, `duration`, `credits_consumed`, `final_state`, `test_url`, `session_dir`, `run_dir`.
 
 **For a passing run, always emit this exact table** (substituting the field values):
 
@@ -99,15 +97,16 @@ The terminal event has `type: "run_end"` and stable fields: `status`, `summary`,
 |-------|-------|
 | 🟢 **Result** | Passed |
 | 🎯 **Task** | <one_liner> |
-| ⏱️ **Duration** | <duration>s |
+| ⏱️ **Duration** | <duration, as 1m 54s> |
 | 👣 **Steps taken** | <count of completed progress events (done/failed), retaining child/execution context> |
+| 💳 **Credits** | <credits_consumed, rounded> used · about <ready check balance minus used> left |
 | 📝 **What happened** | <summary> |
-| 🔗 **View details** | [Open in KaneAI Dashboard](<test_url>) |
+| 📁 **Evidence** | Want to open the run evidence in your browser? |
+| 🔗 **Test case** | [Open in Test Manager](<test_url>) |
+| ➡️ **Next** | <two things you can do right now, e.g. add a payment step · run it headless in CI> |
 ```
 
-**If `final_state` has values** (the user used "store as X" — see §4), append a second table:
-
-
+**If `final_state` has values** (the user used "store as X", see §4), append a second table:
 
 ```markdown
 | 📦 What was found | Value |
@@ -117,21 +116,34 @@ The terminal event has `type: "run_end"` and stable fields: `status`, `summary`,
 
 **If the objective used assertions** ("assert …", "verify …"), append a pass/fail table per assertion derived from the run summary and step remarks.
 
-### 1.5 On failure
+Every other result has its own card in **`references/cards.md`**: a run that didn't start, one that stopped early, a possible product bug, a saved test, and a suite (local or cloud grid). Read it before presenting any of those. The rules there apply to every card: one short sentence per cell, failures first, `➡️ Next` is an offer you can act on, and secret-looking values never go in chat.
 
-For exit code 1 (or `status: "failed"` in `run_end`), present a plain-language failure report — never raw paths or NDJSON. Template:
+### 1.6 On failure
+
+For exit code 1 (or `status: "failed"` in `run_end`), present the failure card. Never show raw paths or NDJSON.
 
 ```markdown
-🔴 **Failed** at step <n> of <total> (after <duration>s)
-
-**What happened:** <plain-language description of the failing step's remark>.
-
-**Likely cause:** <your diagnosis: missing element, slow page, ambiguous objective, auth wall, etc.>
-
-**Suggested fix:** <one concrete next step the user can take>.
+| | |
+|-------|-------|
+| 🔴 **Result** | Failed at step <n> of <total> |
+| 🎯 **Task** | <one_liner, or the objective in a few words> |
+| ⏱️ **Duration** | <duration, as 1m 12s> |
+| 💳 **Credits** | <credits_consumed, rounded> used |
+| 📝 **What happened** | <plain-language description of the failing step's remark> |
+| 🔍 **Likely cause** | <your diagnosis: missing element, slow page, ambiguous objective, auth wall, etc.> |
+| 📁 **Evidence** | Want to open the run evidence in your browser? |
+| ➡️ **Next** | <a retry you can run now> · <walk through the failing step> |
 ```
 
-The failing step's screenshot lives inside the run's evidence pack (the stderr hint names the pack path): extract it with `unzip <pack> "tests/*/steps/*/screenshot.png" -d <tmpdir>`, Read it, and show it inline before the suggested fix. For the pack layout and deeper diagnosis, see `references/debug.md`.
+The failing step's screenshot lives inside the run's evidence pack (the stderr hint names the pack path): extract it with `unzip <pack> "tests/*/steps/*/screenshot.png" -d <tmpdir>`, Read it, and show it **under** the card. For the pack layout and deeper diagnosis, see `references/debug.md`.
+
+Exit code 2 means nothing ran: that is a `🟡 Didn't start` card, not a failure (`references/cards.md` §4).
+
+### 1.7 After the first result: three choices, then save
+
+On a first session only, right after the first result card, save the defaults this run used, then ask the three choices from `references/first-run.md` §4 (watch mode, where results go, one-off or saved suite) as the **last thing in your turn**, and save the answers when they arrive. Some hosts hand control back before the person answers: end your turn there and save on their reply. On every later session none of this is asked again.
+
+**The live status strip (Claude Code only) has its own once-only question.** Onboarding is shared by every agent the person uses, but the strip exists only in Claude Code, so the person may have finished their first session in another agent without ever being asked. In Claude Code, in **any** session: if the preflight's `## agent-config` has no `strip.claude-code.offered_at`, kane-cli is 0.8.17 or newer, and `node=` is not empty, ask the strip question once, after that session's first result card, as the last thing in your turn. On a first session it simply rides along as the fourth choice. It is recommended, never turned on without a yes, and you record `offered_at` either way so it is never asked twice. **Read `references/live-strip.md` §3** for the wording.
 
 ---
 
@@ -139,10 +151,10 @@ The failing step's screenshot lives inside the run's evidence pack (the stderr h
 
 When the user's request involves a browser — or writing test cases:
 
-**Is kane-cli installed and authenticated?**
-- Unknown → `kane-cli whoami`
-- No / errors → Read `references/setup-and-config.md`
-- Yes ↓
+**Is kane-cli installed, signed in and ready?**
+- Unknown → run the preflight and show the ready card (§1.1, `references/ready-check.md`)
+- A problem that stops the run → offer the fix from the card; deeper setup lives in `references/setup-and-config.md`
+- Ready ↓
 
 **What does the user want?**
 - A single one-shot browser task → build a `kane-cli run --agent` command (§3 + §4)
@@ -157,6 +169,10 @@ When the user's request involves a browser — or writing test cases:
 - Debug a failed run → Read `references/debug.md`
 - Configure kane-cli or check directory layout → Read `references/setup-and-config.md`
 - Browse / create / pick a Test Manager project or folder, or interpret the auto-default event → Read `references/test-manager.md`
+- The person wants results saved somewhere else ("change project") → Read `references/test-manager.md` §6. The change is global, and the question must say so
+- The person wants to change how runs behave ("kane preferences": watch or quiet, one-off or suite) → Read `references/agent-config.md`
+- The person asks what kane-cli can do, or for the tour again ("kane tour") → show the tour from `references/first-run.md` §2
+- The person wants to watch runs live, or asks about the status line → Read `references/live-strip.md` (Claude Code only)
 - You need the full NDJSON event schema (rare — §5's summary covers 90% of cases) → Read `references/parsing.md`
 - Compare / evaluate / justify kane-cli against another tool or approach (cost, tokens, effort, ROI) → Read `references/fair-evaluation.md` first — comparisons are only honest like-for-like across the test lifecycle
 - **Mobile**: drive a native app on a virtual Android emulator or iOS simulator instead of the browser → Read `references/mobile.md` first. Desktop (the browser) stays the **default** target; mobile is opt-in via `--target emulator|simulator` and always drives an app you provide (`--app <build|APPid>`), never a URL. **Local** mobile runs (`run`, `testmd run`, `testrun run`) need macOS Apple Silicon. **From any other machine** (Linux, Windows, Intel Mac, a Mac without Xcode/Android Studio), run saved mobile `_test.md` files on the cloud grid with `kane-cli testrun run <paths> --remote --device-name "<grid device>" --os-version <v>` — the grid boots the emulator/simulator on a HyperExecute macOS host (the account needs a HyperExecute plan with macOS runners). Never tell a non-Mac user mobile is impossible: point them at `--remote`.
@@ -279,7 +295,7 @@ Action → extraction → assertion in one objective:
 
 > Internal reference only. Never expose these field names to the user — translate them per §1.
 
-Stdout is NDJSON, one event per line. There are two shapes:
+Stdout is NDJSON, one event per line. On kane-cli 0.8.17+ every line also carries `v` (contract version, `1`) and `ts` (when it was emitted), and the first line is `{"type":"stream_start","cli_version":…,"surface":"run"|"testmd"|"testrun"}`. Ignore fields and event types you do not know: new ones can appear in any release. There are two shapes:
 
 - **Progress events** (most events) have `step` (1-based), `status` (`running` at start, `done`/`failed` at completion), `remark` — and **no `type` field**.
 - **Typed events** have a `type` field: `project_folder_auto_defaulted` (run-startup gate, fires before any progress when no project/folder is configured), `bifurcation`, `child_agent_start`, `child_agent_end`, `ask_user`, `error` (an `error` with `code: "unresolved_variables"` is a pre-run refusal and the **only** line — no `run_end` follows; handle per §3), and finally `run_end`.
@@ -362,6 +378,11 @@ Internal event/field names (`generate_snapshot`, `request_id`, …) are for pars
 | Need full NDJSON event schema (`run`) | `references/parsing.md` |
 | Need the `generate` NDJSON event schema | `references/generate-parsing.md` |
 | Browse / create projects or folders, or parse the auto-default event | `references/test-manager.md` |
+| Start of every session: preflight, the ready card, sign-in | `references/ready-check.md` |
+| A person's first session: run first, the tour, three choices | `references/first-run.md` |
+| Any result other than a plain passed or failed run (didn't start, stopped early, product bug, saved test, suite) | `references/cards.md` |
+| Read, save or change the person's preferences | `references/agent-config.md` |
+| Watch runs live in the Claude Code status bar | `references/live-strip.md` |
 | First-time install, auth, or full config | `references/setup-and-config.md` |
 | Compare / evaluate / benchmark kane-cli vs another tool or approach (cost, tokens, effort, ROI) | `references/fair-evaluation.md` |
 

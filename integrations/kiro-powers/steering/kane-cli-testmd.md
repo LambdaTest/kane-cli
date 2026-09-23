@@ -65,7 +65,9 @@ kane-cli testmd run amazon_test.md --agent
 
 The first run authors every step (the agent figures the page out). The second run replays each step from `output-amazon/.internal/` in seconds. Commit both the `_test.md` and the `output-amazon/` directory.
 
-Before the test launches, `kane-cli testmd run` validates the cached Test Manager project/folder. If none is configured (or the cached value is stale/invalid), the run-startup gate auto-defaults a project/folder and emits a `project_folder_auto_defaulted` event on stdout — surface it as a one-line note ("Kane CLI auto-selected project X / folder Y for this test") and continue parsing. Browse / create explicitly with `kane-cli projects list|create` and `kane-cli folders list|create` (see the `kane-cli-run` steering file).
+Before the test launches, `kane-cli testmd run` validates the cached Test Manager project/folder. If none is configured (or the cached value is stale/invalid), the run-startup gate auto-defaults a project/folder and emits a `project_folder_auto_defaulted` event on stdout. Surface it as a one-line note ("Kane CLI auto-selected project X / folder Y for this test") and continue parsing. Browse / create explicitly with `kane-cli projects list|create` and `kane-cli folders list|create --project <id>` (see the `kane-cli-run` steering file).
+
+Like every session, a `testmd` session starts with the ready check and ends with a result card (POWER.md → Every session). The saved test card is at the end of this file.
 
 ---
 
@@ -556,3 +558,51 @@ Headings marked `@db`, `@api`, `@js`, `@smartui`, `@network_query`, or `@network
 Structured control flow uses balanced heading markers: `@if`, `@elif`, `@else`, `@end-if`, `@while`, `@end-while`. An `@else` must be last in its conditional; end markers must match the opened block type. These are distinct from natural-language conditionals. Markers are excluded from the step body hash. Only one replay-only kind is allowed per step, and an import cannot also be marked replay-only.
 
 Under `--agent`, wait for `test_md_done` (file-level `overall_status`, `duration_s`, `session_id`, optional `share_url`) and process exit. Individual `run_end` events do not complete the file.
+
+## The saved-test stream (what `testmd run --agent` prints)
+
+> **Internal reference only.** Never show these event or field names to the user.
+
+This stream is **not** the one-shot `run` stream. Every line is typed, and the file-level events wrap a small inner stream per step. Read it for the saved test card below.
+
+| Event | Key fields | Use |
+|---|---|---|
+| `stream_start` *(0.8.17+)* | `cli_version`, `surface: "testmd"` | First line (see the stream contract in the `kane-cli-run` steering file) |
+| `test_md_step_start` | `step_index` (1-based), `heading`, `ref` | A `## ` step began. `heading` is its title |
+| inner step events | `bifurcation`, `run_start`, `step_start {index}`, `step_event {index, event, detail}`, `step_end {index, status, summary, kind}`, `describe_trigger`, `run_end` | What happened inside the step. A `step_event` with `event: "replay_started"` means the step is replaying its recording. A `bifurcation` instead means it is being authored. The inner `run_end` closes the step, not the file |
+| `test_md_step_end` | `step_index`, `status`, `duration_s`, `failed_sub_step_index` | The step finished. `status` is `passed`, `failed` or `skipped` |
+| `test_md_evidence_ingest`, `test_md_bundle_sync` | `status` | Informational, before the summary |
+| `test_md_summary` | `overall_status`, `duration_s`, `steps: {total, passed, failed, skipped, replay_decisions, author_decisions}` | The numbers for the card. `replay_decisions` is how many steps replayed, `author_decisions` how many were authored |
+| `test_md_done` | `overall_status`, `duration_s`, `session_id`, `share_url?` | Completion. Always the last line. `share_url` is absent on a pure replay |
+
+Most lines are inner `step_event`s (screenshots, reasoning, actions). Skip them unless you are diagnosing a failure: for the card you need only the step starts and ends, the summary and the completion event. On a failure, the failing step is the `test_md_step_end` with `status: "failed"`, its title comes from the matching `test_md_step_start`, and the last inner `step_end` or `step_event` before it says what went wrong.
+
+On kane-cli 0.8.17+ every line also carries `v` and `ts`. Ignore fields and event types you do not know.
+
+## The saved test card
+
+Present every `testmd run` result as this card. The rules for every card in the `kane-cli-run` steering file (Presenting results) apply here too.
+
+```markdown
+| | |
+|---|---|
+| 🟢 **Result** | Passed · <passed> of <total> steps |
+| 🧾 **Test** | <file name> |
+| ⏱️ **Duration** | <21s> |
+| 🔁 **How it ran** | <see below> |
+| 🔗 **Share link** | [Open](<share link>) · valid 7 days |
+| 📁 **Evidence** | Want to open the run evidence in your browser? |
+| ➡️ **Next** | <offer one> · <offer two> |
+```
+
+**🔁 How it ran**, from the replayed and authored step counts in the summary:
+
+| Counts | Say |
+|---|---|
+| All replayed | `Replayed from its recording, no AI cost` |
+| All authored | `Recorded for the first time. The next run replays in seconds` |
+| Both | `<r> steps replayed, <a> re-recorded because the test changed from there` |
+
+The 🔗 row appears only when there is a share link (pure replays have none). After a first authoring run, a good ➡️ offer is: `Commit output-<stem>/ so teammates and CI replay the same recording`.
+
+A failed saved test uses the failed-run rows (🔴 `Failed at step <n> of <total> · "<step heading>"`, 📝 What happened, 🔍 Likely cause) and says how many later steps were skipped. Failed replays are always investigated: read the finding from the evidence pack before writing 🔍.

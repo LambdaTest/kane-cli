@@ -16,9 +16,13 @@ npm install -g @testmuai/kane-cli
 
 ### Check Auth Status
 
+The preflight script covers this along with credits and settings in one call (`references/ready-check.md`). On its own:
+
 ```bash
 kane-cli whoami
 ```
+
+`whoami` prints a box, not JSON, even when piped. Its `Expires` line is a short-lived token that renews itself: never show it to the person.
 
 If this shows "not configured" or errors, run login:
 
@@ -40,6 +44,8 @@ kane-cli login --oauth
 ```
 
 This opens the browser for OAuth consent and waits for the callback. Works in both TTY and non-TTY (agent) mode.
+
+**This is the sign-in you run for the person.** Offer to open the sign-in page, then run the command yourself with a generous timeout: it returns once they finish in the browser. When there is no display (an SSH session, a container), ask them to run `kane-cli login` in their own terminal instead. **Never ask for an access key or password in chat**: it would land in the transcript. The full flow is in `references/ready-check.md` §5.
 
 ### Login (Interactive — TTY only)
 

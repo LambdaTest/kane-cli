@@ -8,17 +8,12 @@ The single rule that governs everything below: **wait for the terminal `run_end`
 
 # Decision tree (run before every invocation)
 
-When a dependency check fails, run the fix yourself. Only ask the user when the action genuinely needs human input (credentials, project / folder IDs the user must look up).
+When a dependency check fails, run the fix yourself. Only ask the user when the action genuinely needs them (finishing sign-in in the browser, a project or folder they must pick).
 
-**Is `kane-cli` installed?**
-- Unknown → run `kane-cli --version`.
-- No → run `npm install -g @testmuai/kane-cli`. If npm fails with `EACCES` or similar, see POWER.md Step 1.
-- Yes → continue.
-
-**Is the user signed in?**
-- Unknown → run `kane-cli whoami`.
-- No → ask which auth method (basic / OAuth) and run `kane-cli login --username … --access-key …` or `kane-cli login --oauth`. Never fabricate credentials.
-- Yes → continue.
+**Is `kane-cli` installed, signed in and ready?**
+- Unknown → run the ready check and show the ready card (POWER.md → Every session). On a first session, load the **`kane-cli-first-run`** steering file before launching.
+- A problem that stops the run → offer the fix from the card. Not installed: run `npm install -g @testmuai/kane-cli` (if npm fails with `EACCES` or similar, see POWER.md Step 1). Not signed in: Kiro runs `kane-cli login --oauth` itself (POWER.md Step 2). Never ask for an access key or password in chat, and never fabricate credentials.
+- Ready → continue.
 
 **What does the user want?**
 - One browser task → build a single `kane-cli run "<objective>" --agent …` command. **The `run` subcommand is mandatory** — `kane-cli "<objective>"` exits `2` with a "did you mean" hint.
@@ -26,11 +21,13 @@ When a dependency check fails, run the fix yourself. Only ask the user when the 
 - Extract data from a page → same, using the `store … as '<name>'` pattern.
 - Save / re-run / commit a test → switch to `kane-cli testmd`. Load the **`kane-cli-testmd`** steering file.
 - **Test cases or scenarios written** — because the user asked, or because the task needs them (no browser action) → **don't hand-draft them**; load the **`kane-cli-generate`** steering file and use `kane-cli generate`. Trigger phrases: "write tests for", "test cases for", "test suite for", "what edge cases", "generate tests for".
-- Browse / create a Test Manager project or folder, or interpret a `project_folder_auto_defaulted` event → use `kane-cli projects list|create` / `kane-cli folders list|create` (NDJSON under `--agent`). The run-startup gate auto-defaults a project/folder when nothing is configured and emits `project_folder_auto_defaulted` before the first progress event.
+- Browse / create a Test Manager project or folder, or interpret a `project_folder_auto_defaulted` event → use `kane-cli projects list|create` / `kane-cli folders list|create --project <id>` (NDJSON under `--agent`). The run-startup gate auto-defaults a project/folder when nothing is configured and emits `project_folder_auto_defaulted` before the first progress event.
+- The user wants results saved somewhere else ("change project") → follow **Changing where results go** below. The change is global, and the question must say so.
+- The user wants to change how runs behave ("kane preferences": watch or quiet, one-off or suite), or asks what Kane CLI can do or for the tour again ("kane tour") → load the **`kane-cli-first-run`** steering file.
 - Multiple independent flows → decompose into N self-contained sub-objectives and run them in parallel.
 - Debug a failed run → read the run's evidence pack (failure records, per-step logs, screenshots) — see Failure handling below.
 
-After every run: parse NDJSON, present a plain-language results card with any extracted values, and on failure render the failing screenshot inline.
+After every run: parse NDJSON, present the result card with any extracted values, and on failure show the failing screenshot under the card.
 
 ---
 
@@ -202,6 +199,8 @@ Every run needs a start URL for the first navigation, resolved as `--url` flag �
 | `2` | ⚠️ Error (auth, setup, infra) |
 | `3` | ⏱️ Timeout or cancelled |
 
+Exit `2` means nothing ran and no credits were used: present the `🟡 Didn't start` card, not a failure. Exit `3` gets the stopped early card. Both are under Presenting results.
+
 ## Variables and secrets
 
 Use `{{key}}` in the objective and provide the values inline or from a file:
@@ -237,9 +236,35 @@ Override either per-run with `--global-context` / `--local-context`.
 
 # Parsing the NDJSON output
 
-> **Internal reference only.** Never echo these field names (`run_end`, `final_state`, `session_dir`, `run_dir`, `bifurcation`, `NDJSON`) back to the user. Translate them.
+> **Internal reference only.** Never echo these field names (`run_end`, `final_state`, `session_dir`, `run_dir`, `bifurcation`, `stream_start`, `NDJSON`) back to the user. Translate them.
 
 `--agent` writes one JSON object per line on **stdout**. The progress UI goes to **stderr**.
+
+## The stream contract (kane-cli 0.8.17+)
+
+On `run`, `testmd run` and `testrun run`, every stdout line carries two extra fields, and nothing that existed before changed:
+
+| Field | Meaning |
+|---|---|
+| `v` | Contract version, `1`. It only bumps on a breaking change |
+| `ts` | ISO timestamp of when the event was emitted |
+
+The first line on every surface is an opening event:
+
+```json
+{"type":"stream_start","cli_version":"0.8.17","surface":"run","pid":16664,"v":1,"ts":"2026-09-21T08:47:26.889Z"}
+```
+
+`surface` is `run`, `testmd` or `testrun`. Use `cli_version` to tell whether a newer event or flag is available.
+
+Rules a parser must follow:
+
+- **Ignore unknown fields and unknown event types.** New ones can appear in any release without a `v` bump.
+- **Never assume the first line is a progress line**, and skip any line that is not JSON.
+- Step lines on `run` stay **typeless** (below). Do not look for `type: "step"`.
+- The documented completion event is always the last line: `run_end` for `run`, `test_md_done` for `testmd run`, `testrun_done` for `testrun run` (then `remote_done` on cloud grid runs).
+
+The same stream is also written to disk line by line, as `events.ndjson` in the session folder, and while a run is live kane-cli keeps a small active-run pointer file at `~/.testmuai/kaneai/sessions/active/<pid>.json` that it removes on exit. Kiro normally needs neither: the log holds exactly what stdout printed, so treat it with the same care. The log is also where a suite keeps each test's own events (see the `kane-cli-testrun` steering file).
 
 ## Event types
 
@@ -254,7 +279,7 @@ Override either per-run with `--global-context` / `--local-context`.
 
 | Field | Type | Description |
 |---|---|---|
-| `step`   | number | Step index, 1-based |
+| `step`   | number | Step index. It can run one ahead of the step the user would count (a `bifurcation` takes the first slot), so count completed `done`/`failed` lines for "steps taken" rather than reading the last index |
 | `status` | string | `"running"` at start; `"done"` or `"failed"` at completion |
 | `remark` | string | What the agent did or why it failed |
 
@@ -272,7 +297,7 @@ Override either per-run with `--global-context` / `--local-context`.
 | `test_md_bundle_sync` | `status: "ok"\|"failed"`, `commit_id`, `bytes?`/`stage?` | `testmd run`/`testmd sync`: test bundle pushed to cloud after an authored commit. Informational. |
 | `testrun_*` family  | see the **`kane-cli-testrun`** steering file | Only from `kane-cli testrun run`; its terminal event is `testrun_done`, not `run_end`. |
 
-There is no `run_start` event — the first line is either `project_folder_auto_defaulted`, a `bifurcation`, or a progress object.
+The `run` stream has no `run_start` event. On kane-cli 0.8.17+ the first line is `stream_start`, and startup metadata or errors (`project_folder_auto_defaulted`, a `bifurcation`, an `error`) can precede the first progress object.
 
 **The evidence hint is not an event.** After a run, Kane CLI prints `` evidence: view locally with `kane-cli evidence serve <path>` `` on **stderr**. Never look for it on stdout.
 
@@ -284,7 +309,7 @@ There is no `run_start` event — the first line is either `project_folder_auto_
 for each line on stdout:
   if obj.type === "run_end"     → terminal event, stop parsing
   if obj.type === "bifurcation" → flow split, note it for narration
-  if obj.type is set            → other typed event
+  if obj.type is set            → other typed event (skip the ones you do not know, such as the stream_start opening line)
   if obj.step is set            → progress event (narrate it)
 ```
 
@@ -320,7 +345,7 @@ Always the last line on stdout:
   "one_liner": "Searched for laptop on Amazon and added to cart",
   "reason": "Objective completed",
   "duration": 45.2,
-  "credits": 12,
+  "credits_consumed": 11.9,
   "final_state": { "price": "$29.99", "product_name": "Wireless Headphones" },
   "context": { "memory": {}, "variables": {}, "pointer": "(passed) ..." },
   "session_dir": "~/.testmuai/kaneai/sessions/<uuid>",
@@ -338,7 +363,7 @@ Read these fields:
 | `one_liner`    | Short summary for display |
 | `reason`       | Why the run stopped |
 | `duration`     | Seconds |
-| `credits`      | Credits consumed (when reported) |
+| `credits_consumed` | Credits the run used, a decimal number (when reported). Round it for display. Older releases and docs called this `credits` |
 | `final_state`  | Extracted values from "store as" objectives |
 | `test_url`     | KaneAI dashboard link (when upload succeeded) |
 | `session_dir`  | Path to the session directory (session log + the sealed evidence pack under `evidence/`) |
@@ -348,6 +373,16 @@ Read these fields:
 ---
 
 # Presenting results
+
+A one-line "Test passed" instead of the result card is a bug. The order for every run is fixed: ready check → launch line → the run → result card (POWER.md → Every session).
+
+## Before the run: the launch line
+
+In one message, **before** starting the run, send the ready card and then:
+
+> Starting browser task: <one-line restatement of the user's objective>.
+
+That line tells the user something is in progress. On a first session the tour from the **`kane-cli-first-run`** steering file goes in this same message, right after the launch line, so the user reads it while the run works.
 
 ## During the run — narrate, don't sit silent
 
@@ -362,9 +397,22 @@ If a step fails mid-run, flag it immediately:
 
 > Step 5: Could not find the 'Add to Cart' button — the agent is retrying…
 
-Keep updates terse. Do not paste raw JSON, field names, or `run_dir` paths.
+Keep updates terse. Do not paste raw JSON, field names, or `run_dir` paths. When the user's saved watch preference is `results-only`, skip the narration and show the card only.
 
 ## After the run — render a results card
+
+Every result is an emoji table. Rules for every card:
+
+- **Same order every time:** verdict, task, duration, steps, credits, what happened, values or checks, links, next.
+- **One short sentence per cell**, so the table holds its shape in a narrow panel. Screenshots go under the card, never inside it.
+- **Failures first.** Passing tests fold into a count and are never listed one by one.
+- **➡️ Next is an offer**, not advice: two things at most, each something Kiro can do right now.
+- **Durations read like `1m 54s`** (or `21s` under a minute).
+- **💳 Credits** reads `<used> used · about <left> left`. Used is what the run consumed, rounded. Left is the ready check balance minus what was used since: no extra call. Drop the second half when there is no balance.
+- **Never show internals:** no event names, no field names, no paths the user does not own. File names they own (`checkout_test.md`, `output-checkout/`) are fine.
+- **`🟡 Didn't start` is not `🔴 Failed`.** When nothing ran, say what to fix.
+- **Secret-looking values never go in chat.** For a missing value whose name contains `password`, `secret`, `token` or `key`, add an empty entry to the variables file for the user to fill. Ask in chat only for plain values (a URL, a user name).
+- If the run's output carried an update notice, add one quiet last line under the card: `kane-cli <version> is available.`
 
 **Successful run:**
 
@@ -372,12 +420,17 @@ Keep updates terse. Do not paste raw JSON, field names, or `run_dir` paths.
 |---|---|
 | 🟢 **Result**          | Passed |
 | 🎯 **Task**            | Search for 'laptop' on Amazon |
-| ⏱️ **Duration**        | 45.2s |
+| ⏱️ **Duration**        | 45s |
 | 👣 **Steps taken**     | 7 |
-| 📝 **What happened**   | Opened Amazon, typed 'laptop' in search, clicked search, results loaded with 48 products |
-| 🔗 **View details**    | [Open in KaneAI Dashboard](<test_url>) |
+| 💳 **Credits**         | 12 used · about 65,571 left |
+| 📝 **What happened**   | Opened Amazon, searched for 'laptop', and the results loaded with 48 products |
+| 📁 **Evidence**        | Want to open the run evidence in your browser? |
+| 🔗 **Test case**       | [Open in Test Manager](<test case link>) |
+| ➡️ **Next**            | Add an add-to-cart step · Run it headless in CI |
 
-**If data was extracted** (from "store as" objectives):
+Where the rows come from (internal): Task is `one_liner`, Duration is `duration`, Steps taken is the count of completed progress lines (`done` or `failed`, retaining child and execution context), Credits is `credits_consumed` rounded, What happened is `summary`, and the Test case link is `test_url`. On a first session the 📁 row carries the viewer link itself (see the `kane-cli-first-run` steering file).
+
+**If data was extracted** (from "store as" objectives). Leave out `url` unless the user asked for it:
 
 | 📦 What was found | Value |
 |---|---|
@@ -394,17 +447,66 @@ Keep updates terse. Do not paste raw JSON, field names, or `run_dir` paths.
 
 ## On failure
 
-Explain what went wrong **in the user's terms** — don't paste log paths.
+For exit code `1` (or a failed status), present the failure card. Explain what went wrong **in the user's terms**, and never paste log paths or raw output.
 
-> 🔴 **Failed** at step 5 of 9 (after 25s)
->
-> **What happened:** The agent clicked "Proceed to Checkout" but the payment form never appeared. The page showed a loading spinner for 15 seconds before the agent timed out.
->
-> **Likely cause:** The checkout page may require authentication, or the site's payment service was slow / down.
->
-> **Suggested fix:** Add an explicit login step before checkout, or raise the timeout to 120s.
+| | |
+|---|---|
+| 🔴 **Result**          | Failed at step 5 of 9 |
+| 🎯 **Task**            | Check out with a saved card |
+| ⏱️ **Duration**        | 1m 12s |
+| 💳 **Credits**         | 9 used |
+| 📝 **What happened**   | The agent clicked "Proceed to Checkout" but the payment form never appeared |
+| 🔍 **Likely cause**    | The checkout page may require sign-in, or the payment service was slow |
+| 📁 **Evidence**        | Want to open the run evidence in your browser? |
+| ➡️ **Next**            | Re-run with a sign-in step before checkout · Walk through the failing step |
 
-Then extract the failing-step screenshot from the run's evidence pack (`unzip <pack> "tests/*/steps/*/screenshot.png" -d <tmpdir>`) and render it inline.
+🔍 Likely cause is Kiro's own diagnosis: a missing element, a popup over the button, a slow page, an ambiguous objective, an auth wall. ➡️ Next pairs a retry Kiro can run now with an offer to walk through the failing step.
+
+Then extract the failing-step screenshot from the run's evidence pack (`unzip <pack> "tests/*/steps/*/screenshot.png" -d <tmpdir>`) and show it **under** the card.
+
+## Didn't start (exit `2`)
+
+Nothing ran and no credits were used. Causes include missing variable values, no start URL, sign-in or setup errors, a test file that does not parse, an invalid suite plan, a cloud grid refusal. This is its own card, not a failure:
+
+```markdown
+| | |
+|---|---|
+| 🟡 **Result** | Didn't start. Nothing ran, no credits used |
+| ❓ **Missing** | <what is missing, by name> |
+| ➡️ **Next** | <the one thing that unblocks it> |
+```
+
+Swap `❓ **Missing**` for `🔍 **Why**` when the cause is not a missing value (for example: `Two tests belong to another project, so they can't run together`). Never retry the same command unchanged.
+
+## Stopped early (exit `3`)
+
+Timeout or cancelled:
+
+```markdown
+| | |
+|---|---|
+| 🟡 **Result** | Stopped after <2m 0s>, at step <n> |
+| 📝 **What happened** | <what was done before it stopped> |
+| ➡️ **Next** | Raise the time limit · Split the objective into two runs |
+```
+
+## Possible product bug
+
+When bug detection is on and the run confirms a product bug (`result_code` `740` with a verdict, see the Terminal `run_end` event above), it is its own verdict, apart from a test failure:
+
+```markdown
+| | |
+|---|---|
+| 🐞 **Result** | Possible product bug found |
+| 📝 **What happened** | <the verdict's one-line description> |
+| 🚦 **Severity** | <severity> · <confidence> confidence |
+| 📁 **Evidence** | Want to open the run evidence in your browser? |
+| ➡️ **Next** | File it with the evidence attached · Re-run to confirm |
+```
+
+## Saved tests and suites
+
+A saved test (`testmd run`) has its own card in the **`kane-cli-testmd`** steering file, and a suite (`testrun run`, local or cloud grid) has its own in **`kane-cli-testrun`**. The rules for every card above apply to both.
 
 ## Bug-report heuristic
 
@@ -575,11 +677,11 @@ When Kiro's shell is non-TTY, the picker is not appropriate. Use the agent surfa
 ```bash
 kane-cli projects list   [--search <q>] [--limit <n>] [--offset <n>] --agent
 kane-cli projects create "<name>" [--description "<text>"] --agent
-kane-cli folders  list   [--search <q>] [--limit <n>] [--offset <n>] --agent
-kane-cli folders  create "<name>" [--description "<text>"] --agent
+kane-cli folders  list   --project <id> [--search <q>] [--limit <n>] [--offset <n>] --agent
+kane-cli folders  create "<name>" --project <id> [--description "<text>"] --agent
 ```
 
-NDJSON wire shape — each result row is `{id, name}`, terminated by `{_meta: "page", limit, offset, returned, has_more}` (no `total` — paginate while `has_more === true`). `folders` operate inside the currently configured project.
+NDJSON wire shape: each result row is `{id, name}`, terminated by `{_meta: "page", limit, offset, returned, has_more}` (there is no `total`, so paginate while `has_more === true`). `folders list` and `folders create` need the project passed in: `--project <id>` is **required** on both, and `folders create` files the folder inside that project. Take the id from `projects list`, or from `project_id` in `kane-cli config show`.
 
 ## The run-startup auto-default gate
 
@@ -590,6 +692,33 @@ Every `run`, `testmd run`, and `generate` validates the cached project/folder be
 3. No usable credentials in a non-TTY context → exit `2` (auth/setup).
 
 Self-healing: stale, deleted, revoked, or typo'd project IDs trigger 4xx from TMS and the gate re-resolves automatically — no need to clear them by hand.
+
+If the user wants their runs in a different project after seeing the auto-selected one, walk them through the next section.
+
+## Changing where results go (a global setting)
+
+The results project and folder belong to kane-cli, not to the saved preferences file. A change applies to **every later kane-cli session for the current sign-in**: every project folder, every agent, and the terminal. Say so in the question itself, so the user's pick is their consent and no second confirmation is needed.
+
+**When to raise it.** The ready card always states the location with a standing offer that never stops the run. Ask outright only once, after the first result (the `kane-cli-first-run` steering file), or whenever the user says "change project".
+
+**The flow.** Listing projects takes a few seconds, so do it only now, never in the ready check.
+
+1. `kane-cli projects list --limit 10 --agent`. Show the names with the current one marked. If the page says more exist, offer a search by name (`--search <text>`) instead of paging. Never promise a count: the CLI only says whether more exist.
+2. Let the user pick one, search, create a new one, or keep the current one. For a new project suggest the repo's name: `kane-cli projects create "<name>" --agent`.
+3. `kane-cli folders list --project <id> --agent`. Exactly one folder: take it without asking. Otherwise let them pick, or create one with `kane-cli folders create "<name>" --project <id> --agent`.
+4. Save the project first, then the folder, always as a pair, so the two never mismatch:
+
+   ```bash
+   kane-cli config project <project-id>
+   kane-cli config folder <folder-id>
+   ```
+
+5. Confirm in one line: `Results now go to <project> / <folder>, for every kane-cli session from here on.`
+6. In the saved preferences file record only that the question was asked (`"results"` in `onboarding.asked`). The value stays with kane-cli.
+
+**Before switching, warn when it matters.** If this workspace already holds saved tests (`kane-cli testmd list` shows them), say first: cloud grid suites compare each test's project with the configured one and refuse on a mismatch, so switching can make an existing grid suite refuse until it is switched back. Tests that already ran keep their original project.
+
+**Always visible.** The one-line ready card shows the location at the start of every session, so a global setting never surprises anyone.
 
 Project-local overrides live in `./.testmuai/` (`context.md`, `variables/*.json`). Global config and history live in `~/.testmuai/kaneai/`. Pass everything through flags — do **not** rely on environment variables for Kane CLI configuration.
 

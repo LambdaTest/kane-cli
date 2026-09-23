@@ -15,6 +15,7 @@ Every page below is standalone — start wherever your job starts.
 - [Installation](./installation.md) — npm, Homebrew, shell script; Chrome requirements.
 - [Getting started](./getting-started.md) — from a fresh install to a passing run in five minutes.
 - [Authentication](./authentication.md) — OAuth, username/access-key, profiles, CI logins.
+- [Using kane-cli from an AI coding agent](./agents.md): what your agent does on a first run, your preferences, and the live status strip.
 
 ## Mobile testing
 
