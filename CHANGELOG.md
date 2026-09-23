@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.17] - 2026-09-23
+
+### Output you can parse
+- **Non-TTY output is now a versioned NDJSON stream** — every run and `testmd` execution emits structured events with a version stamp at the front, so tooling can depend on the shape of what it reads.
+- **Events are also written to `events.ndjson`** — the stream is teed to a file alongside the terminal, so you get a durable record even when the terminal output is dropped.
+- **A live run is findable from disk** — an active-run pointer lets a separate process or file reader attach to a run that's already in progress.
+- **The wire contract is documented** — the NDJSON event format now has its own reference in the docs, so you can build against it instead of guessing.
+
+### Following a test run, member by member
+- **Per-member event logs** — each member of a `kane-cli testrun` writes its own event log instead of everything landing in one interleaved stream.
+- **Progress events** — `testrun_progress` events report how far along a run is, making progress bars and CI status reporting straightforward.
+
+### Remote test runs
+- **The job URL shows up right away** — `kane-cli testrun --remote` prints the job URL early, so you can open it while the run is still starting.
+- **`--remote` no longer changes TTY behavior** — output formatting stays consistent whether you run locally or remotely.
+
+### Windows installs
+- **Skill tarballs extract correctly on Windows** — archives are now extracted with relative paths so GNU tar on Windows handles them, fixing failed skill installs.
+- **The regression is guarded in CI** — the Windows tar path is covered by tests, so this can't quietly break again.
+- **Skill versions are validated, not pasted into URLs** — a bad version is caught up front instead of turning into a confusing fetch error.
+
 ## [0.8.16] - 2026-09-20
 
 ### Replays that use this run's data
