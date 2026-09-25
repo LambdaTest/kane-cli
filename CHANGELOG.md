@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.18] - 2026-09-25
+
+### Migrated tests replay on solid ground
+- **Replay sticks to supported actions** — clear separation of which actions replay, so runs reauthor on unsupported steps rather than producing confusing mid-run behavior.
+
+### A tidier identity check
+- **`kane-cli whoami` is shorter** — the Identity panel no longer shows an misleading Expires row.
+
 ## [0.8.17] - 2026-09-23
 
 ### Output you can parse
