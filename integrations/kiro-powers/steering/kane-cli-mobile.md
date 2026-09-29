@@ -11,7 +11,7 @@ The single rule that scopes this file: **mobile is opt-in.** A run with no `--ta
 | Where the device runs | Host | Commands |
 |---|---|---|
 | **Local** — a simulator/emulator on this machine | **macOS on Apple Silicon (arm64) only.** Not Intel Macs, Linux, or Windows | `kane-cli run --target …`, `kane-cli testmd run`, `kane-cli testrun run` |
-| **Cloud grid** — a virtual device on a LambdaTest HyperExecute macOS host | **Any machine**; no Xcode or Android Studio needed. The account needs a HyperExecute plan with macOS runners | `kane-cli testrun run <paths> --remote --device-name "<grid device>" --os-version <v>` — see "Running a mobile suite on the cloud grid" below |
+| **Cloud grid** — a virtual device on a LambdaTest HyperExecute macOS host | **Any machine**; no Xcode or Android Studio needed. The account needs a HyperExecute plan with macOS runners | `kane-cli testrun run <paths> --remote --device-name "<grid device>" --os-version <v> < /dev/null` — see "Running a mobile suite on the cloud grid" below |
 
 - **Desktop stays the default.** The `--target` flag is what selects mobile. Leave it off and every run drives the browser, unchanged.
 - If the user is not on a mac-arm64 machine, local mobile is not an option — **offer the grid**: save the objective as a `_test.md` (`target: emulator|simulator` + `app:`) and run it with `--remote`. Do not tell them mobile is unavailable.
@@ -129,7 +129,7 @@ A `_test.md` selects its surface through the **`target:`** frontmatter key — *
 
 Author it once (real device, like any first run), then replay from cache. Everything else about the `_test.md` format is unchanged. Load the **`kane-cli-testmd`** steering file. Run a mobile test with `kane-cli testmd run <path> --agent`.
 
-**Mobile members in `kane-cli testrun`.** A mobile `_test.md` is a normal batch member (0.8.7+). Locally (mac-arm64 with the setup above): `kane-cli testrun run <paths> --device-name "<name>" --os-version <v>`. On the cloud grid, from any machine: add `--remote` (next section). Load the **`kane-cli-testrun`** steering file for the flags, events, and rollup.
+**Mobile members in `kane-cli testrun`.** A mobile `_test.md` is a normal batch member (0.8.7+). Locally (mac-arm64 with the setup above): `kane-cli testrun run <paths> --device-name "<name>" --os-version <v> < /dev/null`. On the cloud grid, from any machine: add `--remote` (next section). Load the **`kane-cli-testrun`** steering file for the flags, events, and rollup.
 
 ---
 
@@ -140,9 +140,9 @@ One command turns a mobile suite into a LambdaTest HyperExecute job on a macOS h
 ```bash
 kane-cli plugin install remote-execution                                    # once; `kane-cli plugin doctor remote-execution` checks it
 kane-cli devices list --target emulator --remote --agent                    # grid catalog: name + os_versions per row
-kane-cli testrun run tests/app/ --remote --device-name "Pixel 7" --os-version 14 --dry-run   # validate + resolve device, no job
-kane-cli testrun run tests/app/ --remote --device-name "Pixel 7" --os-version 14
-kane-cli testrun run tests/ios/ --remote --device-name "iPhone 15" --os-version 17.5
+kane-cli testrun run --match '^tests/app/' --remote --device-name "Pixel 7" --os-version 14 --dry-run < /dev/null   # validate + resolve device, no job
+kane-cli testrun run --match '^tests/app/' --remote --device-name "Pixel 7" --os-version 14 < /dev/null
+kane-cli testrun run --match '^tests/ios/' --remote --device-name "iPhone 15" --os-version 17.5 < /dev/null
 ```
 
 **Always `--dry-run` first** — it runs the remote preflight and resolves the device against the catalog at no cost. Allow several minutes for the real run.

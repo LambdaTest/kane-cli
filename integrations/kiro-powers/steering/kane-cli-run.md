@@ -20,7 +20,7 @@ When a dependency check fails, run the fix yourself. Only ask the user when the 
 - Test / verify something → same, with assertion phrasing.
 - Extract data from a page → same, using the `store … as '<name>'` pattern.
 - Save / re-run / commit a test → switch to `kane-cli testmd`. Load the **`kane-cli-testmd`** steering file.
-- **Test cases or scenarios written** — because the user asked, or because the task needs them (no browser action) → **don't hand-draft them**; load the **`kane-cli-generate`** steering file and use `kane-cli generate`. Trigger phrases: "write tests for", "test cases for", "test suite for", "what edge cases", "generate tests for".
+- **Test cases or scenarios written** — because the user asked, or because the task needs them (no browser action) → **don't hand-draft them**; load the **`kane-cli-assurance`** steering file: a requirement document is ingested and designed from, and a description given in chat is written to `requirements/<feature>.md` in the user's words, ingested, then designed from. Trigger phrases: "write tests for", "test cases for", "test suite for", "what edge cases", "generate tests for".
 - Browse / create a Test Manager project or folder, or interpret a `project_folder_auto_defaulted` event → use `kane-cli projects list|create` / `kane-cli folders list|create --project <id>` (NDJSON under `--agent`). The run-startup gate auto-defaults a project/folder when nothing is configured and emits `project_folder_auto_defaulted` before the first progress event.
 - The user wants results saved somewhere else ("change project") → follow **Changing where results go** below. The change is global, and the question must say so.
 - The user wants to change how runs behave ("kane preferences": watch or quiet, one-off or suite), or asks what Kane CLI can do or for the tour again ("kane tour") → load the **`kane-cli-first-run`** steering file.
@@ -223,6 +223,15 @@ Loading order (later wins):
 
 **Always parameterize:** credentials, API keys, tokens, environment-specific URLs. **OK to hardcode:** one-off URLs, static UI text, navigation paths.
 
+**Unresolved variables (0.8.15+).** kane-cli checks every `{{name}}` in the objective before the run starts. A name with no value is a warning: the run goes ahead and types the name as written, unless a step sets it first. With `--agent` the warning is one `{"type":"warning","code":"unresolved_variables", ...}` event before the first progress frame, carrying `suggested_file` and `variables[]` (`name`; `reason`: `value_missing` = the key exists in `file` with no value · `not_declared` = the key is in no file, add it to `suggested_file`; `used_by[]`). Never checked: an explicit `{{global.*}}` (it resolves from Test Manager at run time), `{{smart.*}}`, `{{environment.*}}`, `{{secrets.*}}`, `{{totp.*}}`, and names an earlier step stores (`store … as 'x'`). Numbers in a variable file count as values (loaded as strings); booleans do not.
+
+**Fill the variables before any run.** Do this before `run`, `testmd run` and `testrun run`, and always before `--remote`, which books a grid job. A missing value is asked for before the run; the first-session rule that nothing is asked before the first result does not cover it.
+
+1. Collect the names with no value: the `warning`, a dry-run plan's `unresolved[]` rows, or a design run's `variables_declared` and `variables_summary` rows. Design rows list what design declared, not every missing value, and a dry run's `valid: true` says nothing about values: the dry run's `warning` is the check.
+2. A value you already have, because the user said it or the requirement document states it, you write into that key in the file the event names (for `run`, `--variables '{"name":{"value":"…"}}'` also works), and you tell the user what you filled and where.
+3. The rest you ask for once, in one message, using each variable's `description` when design gave one. Plain values (a URL, an email, a user name) the user gives you here or adds to the file, their choice. Secrets, which are any row with `secret: true`, any description that names a credential, and any name containing `password`, `secret`, `token` or `key`, the user fills in the file and tells you when done; you never ask for the value in chat, never echo it, and report names and file paths only.
+4. Then a fresh `--dry-run` of the exact selection: a valid plan with no `warning` is the check. A member whose rows are all filled may run while the others wait. Never fill a placeholder just to silence the check; a throwaway value is right only when the description asks for one, such as a deliberately wrong password. A frontmatter declaration with an empty value also silences the check, so look at the values a step relies on, not only at the warning. A name still empty is typed into the page as written; if a run then failed at that step, say so.
+
 ## Context files
 
 The agent picks up two Markdown context files automatically:
@@ -291,8 +300,9 @@ The same stream is also written to disk line by line, as `events.ndjson` in the 
 | `bifurcation`       | `flows[]`, `count`                          | Agent split the objective into sub-flows |
 | `child_agent_start` | `child_id`, `objective`, `parent_step`      | Child agent spawned |
 | `child_agent_end`   | `child_id`, `success`, `steps_taken`, `summary` | Child agent finished |
-| `ask_user`          | `question`, `step_index`, `options?`        | Agent needs input (auto-disabled when stdin is non-TTY) |
+| `ask_user`          | `question`, `step_index`, `options?`        | Agent needs input |
 | `error`             | `message`                                   | Error |
+| `warning`           | `code`, `message`, `suggested_file`, `variables[]` | *(0.8.15+)* Before any progress: `code: "unresolved_variables"` — a `{{name}}` had no value; the run continues and types the name as written unless a step sets it first. See Variables and secrets. |
 | `test_md_evidence_ingest` | `status: "ok"\|"failed"`, `evidence_id`, `stage?` | `testmd run` only: a replay's evidence pack published to the dashboard. Informational. |
 | `test_md_bundle_sync` | `status: "ok"\|"failed"`, `commit_id`, `bytes?`/`stage?` | `testmd run`/`testmd sync`: test bundle pushed to cloud after an authored commit. Informational. |
 | `testrun_*` family  | see the **`kane-cli-testrun`** steering file | Only from `kane-cli testrun run`; its terminal event is `testrun_done`, not `run_end`. |
@@ -301,7 +311,6 @@ The `run` stream has no `run_start` event. On kane-cli 0.8.17+ the first line is
 
 **The evidence hint is not an event.** After a run, Kane CLI prints `` evidence: view locally with `kane-cli evidence serve <path>` `` on **stderr**. Never look for it on stdout.
 
-`ask_user` is auto-disabled when stdin is not a TTY. Since Kiro runs Kane CLI as a subprocess, `ask_user` events will not be emitted — write objectives that don't require interactive input.
 
 ## Parsing strategy
 
@@ -412,6 +421,7 @@ Every result is an emoji table. Rules for every card:
 - **Never show internals:** no event names, no field names, no paths the user does not own. File names they own (`checkout_test.md`, `output-checkout/`) are fine.
 - **`🟡 Didn't start` is not `🔴 Failed`.** When nothing ran, say what to fix.
 - **Secret-looking values never go in chat.** For a missing value whose name contains `password`, `secret`, `token` or `key`, add an empty entry to the variables file for the user to fill. Ask in chat only for plain values (a URL, a user name).
+- **Variables with no value go on the card.** When the run's output carried the `unresolved_variables` warning, add a `⚠️ **Variables**` row before ➡️ Next naming each one.
 - If the run's output carried an update notice, add one quiet last line under the card: `kane-cli <version> is available.`
 
 **Successful run:**
@@ -466,7 +476,7 @@ Then extract the failing-step screenshot from the run's evidence pack (`unzip <p
 
 ## Didn't start (exit `2`)
 
-Nothing ran and no credits were used. Causes include missing variable values, no start URL, sign-in or setup errors, a test file that does not parse, an invalid suite plan, a cloud grid refusal. This is its own card, not a failure:
+Nothing ran and no credits were used. Causes include no start URL, sign-in or setup errors, a test file that does not parse, an invalid suite plan, a cloud grid refusal. This is its own card, not a failure:
 
 ```markdown
 | | |
@@ -566,7 +576,7 @@ Offer the visual route: `kane-cli evidence serve <pack>` starts a local-only ser
 | 🎯 Agent clicks the wrong element | Ambiguous UI, multiple similar elements | Be more specific ("click the **blue** Submit button in the **checkout form**") |
 | 👁️ Agent says "done" but nothing happened | Objective too vague | Add a concrete assertion ("assert the confirmation page shows an order number") |
 | 💀 Exit `2`, no steps | Auth, TMS credential exchange, or Chrome failure | Check `kane-cli whoami`; ensure Chrome is installed |
-| ❓ Exit `2` with "did you mean …" | Missing `run` subcommand — agent invoked `kane-cli "<objective>"` instead of `kane-cli run "<objective>"` | Re-invoke with `run` (same rule for `testmd run` / `generate`) |
+| ❓ Exit `2` with "did you mean …" | Missing `run` subcommand — agent invoked `kane-cli "<objective>"` instead of `kane-cli run "<objective>"` | Re-invoke with `run` (same rule for `testmd run`) |
 | 📤 Upload silently fails after setting a project/folder by hand | Saved ID is invalid (typo, deleted, no access) | No action needed — the next run detects the 4xx and auto-defaults a working project/folder. To rebind: `kane-cli config project` or `kane-cli projects list` → `kane-cli config project <id>` |
 | ⏱️ Exit `3` | Timeout or cancelled | Raise `--timeout`, raise `--max-steps`, or split the objective |
 | 🚫 `CDP endpoint not reachable` | Chrome not running | Drop `--cdp-endpoint` and let Kane CLI auto-launch Chrome |
@@ -577,7 +587,7 @@ Offer the visual route: `kane-cli evidence serve <pack>` starts a local-only ser
 
 For multiple independent browser tasks, decompose and run in parallel.
 
-> **Saved tests? Use testrun instead.** If the tasks are committed `_test.md` files, don't hand-roll parallelism — `kane-cli testrun run --parallel N` gives isolated Chromes, a pooled scheduler, one rollup, and one evidence pack. Load the **`kane-cli-testrun`** steering file. This section is for **ad-hoc `run` objectives** only.
+> **Saved tests? Use testrun instead.** If the tasks are committed `_test.md` files, don't hand-roll parallelism — `kane-cli testrun run --parallel N < /dev/null` gives isolated Chromes, a pooled scheduler, one rollup, and one evidence pack. Load the **`kane-cli-testrun`** steering file. This section is for **ad-hoc `run` objectives** only.
 
 ## When to split
 
@@ -685,7 +695,7 @@ NDJSON wire shape: each result row is `{id, name}`, terminated by `{_meta: "page
 
 ## The run-startup auto-default gate
 
-Every `run`, `testmd run`, and `generate` validates the cached project/folder before launching. Three outcomes:
+Every `run` and `testmd run` validates the cached project/folder before launching. Three outcomes:
 
 1. Cached project/folder still valid → run proceeds, no event.
 2. Nothing configured **or** cached IDs are gone / invalid / inaccessible → Kane CLI auto-resolves (find-or-create) and emits `project_folder_auto_defaulted` on stdout before any progress event. Surface as a one-liner ("Kane CLI auto-selected project X / folder Y for this run").
@@ -724,7 +734,7 @@ Project-local overrides live in `./.testmuai/` (`context.md`, `variables/*.json`
 
 ## Command-specific completion
 
-The `run_end` parsing strategy applies to one-shot `run` only. For `testmd run`, collect `test_md_done.overall_status`, `duration_s`, `session_id`, and optional `share_url`; embedded `run_end` events can finish individual steps. Local suites emit `testrun_done`; dispatched remote suites then emit `remote_done` (retain `status`, `exit`, `sessions_path`). `generate` emits `generate_done`. Assurance conversational agent streams end in `done`; review/read verbs have their own contracts. Always check process exit too: early refusal, invalid plan or dry-run can exit without the normal completion event.
+The `run_end` parsing strategy applies to one-shot `run` only. For `testmd run`, collect `test_md_done.overall_status`, `duration_s`, `session_id`, and optional `share_url`; embedded `run_end` events can finish individual steps. Local suites emit `testrun_done`; dispatched remote suites then emit `remote_done` (retain `status`, `exit`, `sessions_path`). Assurance conversational agent streams end in `done`; review/read verbs have their own contracts. Always check process exit too: early refusal, invalid plan or dry-run can exit without the normal completion event.
 
 Progress is for live display: count only `done`/`failed` completions, retaining child and execution context when step indices repeat.
 
