@@ -146,8 +146,6 @@ Key `run_end` fields:
 
 ## Responding to `ask_user` (if stdin is a TTY)
 
-`ask_user` is disabled when stdin is not a TTY, so a kane-cli whose stdin is a pipe or `/dev/null` never emits it. Write objectives that need no answer mid-run.
-
 ```json
 {"type": "user_response", "answer": "Medium size"}
 ```
