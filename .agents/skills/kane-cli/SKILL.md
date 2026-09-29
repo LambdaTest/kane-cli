@@ -77,7 +77,7 @@ Progress events have `step`/`status`/`remark` fields and **no `type` field**.
 | **Failures** | Any step with `status: "failed"` | `Step <n> failed: <remark>` |
 | **Flow changes** | `bifurcation`, `child_agent_start`, `child_agent_end` | Plain-language one-liner (e.g. "The agent split the objective into 2 sub-tasks") |
 | **Errors** | `error` typed events | `Error: <message>` |
-| **Unresolved variables** | `warning` with `code: "unresolved_variables"` | Pre-run, before any progress: list the names and where a value goes (§3 **Unresolved variables**) — the run went ahead |
+| **Unresolved variables** | `warning` with `code: "unresolved_variables"` | Before any progress: name the variables with no value and where a value goes (§3 **Unresolved variables**). The run continued |
 | **Overall progress** | All passing steps | One summary line: `<total> steps completed: <2–4 key actions from remarks>` |
 
 #### What to skip
@@ -210,7 +210,7 @@ Other flags (`--global-context`, `--local-context`, `--cdp-endpoint`, `--allow-m
 
 **Exit codes:** `0` passed · `1` failed · `2` auth/infra error · `3` timeout/cancelled.
 
-**Unresolved variables (0.8.12+):** every `{{name}}` in the objective is checked before the run starts. A name with no value is a **warning, never a refusal** — the run proceeds and the name is typed as written unless a step sets it first. With `--agent` it arrives as one `{"type":"warning","code":"unresolved_variables", ...}` event before the first progress frame, carrying `variables[]` (`name`, `reason`: `value_missing` = the key exists in `file` with no value · `not_declared` = the key is in no file, add it to `suggested_file`; `used_by[]`). Surface it: tell the user which names had no value and where a value goes; if the run then failed at a step that typed a placeholder, this is the likely cause. Supply values with `--variables '{"name":{"value":"…"}}'` or in the file and run again. Never checked: an explicit `{{global.*}}` (resolves from Test Manager at run time), `{{smart.*}}`/`{{environment.*}}`/`{{secrets.*}}`/`{{totp.*}}`, and names an earlier step stores (`store … as 'x'`). Numbers in a variable file count as values (loaded as strings); booleans do not.
+**Unresolved variables (0.8.15+):** kane-cli checks every `{{name}}` in the objective before the run starts. A name with no value is a warning: the run goes ahead and types the name as written, unless a step sets it first. With `--agent` the warning is one `{"type":"warning","code":"unresolved_variables", ...}` event before the first progress frame. It carries `suggested_file` and `variables[]`: `name`; `reason` (`value_missing` = the key exists in `file` with no value · `not_declared` = the key is in no file, add it to `suggested_file`); `used_by[]`. Tell the user which names had no value and where a value goes. If the run then failed at the step that typed the placeholder, say so. Supply values with `--variables '{"name":{"value":"…"}}'` or in the file, then run again. Never checked: an explicit `{{global.*}}` (it resolves from Test Manager at run time), `{{smart.*}}`, `{{environment.*}}`, `{{secrets.*}}`, `{{totp.*}}`, and names an earlier step stores (`store … as 'x'`). Numbers in a variable file count as values (loaded as strings); booleans do not.
 
 ### Examples
 

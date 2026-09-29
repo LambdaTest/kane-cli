@@ -45,7 +45,7 @@ error: plan invalid — 2 offending test(s):
   tests/other_project_test.md: project_mismatch
 ```
 
-A member whose authored steps reference a `{{name}}` with no value does **not** fail preflight. The plan stays valid and prints a warning receipt — every such name across the members, each with the test files and steps that use it — and the run proceeds, typing the name as written unless a step sets it first:
+A member whose authored steps reference a `{{name}}` with no value passes preflight. kane-cli prints a warning receipt — every such name across the members, each with the test files and steps that use it — and the run types the name as written unless a step sets it first:
 
 ```
 warning: 2 variables have no value
@@ -109,7 +109,7 @@ Each desktop worker gets its **own isolated Chrome** with a fresh temporary prof
 kane-cli testrun run --tags smoke --parallel 4 --dry-run
 ```
 
-Exit `0` means the plan is valid; exit `2` reports planning refusals. This does not prove runtime readiness: local dry-run returns before runtime authentication and browser/device startup. Remote dry-run also validates the grid catalog but does not upload apps or dispatch a job. A real run can still fail after a valid plan.
+Exit `0` means the plan is valid; exit `2` reports planning refusals. This does not prove runtime readiness: local dry-run returns before runtime authentication and browser/device startup. Remote dry-run also validates the grid catalog but does not upload apps or dispatch a job. A real run can still fail after a valid plan. A dry run prints the variable warning too, so you can fill values before the real run.
 
 ## Reading results
 

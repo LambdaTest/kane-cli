@@ -133,7 +133,7 @@ Fill `value`. `kane-cli` never overwrites a key that already exists in any of yo
 
 ### Before a run: unresolved variables
 
-`kane-cli run`, `kane-cli testmd run` and `kane-cli testrun run` check every `{{name}}` an authored step references **before anything starts**. A name with no value is a **warning, never a refusal** — the run proceeds, and the name is typed as written unless a step sets it first:
+`kane-cli run`, `kane-cli testmd run` and `kane-cli testrun run` check every `{{name}}` an authored step references **before anything starts**. A name with no value is a warning: the run goes ahead and types the name as written, unless a step sets it first:
 
 ```
 warning: 3 variables have no value
@@ -153,7 +153,7 @@ warning: 3 variables have no value
 
 The pool file is named once per group. A test filename appears only when it is not the file you named — an `@import`ed unit and a testrun member both keep theirs, and a `kane-cli run` objective shows no location at all. A name that is in no file gets the JSON to create when there is none yet.
 
-Never checked: an explicit `{{global.*}}` (it resolves from Test Manager at run time — only a bare `{{name}}` is a pool question), `{{smart.*}}`, `{{environment.*}}`, `{{secrets.*}}` and `{{totp.*}}` (resolved at run time); a name an earlier step stores (`store the price as 'price'`); and replayed steps, which resolve from their tape and from TMS. `${x}` is not a variable reference on this path. In agent mode the same content is one `warning` event with `code: "unresolved_variables"` — see [Running tests](./running-tests.md#unresolved-variables).
+Never checked: an explicit `{{global.*}}` (it resolves from Test Manager at run time — only a bare `{{name}}` is a pool question), `{{smart.*}}`, `{{environment.*}}`, `{{secrets.*}}` and `{{totp.*}}` (resolved at run time); a name an earlier step stores (`store the price as 'price'`); and replayed steps, which resolve from their tape and from TMS. In agent mode the same content is one `warning` event with `code: "unresolved_variables"` — see [Running tests](./running-tests.md#unresolved-variables).
 
 ## Context files
 

@@ -61,16 +61,16 @@ These are **untyped** — they have no `type` field. Do **not** key on `event.ty
 | `child_agent_end` | `child_id`, `success`, `steps_taken`, `summary` | Child agent finished |
 | `ask_user` | `question`, `step_index`, `options?` | Agent needs user input |
 | `error` | `message` | Error occurred |
-| `warning` | `code`, `message`, … | *(0.8.12+)* Pre-run, before any progress event: `code: "unresolved_variables"` — a `{{name}}` had no value; the run continues. Schema below. |
+| `warning` | `code`, `message`, … | *(0.8.15+)* Before any progress event: `code: "unresolved_variables"` — a `{{name}}` had no value; the run continues. Schema below. |
 | `test_md_evidence_ingest` | `status: "ok"\|"failed"`, `evidence_id`, `stage?` (failure only) | `testmd run` only: a replay's evidence pack published to the dashboard. Informational. |
 | `test_md_bundle_sync` | `status: "ok"\|"failed"`, `commit_id`, `bytes?` (success) / `stage?` (failure) | `testmd run` / `testmd sync`: test bundle pushed to the cloud after an authored commit. Informational. |
 | `testrun_*` family | see `references/testrun.md` | Emitted only by `kane-cli testrun run`; terminal event is `testrun_done`, not `run_end`. |
 
 **Note:** The `run` stream has no `run_start` event; startup metadata or errors can precede progress.
 
-### `warning` with `code: "unresolved_variables"` (0.8.12+)
+### `warning` with `code: "unresolved_variables"` (0.8.15+)
 
-Emitted by `run`, `testmd run` and (after `testrun_plan`) `testrun run` when an authored step references a `{{name}}` that has no value. **The run proceeds** — the name is typed as written unless a step sets it first. Exit codes are unaffected.
+Emitted by `run`, `testmd run` and (after `testrun_plan`) `testrun run` when an authored step references a `{{name}}` that has no value. The run goes ahead: the name is typed as written unless a step sets it first. The warning does not change the exit code.
 
 ```json
 {"type":"warning","code":"unresolved_variables","message":"2 variable(s) have no value — typed as written unless a step sets them first",
@@ -83,12 +83,12 @@ Emitted by `run`, `testmd run` and (after `testrun_plan`) `testrun run` when an 
 
 | Field | Meaning |
 |---|---|
-| `variables[].reason` | `value_missing` — the key exists in `variables[].file` with an empty value · `not_declared` — the key is in no variable file |
+| `variables[].reason` | `value_missing` — the key exists in `variables[].file` with an empty value · `not_declared` — the key is in no variable file · `not_a_dataset_column` — a `${x}` that is no column of the Test Manager dataset the run was given (`variables[].dataset` names it) |
 | `variables[].file` | the pool file that holds the empty key (`value_missing` only); `--variables` when it came inline |
 | `variables[].used_by[]` | `{file, step}` — `file` is `objective` for `kane-cli run`, else the test file (flattened step index) |
 | `suggested_file` | where to add a `not_declared` key: `.testmuai/variables/assurance.json` inside an assurance store, `variables.json` otherwise |
 
-Report it alongside the run's outcome; if a later step failed on a literal placeholder, point at this.
+Report it with the run's outcome. If a later step failed on a literal placeholder, point at this.
 
 ## Parsing Strategy for one-shot `run`
 
@@ -145,6 +145,8 @@ Key `run_end` fields:
 **The evidence hint is not an event.** After a run, kane-cli prints `` evidence: view locally with `kane-cli evidence serve <path>` `` on **stderr**. Never look for it on stdout; see `references/evidence.md` for how to act on it. `run_end` itself carries no evidence-pack field.
 
 ## Responding to `ask_user` (if stdin is a TTY)
+
+`ask_user` is disabled when stdin is not a TTY, so a kane-cli started as a subprocess never emits it. Write objectives that need no answer mid-run.
 
 ```json
 {"type": "user_response", "answer": "Medium size"}

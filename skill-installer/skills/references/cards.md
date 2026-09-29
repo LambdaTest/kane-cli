@@ -16,6 +16,7 @@ Every result is an emoji table. A one-line "Test passed" instead of the card is 
 - **`🟡 Didn't start` is not `🔴 Failed`.** When nothing ran, say what to fix.
 - **Secret-looking values never go in chat.** For a missing value whose name contains `password`, `secret`, `token` or `key`, add an empty entry to the variables file for the person to fill. Ask in chat only for plain values (a URL, a user name).
 - If the run's output carried an update notice, add one quiet last line under the card: `kane-cli <version> is available.`
+- **Variables with no value go on the card.** When the run's output carried the `unresolved_variables` warning, add a `⚠️ **Variables**` row before ➡️ Next naming each one; the run typed it as written.
 
 ## 2. Run, passed
 
@@ -72,7 +73,7 @@ Exit code `1`, or `status: "failed"`. Show the failing step's screenshot under t
 
 ## 4. Didn't start
 
-Exit code `2`: nothing ran and no credits were used. Causes include missing variable values, no start URL, sign-in or setup errors, a test file that does not parse, an invalid suite plan, a cloud grid refusal.
+Exit code `2`: nothing ran and no credits were used. Causes include no start URL, sign-in or setup errors, a test file that does not parse, an invalid suite plan, a cloud grid refusal.
 
 ```markdown
 | | |
