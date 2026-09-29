@@ -104,7 +104,7 @@ To use the result for subsequent runs, persist with `kane-cli config project <id
 
 ## 5. The run-startup auto-default event
 
-`kane-cli run`, `kane-cli testmd run`, and `kane-cli generate` all validate the cached project/folder before launching anything. Three outcomes:
+`kane-cli run` and `kane-cli testmd run` validate the cached project/folder before launching anything. Three outcomes:
 
 1. **Cached project/folder still valid** → run proceeds. No event.
 2. **Nothing configured, or the cached IDs are gone / inaccessible** → kane-cli resolves a sensible project/folder headlessly (find-or-create), then emits a typed event before the run starts:
@@ -167,4 +167,4 @@ The results project and folder belong to kane-cli, not to the agent config. A ch
 | 0 | OK |
 | 2 | Auth/setup error (missing or invalid credentials) or unknown subcommand |
 
-Other codes are run-specific (`run` / `testmd run` / `generate`) and don't apply to `projects` / `folders`.
+Other codes are run-specific (`run` / `testmd run`) and don't apply to `projects` / `folders`.

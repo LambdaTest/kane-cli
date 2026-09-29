@@ -55,24 +55,25 @@ These are **untyped** — they have no `type` field. Do **not** key on `event.ty
 
 | Event (`type` field) | Key Fields | Purpose |
 |-------|-----------|---------|
-| `project_folder_auto_defaulted` | resolved project + folder (id, name) | Run-startup gate auto-resolved a project/folder when none was configured (or the cached one was stale/invalid). Fires before any progress event on `run` / `testmd run` / `generate`. Translate to plain language (see `references/test-manager.md`). |
+| `project_folder_auto_defaulted` | resolved project + folder (id, name) | Run-startup gate auto-resolved a project/folder when none was configured (or the cached one was stale/invalid). Fires before any progress event on `run` / `testmd run`. Translate to plain language (see `references/test-manager.md`). |
 | `bifurcation` | `flows[]`, `count` | Agent split objective into sub-flows |
 | `child_agent_start` | `child_id`, `objective`, `parent_step` | Child agent spawned |
 | `child_agent_end` | `child_id`, `success`, `steps_taken`, `summary` | Child agent finished |
 | `ask_user` | `question`, `step_index`, `options?` | Agent needs user input |
-| `error` | `message`, `code?` | Error occurred. With `code: "unresolved_variables"` it is the pre-run refusal — the only event of the run, no `run_end` follows; schema below. |
+| `error` | `message` | Error occurred |
+| `warning` | `code`, `message`, … | *(0.8.15+)* Before any progress event: `code: "unresolved_variables"` — a `{{name}}` had no value; the run continues. Schema below. |
 | `test_md_evidence_ingest` | `status: "ok"\|"failed"`, `evidence_id`, `stage?` (failure only) | `testmd run` only: a replay's evidence pack published to the dashboard. Informational. |
 | `test_md_bundle_sync` | `status: "ok"\|"failed"`, `commit_id`, `bytes?` (success) / `stage?` (failure) | `testmd run` / `testmd sync`: test bundle pushed to the cloud after an authored commit. Informational. |
 | `testrun_*` family | see `references/testrun.md` | Emitted only by `kane-cli testrun run`; terminal event is `testrun_done`, not `run_end`. |
 
 **Note:** The `run` stream has no `run_start` event; startup metadata or errors can precede progress.
 
-### `error` with `code: "unresolved_variables"` (0.8.12+)
+### `warning` with `code: "unresolved_variables"` (0.8.15+)
 
-Emitted by `run`, `testmd run` and (after `testrun_plan`) `testrun run` when an authored step references a `{{name}}` that has no value. Nothing was dispatched; exit code `2`; stderr is silent.
+Emitted by `run`, `testmd run` and (after `testrun_plan`) `testrun run` when an authored step references a `{{name}}` that has no value. The run goes ahead: the name is typed as written unless a step sets it first. The warning does not change the exit code. A run given a Test Manager dataset row can emit a second `warning` with the same code for `${x}` names that are no column of that row, still before any progress.
 
 ```json
-{"type":"error","code":"unresolved_variables","message":"2 variable(s) have no value — nothing was dispatched",
+{"type":"warning","code":"unresolved_variables","message":"2 variable(s) have no value — typed as written unless a step sets them first",
  "suggested_file":".testmuai/variables/variables.json",
  "variables":[
    {"name":"checkout_url","reason":"not_declared","used_by":[{"file":"objective","step":1}]},
@@ -82,14 +83,12 @@ Emitted by `run`, `testmd run` and (after `testrun_plan`) `testrun run` when an 
 
 | Field | Meaning |
 |---|---|
-| `variables[].reason` | `value_missing` — the key exists in `variables[].file` with an empty value · `not_declared` — the key is in no variable file |
+| `variables[].reason` | `value_missing` — the key exists in `variables[].file` with an empty value · `not_declared` — the key is in no variable file · `not_a_dataset_column` — a `${x}` that is no column of the Test Manager dataset the run was given (`variables[].dataset` names it) |
 | `variables[].file` | the pool file that holds the empty key (`value_missing` only); `--variables` when it came inline |
 | `variables[].used_by[]` | `{file, step}` — `file` is `objective` for `kane-cli run`, else the test file (flattened step index) |
 | `suggested_file` | where to add a `not_declared` key: `.testmuai/variables/assurance.json` inside an assurance store, `variables.json` otherwise |
 
-Terminal: do not re-run the same command. Supply values (`--variables`, or fill the file) and run again.
-
-**Note:** `ask_user` is auto-disabled when stdin is not a TTY. Since agents typically run kane-cli as a subprocess, ask_user events will not be emitted. Write objectives that don't require interactive input.
+Report it with the run's outcome. If a later step failed on a literal placeholder, point at this.
 
 ## Parsing Strategy for one-shot `run`
 
@@ -159,6 +158,6 @@ To cancel a run:
 
 ## Command-specific completion
 
-The `run_end` parsing strategy applies to one-shot `run` only. For `testmd run`, collect `test_md_done.overall_status`, `duration_s`, `session_id`, and optional `share_url`; embedded `run_end` events can finish individual steps. Local suites emit `testrun_done`; dispatched remote suites then emit `remote_done` (retain `status`, `exit`, `sessions_path`). `generate` emits `generate_done`. Assurance conversational agent streams end in `done`; review/read verbs have their own contracts. Always check process exit too: early refusal, invalid plan or dry-run can exit without the normal completion event.
+The `run_end` parsing strategy applies to one-shot `run` only. For `testmd run`, collect `test_md_done.overall_status`, `duration_s`, `session_id`, and optional `share_url`; embedded `run_end` events can finish individual steps. Local suites emit `testrun_done`; dispatched remote suites then emit `remote_done` (retain `status`, `exit`, `sessions_path`). Assurance conversational agent streams end in `done`; review/read verbs have their own contracts. Always check process exit too: early refusal, invalid plan or dry-run can exit without the normal completion event.
 
 Progress is for live display: count only `done`/`failed` completions, retaining child and execution context when step indices repeat.

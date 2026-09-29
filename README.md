@@ -91,7 +91,7 @@ kane-cli launches your locally installed Google Chrome (stable channel) via the 
 kane-cli can also run tests against an iOS Simulator or Android Emulator. It is off by default, so your web runs are unaffected.
 
 - **Locally** — macOS Apple Silicon (arm64) only. Install the platform tooling you already use: **Xcode** (for iOS), or **Android Studio** with one `arm64-v8a` AVD (for Android); sign in and install kane-cli's managed test tooling: `kane-cli login && kane-cli doctor --target simulator --install`; then `kane-cli run "<objective>" --target simulator --app ./MyApp.zip`.
-- **On the cloud grid** — from Linux, Windows, or any Mac, with no mobile tooling: `kane-cli testrun run tests/app/ --remote --device-name "Pixel 7" --os-version 14` runs a saved mobile suite on a HyperExecute emulator or simulator (needs a LambdaTest plan with HyperExecute macOS runners and `kane-cli plugin install remote-execution`).
+- **On the cloud grid** — from Linux, Windows, or any Mac, with no mobile tooling: `kane-cli testrun run --match '^tests/app/' --remote --device-name "Pixel 7" --os-version 14` runs a saved mobile suite on a HyperExecute emulator or simulator (needs a LambdaTest plan with HyperExecute macOS runners and `kane-cli plugin install remote-execution`).
 
 > Full setup and prerequisites: [Mobile testing](docs/user-guide/mobile/overview.md) · [Remote runs on the cloud grid](docs/user-guide/remote-execution.md).
 
@@ -201,7 +201,7 @@ kane-cli run "<one-sentence objective starting with 'Go to <url> and …'>" --ag
 
 Three rules:
 
-1. Use `--agent` for `run`, `testmd run`, and `generate`. `testrun run` has no `--agent`: it emits NDJSON when **stdin** is not a TTY (use `< /dev/null` for terminal automation). Assurance conversational commands use `--mode agent`. Parse command-specific completion events and process exit.
+1. Use `--agent` for `run` and `testmd run`. `testrun run` has no `--agent`: it emits NDJSON only when **stdin** is not a TTY, so every `testrun run` line an agent writes ends in `< /dev/null` (`< NUL` in cmd.exe; from PowerShell, `cmd /c "… < NUL"`); the first stdout line is `stream_start` (0.8.17+); a prose plan there means terminal mode, which after a real run waits on an evidence table until `q` or Esc. Assurance conversational commands use `--mode agent`. Parse command-specific completion events and process exit.
 2. **Use the "store as" pattern** for extraction. `"go to example.com, store the page title as 'page_title'"` — never `"read the page title"`.
 3. **One objective = one task.** If a flow has more than ~15 steps, split it into multiple `kane-cli run` calls and run them in parallel.
 

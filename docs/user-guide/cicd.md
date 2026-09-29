@@ -10,7 +10,7 @@ These patterns apply to every CI system; the recipes below differ only in how th
 - Always pass `--timeout <seconds>`. A hung run cannot be allowed to block the pipeline.
 - Authenticate with `--username` and `--access-key` from CI secrets. Do not call `kane-cli login` in CI — that flow opens a browser for OAuth and will not work on a runner.
 - Provide a start URL. A CI run has no interactive prompt, so if neither the objective names a site, the `--url` flag is passed, nor a `default_url` is configured, the run fails fast instead of waiting for input. The simplest options are to start the objective with the site ("Go to https://… and …") or pass `--url <url>`. To deliberately start from the browser's current page instead, add `--allow-missing-url`. See [Default start URL](./configuration.md#default-start-url).
-- Load test data with `--variables-file <path>`. Check the file into your repo (without secret values), or generate it before the step. A `{{name}}` with no value fails the job with exit `2` **before** any browser starts, with a receipt naming the variable — so fill values from CI secrets in that step, not later.
+- Load test data with `--variables-file <path>`. Check the file into your repo (without secret values), or generate it before the step. A `{{name}}` with no value does not change the exit code by itself: kane-cli warns before the browser starts and types the name as written, and a step that then fails on the literal text fails the job as usual. Fill values from CI secrets in that step. The warning is a `warning` line on stdout with `code: "unresolved_variables"`; fail the step on it if a missing value should block the pipeline.
 - **Project and folder are optional.** If you want uploads filed under a specific Test Manager project/folder, pre-configure with `kane-cli config project <id>` / `kane-cli config folder <id>` (use `kane-cli projects list` / `kane-cli folders list` to find the IDs). If you skip this, kane-cli auto-defaults a project/folder on first run and reports which one it picked — see [test-manager-integration.md](./test-manager-integration.md).
 - Check the exit code. The mapping is documented in [running tests](./running-tests.md#exit-codes); the short form is `0` passed, `1` failed, `2` error, `3` timeout or cancellation.
 - Run whole suites with one command. If your repo has committed `_test.md` tests, prefer one `testrun` invocation over a shell loop:
@@ -27,12 +27,12 @@ These patterns apply to every CI system; the recipes below differ only in how th
   kane-cli plugin install remote-execution
 
   # a web suite on 4 grid runners
-  kane-cli testrun run tests/web/ --remote --parallel 4 \
+  kane-cli testrun run --match '^tests/web/' --remote --parallel 4 \
     --username "$LT_USERNAME" --access-key "$LT_ACCESS_KEY" \
     --on-failure fail-fast
 
   # a mobile suite, from a Linux runner
-  kane-cli testrun run tests/app/ --remote \
+  kane-cli testrun run --match '^tests/app/' --remote \
     --device-name "Pixel 7" --os-version 14 \
     --username "$LT_USERNAME" --access-key "$LT_ACCESS_KEY" \
     --on-failure fail-fast

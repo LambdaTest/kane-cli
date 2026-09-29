@@ -10,8 +10,8 @@ Remote runs cover both kinds of test:
 ```bash
 kane-cli plugin install remote-execution                                          # once
 kane-cli testrun run --tags smoke --remote --parallel 4                           # a web suite on 4 grid runners
-kane-cli testrun run tests/app/ --remote --device-name "Pixel 7" --os-version 14  # an Android suite
-kane-cli testrun run tests/ios/ --remote --device-name "iPhone 15" --os-version 17.5
+kane-cli testrun run --match '^tests/app/' --remote --device-name "Pixel 7" --os-version 14  # an Android suite
+kane-cli testrun run --match '^tests/ios/' --remote --device-name "iPhone 15" --os-version 17.5
 ```
 
 > `--remote` is not the same as `--ws-endpoint` / `--cdp-endpoint`. Those attach a **remote browser** to a run that still executes on your machine (`kane-cli run`, `kane-cli testmd run`). `--remote` moves the **whole suite** to the grid: kane-cli itself runs there, and nothing but Node and the plugin is needed locally.
@@ -67,7 +67,7 @@ A web suite needs nothing beyond the prerequisites: the grid runner has Chrome, 
 
 ```bash
 kane-cli plugin install remote-execution
-kane-cli testrun run tests/web/ --remote --parallel 4
+kane-cli testrun run --match '^tests/web/' --remote --parallel 4
 ```
 
 What you see back is a normal `testrun` summary; the only extra lines are the dispatch and the job link. A member that authors on the grid comes back with its `output-<stem>/` recordings, so the next run — local or remote — replays them. Commit those recordings as you would after a local run.
@@ -154,11 +154,11 @@ npm install -g @testmuai/kane-cli
 kane-cli plugin install remote-execution
 
 # a web suite
-kane-cli testrun run tests/web/ --remote --parallel 4 \
+kane-cli testrun run --match '^tests/web/' --remote --parallel 4 \
   --username "$LT_USERNAME" --access-key "$LT_ACCESS_KEY"
 
 # a mobile suite
-kane-cli testrun run tests/app/ --remote \
+kane-cli testrun run --match '^tests/app/' --remote \
   --device-name "Pixel 7" --os-version 14 \
   --username "$LT_USERNAME" --access-key "$LT_ACCESS_KEY"
 ```

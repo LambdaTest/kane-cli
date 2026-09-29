@@ -133,10 +133,10 @@ Fill `value`. `kane-cli` never overwrites a key that already exists in any of yo
 
 ### Before a run: unresolved variables
 
-`kane-cli run`, `kane-cli testmd run` and `kane-cli testrun run` check every `{{name}}` an authored step references **before anything starts** — no browser, no session. A name with no value stops the run there, with exit code `2`, and the receipt says what each one needs:
+`kane-cli run`, `kane-cli testmd run` and `kane-cli testrun run` check every `{{name}}` an authored step references **before anything starts**. A name with no value is a warning: the run goes ahead and types the name as written, unless a step sets it first:
 
 ```
-✗ 3 variables have no value — nothing was dispatched
+warning: 3 variables have no value
 
   Waiting for a value in .testmuai/variables/assurance.json
     storefront_sign_in_url     step 1
@@ -148,12 +148,12 @@ Fill `value`. `kane-cli` never overwrites a key that already exists in any of yo
     Add it to .testmuai/variables/assurance.json
 
   If {{name}} is literal page text, write \{{name}} to keep it as-is.
-  Fill the values and run again.
+  A step that sets a name first binds it; anything else is typed as written. Fill the values to bind them.
 ```
 
-The pool file is named once per group. A test filename appears only when it is not the file you named — an `@import`ed unit and a testrun member both keep theirs, and a `kane-cli run` objective shows no location at all. A name that is in no file gets `Add it to <file>` when a pool file exists, or the JSON to create when there is none yet.
+The pool file is named once per group. A test filename appears only when it is not the file you named — an `@import`ed unit and a testrun member both keep theirs, and a `kane-cli run` objective shows no location at all. A name that is in no file gets `Add it to <file>` when the pool file exists, or the JSON to create when there is none yet.
 
-There is no flag to bypass the check: fill the value or remove the reference. Never checked: `{{smart.*}}`, `{{environment.*}}`, `{{secrets.*}}` and `{{totp.*}}` (resolved at run time); a name an earlier step stored (`store the price as 'price'`); a test's own frontmatter `variables:`; and replayed steps, which resolve from their tape and from TMS — a replay with a missing value gets a warning line, never a refusal. `${x}` is not a variable reference on this path. In agent mode the refusal is one typed `error` event with `code: "unresolved_variables"` — see [Running tests](./running-tests.md#unresolved-variables).
+Never checked: an explicit `{{global.*}}` (it resolves from Test Manager at run time — only a bare `{{name}}` is a pool question), `{{smart.*}}`, `{{environment.*}}`, `{{secrets.*}}` and `{{totp.*}}` (resolved at run time); a name an earlier step stores (`store the price as 'price'`); a name the test's own frontmatter `variables:` declares, even with an empty value; and replayed steps, which resolve from their tape and from TMS (a `testrun run` preflight still lists a replayed step's names, because it checks the file before it knows which steps replay). `${x}` is a dataset column reference, not a pool reference; a `${x}` that is no column of the dataset row the run was given gets its own warning. In agent mode the same content is one `warning` event with `code: "unresolved_variables"` — see [Running tests](./running-tests.md#unresolved-variables).
 
 ## Context files
 

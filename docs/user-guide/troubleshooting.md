@@ -149,11 +149,11 @@ You have three options:
 
 ## "Variables not resolving"
 
-Since 0.8.12 a run **refuses to start** when an authored step references a `{{name}}` that has no value — you get a receipt naming each variable, the file that is waiting for its value (or `Not in any variables file`), and the step that uses it; exit code `2`, nothing dispatched. Read the receipt first: it tells you whether to fill an existing key or add a new one, and which file. See [Before a run](./variables-and-context.md#before-a-run-unresolved-variables).
+A run **warns before it starts** when an authored step references a `{{name}}` that has no value: the receipt names each variable, the file that is waiting for its value (or `Not in any variables file`), and the step that uses it. The run then goes ahead and types the name as written. Read the warning first: it tells you whether to fill an existing key or add a new one, and which file. See [Before a run](./variables-and-context.md#before-a-run-unresolved-variables).
 
-If a `{{my_var}}` placeholder is nevertheless appearing **literally** in a browser action, one of three things is true:
+If a `{{my_var}}` placeholder appears **literally** in a browser action, one of three things is true:
 
-- The step is a **replay** — replayed steps resolve from their tape and from TMS, and a missing value there produces a warning line rather than a refusal. Fill the value and run again.
+- The warning above named it and nothing set it — fill the value and run again (a **replay** step resolves from its tape and from TMS instead).
 - The reference is **escaped** — `\{{my_var}}` is typed as-is on purpose, for pages where the braces are real text.
 - The variable file is not being loaded at all. Check, in order:
 

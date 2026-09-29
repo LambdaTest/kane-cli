@@ -14,7 +14,7 @@ Use `testrun` when you have a suite of committed tests to run together — night
 
 Members come either from explicit paths (each must end in `_test.md`) or, when no paths are given, from a recursive walk of the current directory. Two filters then apply, in order:
 
-- **`--match <regex>`** — keep tests whose project-relative path matches the regex.
+- **`--match <regex>`** — keep tests whose project-relative path matches the regex. `--match` sees the path as the OS writes it: `tests/app/` on macOS and Linux, `tests\app\` on Windows. Quote the regex with double quotes in cmd.exe; single quotes are literal there.
 - **`--tags <list>`** — keep tests whose [`tags:` frontmatter](./testmd/overview.md#frontmatter) matches **any** of the given tags (case-insensitive). Repeat the flag or pass a comma-separated list; `--tags smoke,checkout` and `--tags smoke --tags checkout` are equivalent.
 
 Duplicates are removed and the final list runs in a stable order.
@@ -36,7 +36,6 @@ A member can fail preflight for these reasons:
 |---|---|---|
 | `org_mismatch` | Belongs to a different organisation than the rest | Check with `kane-cli testmd status <path>` |
 | `project_mismatch` | Belongs to a different project than the rest | Check with `kane-cli testmd status <path>`; run project-by-project |
-| `unresolved_variables` *(0.8.12)* | An authored step references a `{{name}}` that has no value in any variable file or in the member's own `variables:` frontmatter | Fill the value in `.testmuai/variables/*.json` (the receipt names the file) or remove the reference. `testrun run` has no `--variables` flag |
 
 If any member fails preflight, the plan is invalid and **nothing runs** (exit `2`). The offenders print to stderr:
 
@@ -46,10 +45,10 @@ error: plan invalid — 2 offending test(s):
   tests/other_project_test.md: project_mismatch
 ```
 
-Variable offenders get the full receipt instead of a one-line code — every unresolved name across the members, each with the test files and steps that use it:
+A member whose authored steps reference a `{{name}}` with no value passes preflight. kane-cli prints a warning receipt — every such name across the members, each with the test files and steps that use it — and the run types the name as written unless a step sets it first:
 
 ```
-✗ 2 variables have no value — nothing was dispatched
+warning: 2 variables have no value
 
   Not in any variables file
     other_key   b_test.md step 1
@@ -58,10 +57,10 @@ Variable offenders get the full receipt instead of a one-line code — every unr
     Add them to .testmuai/variables/variables.json
 
   If {{name}} is literal page text, write \{{name}} to keep it as-is.
-  Fill the values and run again.
+  A step that sets a name first binds it; anything else is typed as written. Fill the values to bind them.
 ```
 
-In agent mode (stdin not a TTY) the same information arrives as one `error` event with `code: "unresolved_variables"` right after `testrun_plan` — see [Running tests](./running-tests.md#unresolved-variables) for the shape.
+`testrun run` has no `--variables` flag: fill the pool file or the member's own `variables:` frontmatter. In agent mode (stdin not a TTY) the same content arrives as one `warning` event with `code: "unresolved_variables"` right after `testrun_plan`, whose members carry their rows — see [Running tests](./running-tests.md#unresolved-variables) for the shape.
 
 ## Mobile members
 
@@ -71,8 +70,8 @@ A `_test.md` with a mobile [`target:`](./testmd/overview.md#mobile-target) (`emu
 - **On the cloud grid** (`--remote`), the suite runs on a virtual device on a HyperExecute macOS host, so it works **from any machine** — Linux, Windows, or a Mac with no Xcode or Android Studio. Pick the device from `kane-cli devices list --target emulator|simulator --remote`. One grid job runs one platform (emulator members on one Android version, simulator members on one HyperExecute pool), and a member's local build is uploaded from your machine before dispatch and handed to the grid as an `APP…` id. Everything else is in [Remote runs](./remote-execution.md).
 
 ```bash
-kane-cli testrun run tests/app/ --device-name "Pixel 7 API 35" --os-version 15            # local emulators
-kane-cli testrun run tests/app/ --remote --device-name "Pixel 7" --os-version 14           # the grid
+kane-cli testrun run --match '^tests/app/' --device-name "Pixel 7 API 35" --os-version 15            # local emulators
+kane-cli testrun run --match '^tests/app/' --remote --device-name "Pixel 7" --os-version 14           # the grid
 ```
 
 ## Running
@@ -110,7 +109,7 @@ Each desktop worker gets its **own isolated Chrome** with a fresh temporary prof
 kane-cli testrun run --tags smoke --parallel 4 --dry-run
 ```
 
-Exit `0` means the plan is valid; exit `2` reports planning refusals. This does not prove runtime readiness: local dry-run returns before runtime authentication and browser/device startup. Remote dry-run also validates the grid catalog but does not upload apps or dispatch a job. A real run can still fail after a valid plan.
+Exit `0` means the plan is valid; exit `2` reports planning refusals. This does not prove runtime readiness: local dry-run returns before runtime authentication and browser/device startup. Remote dry-run also validates the grid catalog but does not upload apps or dispatch a job. A real run can still fail after a valid plan. A dry run prints the variable warning too, so you can fill values before the real run.
 
 ## Reading results
 
@@ -137,7 +136,7 @@ Add `--remote` and the same selection runs as one **HyperExecute** job: Chrome o
 kane-cli plugin install remote-execution
 kane-cli testrun run --tags smoke --remote --dry-run          # resolve everything, dispatch nothing
 kane-cli testrun run --tags smoke --remote --parallel 4       # a web suite on 4 grid runners
-kane-cli testrun run tests/ios/ --remote --device-name "iPhone 15" --os-version 17.5
+kane-cli testrun run --match '^tests/ios/' --remote --device-name "iPhone 15" --os-version 17.5
 ```
 
 `--dry-run` runs the remote preflight too, so the selection is validated against the grid before any job exists. A web selection and a device selection cannot share one job — run them as two suites. This is different from `--ws-endpoint`, which attaches a remote browser to a run that still executes on your machine. The full guide — prerequisites, how a job runs, web suites, device catalog, app rules, what one job can hold, and the events — is [Remote runs on the cloud grid](./remote-execution.md).

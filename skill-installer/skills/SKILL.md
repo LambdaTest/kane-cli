@@ -1,18 +1,18 @@
 ---
 name: kane-cli
-description: Browser automation + AI test authoring via kane-cli - run browser objectives, generate & refine test scenarios/cases from a description, design requirement-linked test suites from a PRD/spec (assurance), parse NDJSON output, inspect logs, save runnable _test.md. Use for any task requiring a real browser (navigate, click, fill forms, test web UI, take screenshots), or to author test cases, quick cases from a description via kane-cli generate; a designed, coverage-accounted suite from requirement documents via the assurance commands. Never write test cases by hand. Also runs mobile app tests - native Android app on a virtual emulator or iOS app on a simulator via --target emulator|simulator (desktop browser stays the default target): locally on macOS Apple Silicon, or on the LambdaTest cloud grid from any machine via kane-cli testrun run --remote. Also shares the assurance store (.context/) with a team through a location (a GitHub repository, an S3-compatible bucket, or a folder) via kane-cli context sync, and resolves the decisions a sync rebase asks.
+description: Browser automation + AI test authoring via kane-cli - run browser objectives, design requirement-linked test suites from a PRD/spec or from a description (assurance), parse NDJSON output, inspect logs, save runnable _test.md. Use for any task requiring a real browser (navigate, click, fill forms, test web UI, take screenshots), or to author test cases: a designed, coverage-accounted suite from requirement documents, or from a description the user gives you, via the assurance commands. Never write test cases by hand. Also runs mobile app tests - native Android app on a virtual emulator or iOS app on a simulator via --target emulator|simulator (desktop browser stays the default target): locally on macOS Apple Silicon, or on the LambdaTest cloud grid from any machine via kane-cli testrun run --remote. Also shares the assurance store (.context/) with a team through a location (a GitHub repository, an S3-compatible bucket, or a folder) via kane-cli context sync, and resolves the decisions a sync rebase asks.
 ---
 
 # Kane CLI — Browser Automation Skill
 
-Use `kane-cli` for **any task that requires a real browser**: navigating websites, clicking elements, filling forms, searching, testing web UI, taking screenshots, or verifying deployments. Do NOT use Playwright, Puppeteer, or Selenium directly. Use `--agent` for `run`, `testmd run`, and `generate`. `testrun run` has no `--agent`: it emits NDJSON when **stdin** is not a TTY (use `< /dev/null` for terminal automation). Assurance conversational commands use `--mode agent`.
+Use `kane-cli` for **any task that requires a real browser**: navigating websites, clicking elements, filling forms, searching, testing web UI, taking screenshots, or verifying deployments. Do NOT use Playwright, Puppeteer, or Selenium directly. Use `--agent` for `run` and `testmd run`. `testrun run` has no `--agent`: it emits NDJSON only when **stdin** is not a TTY, so every `testrun run` line you write ends in `< /dev/null` (bash and zsh: macOS, Linux, Git Bash; in cmd.exe write `< NUL`; from PowerShell run it through cmd: `cmd /c "kane-cli testrun run … < NUL"`). Check the first stdout line: on 0.8.17+ it is `{"type":"stream_start"…}`. A prose plan there instead means the CLI is in terminal mode: it shows the human view and, after a real run, opens an evidence table that waits until `q` or Esc, so the process never exits on its own; stop it and rerun with the redirect. An empty stdout with a message on stderr is a usage error: read it. Assurance conversational commands use `--mode agent`.
 
-**Authoring test cases or scenarios?** Never write them by hand — kane-cli has two authoring pipelines, and the routing matters:
+**Authoring test cases or scenarios?** Never write them by hand: every test case comes from the **assurance** commands — Read `references/assurance.md` first.
 
-- The user describes what to test in a sentence or two, or wants quick scenario/case ideas → `kane-cli generate` (§6).
-- The user has **requirement documents** (a PRD, a spec, acceptance notes) and wants a designed suite, requirement-linked coverage, or "what exactly is covered?" answers → the **assurance** commands — Read `references/assurance.md` first.
+- The user has **requirement documents** (a PRD, a spec, acceptance notes) → ingest them, then design.
+- The user only **describes** what to test, in chat → write their description, in their words, to a requirements file, ingest that file, then design (§6). The description is the requirement.
 
-Don't draft test cases in chat or scratch files: both pipelines produce structured, refinable, runnable `_test.md` output.
+Don't draft test cases in chat or scratch files: design produces structured, refinable, runnable `_test.md` output.
 
 ---
 
@@ -50,7 +50,7 @@ On Windows PowerShell: `$env:KANE_CLI_USER_AGENT='<your-runtime>'; kane-cli run 
 
 **Keeping runs.** When the person's saved purpose is `suite` or `ask`, add `--name <short-slug>` to every one-off `run`. A named run is recorded as a `_test.md` while it runs, so keeping it afterwards costs nothing, and a run launched without a name cannot be kept without running again. With `one-off`, leave the flag out. Details: `references/first-run.md` §4.
 
-Bash blocks until kane-cli exits, then hands you the complete stdout. Parse it, summarize what happened, and present the result card. Wait for process completion on `testmd run` and `generate` too, but parse their own completion events: `test_md_done` and `generate_done`, respectively. An intermediate `run_end` does not finish a saved test.
+Bash blocks until kane-cli exits, then hands you the complete stdout. Parse it, summarize what happened, and present the result card. Wait for process completion on `testmd run` too, but parse its own completion event, `test_md_done`. An intermediate `run_end` does not finish a saved test.
 
 Set a generous timeout (up to 600000ms) since browser runs can take a while.
 
@@ -76,7 +76,8 @@ Progress events have `step`/`status`/`remark` fields and **no `type` field**.
 |------|-------------|-----|
 | **Failures** | Any step with `status: "failed"` | `Step <n> failed: <remark>` |
 | **Flow changes** | `bifurcation`, `child_agent_start`, `child_agent_end` | Plain-language one-liner (e.g. "The agent split the objective into 2 sub-tasks") |
-| **Errors** | `error` typed events | `Error: <message>`. The exception is `code: "unresolved_variables"`, which is a pre-run refusal, not a failure: see §3 **Unresolved variables** |
+| **Errors** | `error` typed events | `Error: <message>` |
+| **Unresolved variables** | `warning` with `code: "unresolved_variables"` | Before any progress: name the variables with no value and where a value goes (§3 **Unresolved variables**). The run continued |
 | **Overall progress** | All passing steps | One summary line: `<total> steps completed: <2–4 key actions from remarks>` |
 
 #### What to skip
@@ -159,9 +160,9 @@ When the user's request involves a browser — or writing test cases:
 **What does the user want?**
 - A single one-shot browser task → build a `kane-cli run --agent` command (§3 + §4)
 - A test they want to save / re-run / commit → Read `references/testmd.md` first, then use `kane-cli testmd`
-- Run a suite of saved tests (several `_test.md` at once) → Read `references/testrun.md` first, then use `kane-cli testrun run`
-- Need test cases or scenarios from a short description — because the user asked, or because the task needs them (no browser) → **don't hand-write them**; Read `references/generate.md` first, then use `kane-cli generate` (§6)
-- Has requirement documents (PRD/spec) and wants a designed suite, coverage accounting, or suite upkeep → Read `references/assurance.md` first — the assurance commands (`context`/`design`/`cover`/`maintain reconcile`, kane-cli 0.6.1+; several features need newer releases, up to 0.8.14+ — the reference marks each), NOT `generate`
+- Run a suite of saved tests (several `_test.md` at once) → Read `references/testrun.md` first, then use `kane-cli testrun run … < /dev/null`
+- Need test cases from a description the user gives in chat, with no document → **don't hand-write them**; write the description to a requirements file and design from it (§6)
+- Has requirement documents (PRD/spec) and wants a designed suite, coverage accounting, or suite upkeep → Read `references/assurance.md` first — the assurance commands (`context`/`design`/`cover`/`maintain reconcile`, kane-cli 0.6.1+; several features need newer releases, up to 0.8.14+ — the reference marks each)
 - A **designed** test (its `_test.md` carries an `assurance:` block) failed a run → Read `references/assurance.md` §6.1 **before touching the file** — an edit is adopted as the next design version on the next run; classify the failure first (app bug → report it; requirement changed → reconcile; wording → redesign through the CLI; capability missing → stop), and edit a step of an existing designed test by hand only after reading `references/objectives-cookbook.md`
 - Share the context store with a team, join a teammate's, keep two stores level, or resolve a sync conflict → Read `references/context-sync.md` first — `kane-cli context sync`, `kane-cli context push`, `kane-cli context pull` and `kane-cli context clone` (kane-cli 0.8.14+); the store is shared through a location, never by copying or git-merging `.context/`
 - Multiple independent browser tasks → Read `references/parallel.md` first
@@ -175,7 +176,7 @@ When the user's request involves a browser — or writing test cases:
 - The person wants to watch runs live, or asks about the status line → Read `references/live-strip.md` (Claude Code only)
 - You need the full NDJSON event schema (rare — §5's summary covers 90% of cases) → Read `references/parsing.md`
 - Compare / evaluate / justify kane-cli against another tool or approach (cost, tokens, effort, ROI) → Read `references/fair-evaluation.md` first — comparisons are only honest like-for-like across the test lifecycle
-- **Mobile**: drive a native app on a virtual Android emulator or iOS simulator instead of the browser → Read `references/mobile.md` first. Desktop (the browser) stays the **default** target; mobile is opt-in via `--target emulator|simulator` and always drives an app you provide (`--app <build|APPid>`), never a URL. **Local** mobile runs (`run`, `testmd run`, `testrun run`) need macOS Apple Silicon. **From any other machine** (Linux, Windows, Intel Mac, a Mac without Xcode/Android Studio), run saved mobile `_test.md` files on the cloud grid with `kane-cli testrun run <paths> --remote --device-name "<grid device>" --os-version <v>` — the grid boots the emulator/simulator on a HyperExecute macOS host (the account needs a HyperExecute plan with macOS runners). Never tell a non-Mac user mobile is impossible: point them at `--remote`.
+- **Mobile**: drive a native app on a virtual Android emulator or iOS simulator instead of the browser → Read `references/mobile.md` first. Desktop (the browser) stays the **default** target; mobile is opt-in via `--target emulator|simulator` and always drives an app you provide (`--app <build|APPid>`), never a URL. **Local** mobile runs (`run`, `testmd run`, `testrun run`) need macOS Apple Silicon. **From any other machine** (Linux, Windows, Intel Mac, a Mac without Xcode/Android Studio), run saved mobile `_test.md` files on the cloud grid with `kane-cli testrun run <paths> --remote --device-name "<grid device>" --os-version <v> < /dev/null` — the grid boots the emulator/simulator on a HyperExecute macOS host (the account needs a HyperExecute plan with macOS runners). Never tell a non-Mac user mobile is impossible: point them at `--remote`.
 
 **Every run, always:** follow §1 above.
 
@@ -187,7 +188,7 @@ When the user's request involves a browser — or writing test cases:
 kane-cli run "<objective>" --agent [options]
 ```
 
-> The `run` subcommand is **mandatory**. `kane-cli "<objective>"` (no `run`) does **not** work — unknown first tokens exit `2` with a "did you mean" suggestion. Same rule applies to `kane-cli testmd run …` and `kane-cli generate …`.
+> The `run` subcommand is **mandatory**. `kane-cli "<objective>"` (no `run`) does **not** work — unknown first tokens exit `2` with a "did you mean" suggestion. Same rule applies to `kane-cli testmd run …`.
 
 `--agent` is mandatory — it switches stdout to NDJSON. Most-used flags:
 
@@ -209,7 +210,14 @@ Other flags (`--global-context`, `--local-context`, `--cdp-endpoint`, `--allow-m
 
 **Exit codes:** `0` passed · `1` failed · `2` auth/infra error · `3` timeout/cancelled.
 
-**Unresolved variables (0.8.12+):** every `{{name}}` in the objective must have a value before the run starts. If one does not, the run **refuses before anything launches** — exit `2`, and with `--agent` a single `{"type":"error","code":"unresolved_variables", ...}` event carrying `variables[]` (`name`, `reason`: `value_missing` = the key exists in `file` with no value · `not_declared` = the key is in no file, add it to `suggested_file`; `used_by[]`). **This is terminal — do not retry the same command.** Either ask the user for the values, or write them yourself (`--variables '{"name":{"value":"…"}}'`, or `{"name":{"value":""}}` stubs into `suggested_file` for the user to fill), then run again. There is no bypass flag. Never checked: `{{smart.*}}`/`{{environment.*}}`/`{{secrets.*}}`/`{{totp.*}}`, and names an earlier step stores (`store … as 'x'`). Numbers in a variable file count as values (loaded as strings); booleans do not.
+**Unresolved variables (0.8.15+):** kane-cli checks every `{{name}}` in the objective before the run starts. A name with no value is a warning: the run goes ahead and types the name as written, unless a step sets it first. With `--agent` the warning is one `{"type":"warning","code":"unresolved_variables", ...}` event before the first progress frame. It carries `suggested_file` and `variables[]`: `name`; `reason` (`value_missing` = the key exists in `file` with no value · `not_declared` = the key is in no file, add it to `suggested_file`); `used_by[]`. Never checked: an explicit `{{global.*}}` (it resolves from Test Manager at run time), `{{smart.*}}`, `{{environment.*}}`, `{{secrets.*}}`, `{{totp.*}}`, and names an earlier step stores (`store … as 'x'`). Numbers in a variable file count as values (loaded as strings); booleans do not.
+
+**Fill the variables before any run.** Do this before `run`, `testmd run` and `testrun run`, and always before `--remote`, which books a grid job. A missing value is asked for before the run; the first-run rule that nothing is asked before the first result does not cover it.
+
+1. Collect the names with no value: the `warning`, a dry-run plan's `unresolved[]` rows, or a design run's `variables_declared` and `variables_summary` rows. Design rows list what design declared, not every missing value, and a dry run's `valid: true` says nothing about values: the dry run's `warning` is the check.
+2. A value you already have, because the user said it or the requirement document states it, you write into that key in the file the event names (for `run`, `--variables '{"name":{"value":"…"}}'` also works), and you tell the user what you filled and where.
+3. The rest you ask for once, in one message, using each variable's `description` when design gave one. Plain values (a URL, an email, a user name) the user gives you here or adds to the file, their choice. Secrets, which are any row with `secret: true`, any description that names a credential, and any name containing `password`, `secret`, `token` or `key`, the user fills in the file and tells you when done; you never ask for the value in chat, never echo it, and report names and file paths only.
+4. Then a fresh `--dry-run` of the exact selection: a valid plan with no `warning` is the check. A member whose rows are all filled may run while the others wait. Never fill a placeholder just to silence the check; a throwaway value is right only when the description asks for one, such as a deliberately wrong password. A frontmatter declaration with an empty value also silences the check, so look at the values a step relies on, not only at the warning. A name still empty is typed into the page as written; if a run then failed at that step, say so.
 
 ### Examples
 
@@ -298,7 +306,7 @@ Action → extraction → assertion in one objective:
 Stdout is NDJSON, one event per line. On kane-cli 0.8.17+ every line also carries `v` (contract version, `1`) and `ts` (when it was emitted), and the first line is `{"type":"stream_start","cli_version":…,"surface":"run"|"testmd"|"testrun"}`. Ignore fields and event types you do not know: new ones can appear in any release. There are two shapes:
 
 - **Progress events** (most events) have `step` (1-based), `status` (`running` at start, `done`/`failed` at completion), `remark` — and **no `type` field**.
-- **Typed events** have a `type` field: `project_folder_auto_defaulted` (run-startup gate, fires before any progress when no project/folder is configured), `bifurcation`, `child_agent_start`, `child_agent_end`, `ask_user`, `error` (an `error` with `code: "unresolved_variables"` is a pre-run refusal and the **only** line — no `run_end` follows; handle per §3), and finally `run_end`.
+- **Typed events** have a `type` field: `project_folder_auto_defaulted` (run-startup gate, fires before any progress when no project/folder is configured), `bifurcation`, `child_agent_start`, `child_agent_end`, `ask_user`, `error`, `warning` (pre-run `code: "unresolved_variables"` — the run continues; handle per §3), and finally `run_end`.
 
 Parsing strategy:
 
@@ -313,51 +321,21 @@ For one-shot `run`, build post-run logic on `run_end` and process exit. Saved te
 
 For full event schemas (`bifurcation` flow fields, `child_agent_*`, `ask_user` semantics, `cancel`/`user_response` outbound events, complete `run_end` field list), Read `references/parsing.md`.
 
-`kane-cli generate` (§6) emits a **different** stream — every line is typed `generate_*` (no untyped progress lines), terminated by `generate_done`. Its schema is in `references/generate-parsing.md`.
-
 The assurance conversational commands (`context ingest`/`context extract`, `design tests`, `maintain reconcile`, `cover`) do NOT take `--agent` — they take **`--mode agent`** and speak their own typed stream ending in `done` (open vocabulary — tolerate unknown event types; on 0.7.2+ the stream is strict — every stdout line parses, stderr silent — while on 0.7.1 a merged `context ingest` prints a few prose receipt lines BEFORE the stream — skip to the first `{` line, harmless on 0.7.2+ — and a landing-phase ingest failure ends with prose + exit 1/2 and no stream at all: a refusal, not a crash; on 0.7.2+ those failures ride the stream as `error` + `done`); **for those commands only, exit `3` means paused-and-resumable, not timeout** — schema in `references/assurance-parsing.md`, behavior in `references/assurance.md`. The context sync verbs (`kane-cli context sync`, `kane-cli context push`, `kane-cli context pull`, `kane-cli context clone`; kane-cli 0.8.14+) take `--mode agent` the same way and speak a `sync_*` family ending in `done`; there too exit `3` means a decision or a pull is needed, not a failure — `references/context-sync.md`. `kane-cli context sync setup` refuses without a terminal (`TTY_REQUIRED`): agents use `kane-cli context sync add` and `kane-cli context clone`.
 
 `kane-cli testrun run` also emits its own typed stream (`testrun_plan` … terminal `testrun_done`) — schema in `references/testrun.md`. `kane-cli testmd run` may additionally emit `test_md_evidence_ingest` (replay evidence published) and `test_md_bundle_sync` (test bundle synced) — informational; describe in plain language, never surface raw names. The post-run evidence hint (`` evidence: view locally with `kane-cli evidence serve <path>` ``) is a **stderr** text line, not a stdout event — don't try to parse it from the NDJSON stream; see `references/evidence.md` for how to act on it.
 
 ---
 
-## 6. Generate test cases (authoring — no browser)
+## 6. Test cases from a description (no requirement document)
 
-`kane-cli generate` authors **Test Scenarios → Test Cases** from a plain-language description. It does **not** drive a browser. **Use it whenever a task needs quick test cases or scenarios from a description — don't hand-author them in chat or a file.** (Requirement documents + coverage accounting → assurance instead: `references/assurance.md`.) Reach for it to: turn a feature / requirement description into a test suite; expand or refine coverage (more edge cases, negative paths, a narrower focus); or save the Functional cases as runnable `_test.md` and hand them to `kane-cli testmd run`. Full details + event schema: **Read `references/generate.md`**.
+When the user describes what to test in chat and has no document, use the description as the requirement.
 
-Three explicit modes, each runs **one turn then exits**:
+1. Write the user's words to `requirements/<feature>.md` in the project, as given, one heading per feature, nothing invented. Tell the user the file exists and that the tests will cite it.
+2. `kane-cli context ingest requirements/<feature>.md --mode agent`, review the extracted use-cases at the checkpoint, then `kane-cli design tests …`, exactly as `references/assurance.md` describes.
+3. Present the designed tests, gaps, warnings and the variables that need values (§3 **Fill the variables before any run**). The designed tests get their own review checkpoint before any run (`references/assurance.md`). Then hand the set to `kane-cli testrun run … < /dev/null` (`references/assurance.md`, the authoring bridge).
 
-| Mode | Command |
-|---|---|
-| **New** | `kane-cli generate "<what to test>" --agent` |
-| **Refine** | `kane-cli generate "<change>" --refine --req <id> --agent` |
-| **Save** | `kane-cli generate --save --req <id> --agent` → writes runnable `_test.md` |
-
-**Launch + present** — same as §1: use `Bash` (not Monitor), emit "Generating test cases…" before launch, then parse the output when it returns. Generate is a **quick single turn** — it exits on its own at `generate_done`.
-
-**After Bash returns**, parse the NDJSON and present only what matters:
-
-| Show | Event | How |
-|------|-------|-----|
-| **The deliverable** | `generate_snapshot` | Present scenarios + cases (see below) |
-| **Clarifications** | `generate_clarification` | Surface the question — it needs an answer |
-| **Save results** | `generate_save_result` | List files written |
-| **Errors** | `error` | Surface the message |
-| **Skip everything else** | `generate_thinking`, `generate_progress`, `generate_chat`, `generate_start` | Noise — don't narrate |
-
-At `generate_done`, **present the result adaptively**:
-- **≤ ~30 cases** → a nested tree: each scenario, then its cases tagged Positive / Negative / Edge.
-- **more than that** → a summary line + a bulleted scenario list (title + case count); expand a scenario's cases only when asked.
-
-Then offer the next commands from the terminal line's Refine / Save hints (they carry the request id) — don't hand-build them.
-
-**Clarification → refine (do not skip):** if the turn ends with a clarification, that's **exit 0 — not an error**. Act on it: answer it yourself, or ask your own user, then **re-invoke** `kane-cli generate "<answer>" --refine --req <id> --agent`. Never drop a clarification.
-
-**Attach files:** `--files a,b,c` adds local files (docs / images / PDF / CSV — up to 10, ≤ 50 MB each) as generation context on a **new** or **`--refine`** turn (not `--save`); each emits a `generate_upload` line before `generate_start`. Details in `references/generate.md`.
-
-**Save is Functional-only:** `--save` writes only **Functional** cases to `_test.md` (under `<cwd>/.testmuai/tests` by default). Non-functional cases (Security, Performance, …) are generated and shown but not saved. Run saved files with **`kane-cli testmd run`** (`references/testmd.md`) — that's the generate → testmd pipeline.
-
-Internal event/field names (`generate_snapshot`, `request_id`, …) are for parsing only — never show them to the user (§5 rule). Wire schema: `references/generate-parsing.md`.
+A draft in chat cannot be run, and a hand-written `_test.md` carries no requirement link and no coverage accounting; the deliverable is the designed test.
 
 ---
 
@@ -368,7 +346,6 @@ Internal event/field names (`generate_snapshot`, `request_id`, …) are for pars
 | User wants to save/persist/re-run a test | `references/testmd.md` |
 | Run a suite of saved `_test.md` tests as one batch | `references/testrun.md` |
 | Run a suite on the cloud grid (`--remote`), incl. mobile suites from any machine | `references/testrun.md` §Remote + `references/mobile.md` §Remote |
-| You need quick test cases or scenarios from a description | `references/generate.md` |
 | User has requirement docs (PRD/spec) → designed suite, coverage, or suite upkeep | `references/assurance.md` |
 | Need the assurance NDJSON event schema (`--mode agent`) | `references/assurance-parsing.md` |
 | Share the context store with a team, join one, keep stores level, or resolve a sync conflict (kane-cli 0.8.14+) | `references/context-sync.md` |
@@ -376,7 +353,6 @@ Internal event/field names (`generate_snapshot`, `request_id`, …) are for pars
 | View, share, validate, or merge evidence packs | `references/evidence.md` |
 | Multiple independent browser tasks | `references/parallel.md` |
 | Need full NDJSON event schema (`run`) | `references/parsing.md` |
-| Need the `generate` NDJSON event schema | `references/generate-parsing.md` |
 | Browse / create projects or folders, or parse the auto-default event | `references/test-manager.md` |
 | Start of every session: preflight, the ready card, sign-in | `references/ready-check.md` |
 | A person's first session: run first, the tour, three choices | `references/first-run.md` |
@@ -388,7 +364,7 @@ Internal event/field names (`generate_snapshot`, `request_id`, …) are for pars
 
 ## Command-specific completion
 
-The `run_end` parsing strategy applies to one-shot `run` only. For `testmd run`, collect `test_md_done.overall_status`, `duration_s`, `session_id`, and optional `share_url`; embedded `run_end` events can finish individual steps. Local suites emit `testrun_done`; dispatched remote suites then emit `remote_done` (retain `status`, `exit`, `sessions_path`). `generate` emits `generate_done`. Assurance conversational agent streams end in `done`; review/read verbs have their own contracts. Always check process exit too: early refusal, invalid plan or dry-run can exit without the normal completion event.
+The `run_end` parsing strategy applies to one-shot `run` only. For `testmd run`, collect `test_md_done.overall_status`, `duration_s`, `session_id`, and optional `share_url`; embedded `run_end` events can finish individual steps. Local suites emit `testrun_done`; dispatched remote suites then emit `remote_done` (retain `status`, `exit`, `sessions_path`). Assurance conversational agent streams end in `done`; review/read verbs have their own contracts. Always check process exit too: early refusal, invalid plan or dry-run can exit without the normal completion event.
 
 Progress is for live display: count only `done`/`failed` completions, retaining child and execution context when step indices repeat.
 

@@ -195,13 +195,13 @@ The customer-facing flags accepted by `kane-cli run`:
 
 ### Unresolved variables
 
-Every `{{name}}` in the objective must have a value before the run starts. A name with no value stops the run there — no browser, no session — with exit code `2` and a receipt naming each variable and what it needs. There is no flag to bypass it: fill the value or remove the reference. With `--agent`, the refusal is a single typed event:
+kane-cli checks every `{{name}}` in the objective before the run starts. A name with no value is a warning: the run goes ahead and types the name as written, unless a step sets it first. On a TTY the warning is the receipt shown in [Variables and context](./variables-and-context.md#before-a-run-unresolved-variables); with `--agent` it is a single typed event before the first progress frame:
 
 ```json
-{"type":"error","code":"unresolved_variables","message":"2 variable(s) have no value — nothing was dispatched","suggested_file":".testmuai/variables/variables.json","variables":[{"name":"checkout_url","reason":"not_declared","used_by":[{"file":"objective","step":1}]},{"name":"login_password","reason":"value_missing","file":".testmuai/variables/variables.json","used_by":[{"file":"objective","step":1}]}]}
+{"type":"warning","code":"unresolved_variables","message":"2 variable(s) have no value — typed as written unless a step sets them first","suggested_file":".testmuai/variables/variables.json","variables":[{"name":"checkout_url","reason":"not_declared","used_by":[{"file":"objective","step":1}]},{"name":"login_password","reason":"value_missing","file":".testmuai/variables/variables.json","used_by":[{"file":"objective","step":1}]}]}
 ```
 
-`reason` is `value_missing` (the key exists in `file`, with no value) or `not_declared` (the key is in no file; `suggested_file` is where to add it). Names an earlier step stores, and the `{{smart.*}}` / `{{environment.*}}` / `{{secrets.*}}` / `{{totp.*}}` namespaces, are never checked.
+`reason` is `value_missing` (the key exists in `file`, with no value), `not_declared` (the key is in no file; `suggested_file` is where to add it), or `not_a_dataset_column` (a `${x}` that is no column of the dataset row the run was given). The warning does not change the exit code. An explicit `{{global.*}}` reference (resolved from Test Manager at run time), names an earlier step stores, and the `{{smart.*}}` / `{{environment.*}}` / `{{secrets.*}}` / `{{totp.*}}` namespaces are never checked.
 
 For variables and context file behavior, see [./variables-and-context.md](./variables-and-context.md). For code export and the run mode toggle, see [./configuration.md](./configuration.md).
 

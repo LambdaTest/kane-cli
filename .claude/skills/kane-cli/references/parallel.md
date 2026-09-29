@@ -4,7 +4,7 @@
 
 For multiple independent browser tasks, decompose and run in parallel using the Agent tool.
 
-> **Saved tests? Use testrun instead.** If the tasks are committed `_test.md` files, do NOT hand-roll parallelism — `kane-cli testrun run --parallel N` gives you isolated Chromes, a pooled scheduler, one rollup, and one evidence pack. Read `references/testrun.md`. This reference is for **ad-hoc `run` objectives** only.
+> **Saved tests? Use testrun instead.** If the tasks are committed `_test.md` files, do NOT hand-roll parallelism — `kane-cli testrun run --parallel N < /dev/null` gives you isolated Chromes, a pooled scheduler, one rollup, and one evidence pack. Read `references/testrun.md`. This reference is for **ad-hoc `run` objectives** only.
 
 ## When to Split
 

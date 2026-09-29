@@ -59,7 +59,7 @@ kane-cli run "Add the first item to the cart" --app ./builds/app-debug.apk
 
 # a saved test, or a whole suite of them
 kane-cli testmd run tests/checkout_test.md
-kane-cli testrun run tests/app/ --device-name "Pixel 7 API 35" --os-version 15
+kane-cli testrun run --match '^tests/app/' --device-name "Pixel 7 API 35" --os-version 15
 ```
 
 Pick a device with `--device-name` and `--os-version` as `kane-cli devices list --target emulator|simulator` prints them, or save defaults with `kane-cli config set-device-name` / `set-os-version`. In the interactive TUI, switch targets with `/mobile` and `/desktop`. For the full flag list and the app formats each target accepts, see [Running tests](../running-tests.md).
@@ -71,8 +71,8 @@ Skip the local setup entirely: `kane-cli testrun run --remote` sends your mobile
 ```bash
 kane-cli plugin install remote-execution                              # once
 kane-cli devices list --target emulator --remote                      # what the grid can provision
-kane-cli testrun run tests/app/ --remote --device-name "Pixel 7" --os-version 14 --dry-run
-kane-cli testrun run tests/app/ --remote --device-name "Pixel 7" --os-version 14
+kane-cli testrun run --match '^tests/app/' --remote --device-name "Pixel 7" --os-version 14 --dry-run
+kane-cli testrun run --match '^tests/app/' --remote --device-name "Pixel 7" --os-version 14
 ```
 
 Three things differ from a local run: the device comes from the **grid catalog** (`devices list … --remote`), one job runs **one platform** (emulator members on one Android version; simulator members on one HyperExecute pool), and a **local build** is uploaded from your machine before dispatch and handed to the grid as an `APP…` id. The details — prerequisites, the app rules, and what one job can hold — are in [Remote runs on the cloud grid](../remote-execution.md).
