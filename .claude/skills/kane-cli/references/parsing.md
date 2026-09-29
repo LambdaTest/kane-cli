@@ -70,7 +70,7 @@ These are **untyped** — they have no `type` field. Do **not** key on `event.ty
 
 ### `warning` with `code: "unresolved_variables"` (0.8.15+)
 
-Emitted by `run`, `testmd run` and (after `testrun_plan`) `testrun run` when an authored step references a `{{name}}` that has no value. The run goes ahead: the name is typed as written unless a step sets it first. The warning does not change the exit code.
+Emitted by `run`, `testmd run` and (after `testrun_plan`) `testrun run` when an authored step references a `{{name}}` that has no value. The run goes ahead: the name is typed as written unless a step sets it first. The warning does not change the exit code. A run given a Test Manager dataset row can emit a second `warning` with the same code for `${x}` names that are no column of that row, still before any progress.
 
 ```json
 {"type":"warning","code":"unresolved_variables","message":"2 variable(s) have no value — typed as written unless a step sets them first",
@@ -146,7 +146,7 @@ Key `run_end` fields:
 
 ## Responding to `ask_user` (if stdin is a TTY)
 
-`ask_user` is disabled when stdin is not a TTY, so a kane-cli started as a subprocess never emits it. Write objectives that need no answer mid-run.
+`ask_user` is disabled when stdin is not a TTY, so a kane-cli whose stdin is a pipe or `/dev/null` never emits it. Write objectives that need no answer mid-run.
 
 ```json
 {"type": "user_response", "answer": "Medium size"}

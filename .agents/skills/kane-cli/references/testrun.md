@@ -45,7 +45,7 @@ All members must share one org + project. *(0.8.4+)* Members need **not** be aut
 | `org_mismatch` | Different organisation than the other tests | "Check `kane-cli testmd status <path>` — it belongs to another org" |
 | `project_mismatch` | Different project than the other tests | "Run it separately or per-project" |
 
-If **any** member fails preflight, the plan is invalid: nothing runs, exit `2`. Suggest `--dry-run` to preview the plan cheaply before a big run. *(0.8.15+)* Preflight also checks variables. A `{{name}}` with no value is a warning, not a plan failure: the member stays in the plan, and the run types the name as written unless a step sets it first. `testrun run` has no `--variables` flag, so fill the pool file (`.testmuai/variables/*.json`) or the member's own `variables:` frontmatter first.
+If **any** member fails preflight, the plan is invalid: nothing runs, exit `2`. Suggest `--dry-run` to preview the plan cheaply before a big run. *(0.8.15+)* Preflight also checks variables. A `{{name}}` with no value is a warning: the member stays in the plan (`valid` does not look at variables), and the run types the name as written unless a step sets it first. The check covers every step of the member, replayed ones included. `testrun run` has no `--variables` flag, so fill the pool file (`.testmuai/variables/*.json`) or the member's own `variables:` frontmatter first.
 
 ## Remote: the suite as one HyperExecute job (`--remote`)
 
@@ -87,7 +87,7 @@ All typed; stdout; one JSON object per line. **Local completion: `testrun_done`.
 
 | `type` | Payload | Notes |
 |---|---|---|
-| `testrun_plan` | `members: [{path, test_id?, tags, failure?, unresolved?}]`, `valid`, `parallel`, `parallel_clamped?` | If `valid: false`, treat as immediate failure — report each member's `failure` reason and stop expecting more events. *(0.8.15+)* `unresolved[]` lists the member's `{{name}}`s with no value; it is not a `failure`. One `warning` event with `code: "unresolved_variables"` follows the plan (schema in `references/parsing.md`) and the run goes ahead. |
+| `testrun_plan` | `members: [{path, test_id?, tags, failure?, unresolved?}]`, `valid`, `parallel`, `parallel_clamped?` | If `valid: false`, treat as immediate failure — report each member's `failure` reason; a `warning` may still follow before the process exits. *(0.8.15+)* `unresolved[]` lists the member's `{{name}}`s with no value; `valid` does not look at it. One `warning` event with `code: "unresolved_variables"` follows the plan (schema in `references/parsing.md`) and the run goes ahead. |
 | `testrun_start` | `execution_id`, `members` (paths), `parallel` | |
 | `testrun_member_start` | `path`, `test_id?`, *(0.8.17+)* `session_id`, `log_path` | A saved test started. `log_path` is the absolute path of that test's own event log (see **Each test's own log** below). |
 | `testrun_member_end` | `path`, `test_id?`, `status`, `duration_s`, *(0.8.17+)* `session_id`, `log_path`, `failure?: {message, step_index?}` | `status` ∈ `passed \| failed \| broken \| interrupted`. `failure` is present when the test did not pass: use it for the "where" and "why" of the failed-tests table. |
@@ -129,7 +129,7 @@ for each line:
   if type === "testrun_done"          → capture suite outcome; remote runs keep reading
   if type === "remote_done"           → capture remote status, exit and sessions_path
   if type === "testrun_plan" && !valid → report offenders, expect exit 2
-  if type === "warning"                → name the variables with no value (references/parsing.md); the run continues
+  if type === "warning" && code === "unresolved_variables" → name the variables with no value (references/parsing.md); the run continues; ignore other warning codes
   if type === "testrun_member_end"    → note per-member outcome
   if type === "testrun_summary"       → capture totals for the rollup
   else                                → informational; narrate sparingly

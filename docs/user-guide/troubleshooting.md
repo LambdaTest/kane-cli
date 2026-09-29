@@ -153,7 +153,7 @@ A run **warns before it starts** when an authored step references a `{{name}}` t
 
 If a `{{my_var}}` placeholder appears **literally** in a browser action, one of three things is true:
 
-- The warning above named it and nothing set it — fill the value and run again (a **replay** step resolves from its tape and from TMS instead, and is never checked).
+- The warning above named it and nothing set it — fill the value and run again (a **replay** step resolves from its tape and from TMS instead).
 - The reference is **escaped** — `\{{my_var}}` is typed as-is on purpose, for pages where the braces are real text.
 - The variable file is not being loaded at all. Check, in order:
 

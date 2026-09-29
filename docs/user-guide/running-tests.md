@@ -201,7 +201,7 @@ kane-cli checks every `{{name}}` in the objective before the run starts. A name 
 {"type":"warning","code":"unresolved_variables","message":"2 variable(s) have no value — typed as written unless a step sets them first","suggested_file":".testmuai/variables/variables.json","variables":[{"name":"checkout_url","reason":"not_declared","used_by":[{"file":"objective","step":1}]},{"name":"login_password","reason":"value_missing","file":".testmuai/variables/variables.json","used_by":[{"file":"objective","step":1}]}]}
 ```
 
-`reason` is `value_missing` (the key exists in `file`, with no value) or `not_declared` (the key is in no file; `suggested_file` is where to add it). The warning does not change the exit code. An explicit `{{global.*}}` reference (resolved from Test Manager at run time), names an earlier step stores, and the `{{smart.*}}` / `{{environment.*}}` / `{{secrets.*}}` / `{{totp.*}}` namespaces are never checked.
+`reason` is `value_missing` (the key exists in `file`, with no value), `not_declared` (the key is in no file; `suggested_file` is where to add it), or `not_a_dataset_column` (a `${x}` that is no column of the dataset row the run was given). The warning does not change the exit code. An explicit `{{global.*}}` reference (resolved from Test Manager at run time), names an earlier step stores, and the `{{smart.*}}` / `{{environment.*}}` / `{{secrets.*}}` / `{{totp.*}}` namespaces are never checked.
 
 For variables and context file behavior, see [./variables-and-context.md](./variables-and-context.md). For code export and the run mode toggle, see [./configuration.md](./configuration.md).
 
