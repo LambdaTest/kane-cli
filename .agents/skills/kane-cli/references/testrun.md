@@ -22,7 +22,7 @@ kane-cli testrun run [paths...] [flags] < /dev/null   # NDJSON only when stdin i
 
 | Flag | Purpose | Default |
 |---|---|---|
-| `--match <regex>` | Filter candidates by project-relative path regex | The path is as the OS writes it: `tests/app/` on macOS and Linux, `tests\app\` on Windows. |
+| `--match <regex>` | Filter candidates by project-relative path regex | The path is as the OS writes it: `tests/app/` on macOS and Linux, `tests\app\` on Windows. Quote the regex with double quotes in cmd.exe; single quotes are literal there. |
 | `--tags <list>` | ANY-match on frontmatter `tags:` (repeatable or comma-separated, case-insensitive) | — |
 | `--parallel <n>` | Worker count; each desktop worker gets an isolated Chrome with a fresh temp profile | `1` |
 | `--on-failure <mode>` | `continue` (run everything) \| `fail-fast` (stop dispatching new members after a failure) | `continue` |
