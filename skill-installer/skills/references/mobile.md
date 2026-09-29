@@ -12,7 +12,7 @@ Desktop (the browser) is the **default** target and the primary use of kane-cli.
 | **Cloud grid** (a virtual device on a HyperExecute macOS host) | **Any machine** — no Xcode / Android Studio needed. The account needs a HyperExecute plan with macOS runners | `testrun run <paths> --remote …` — see §Remote below |
 
 - **Desktop stays the default.** The `--target` axis is what selects mobile. Leave it off and you get the browser.
-- If the user is not on mac-arm64, local mobile is not an option — **offer the grid**: save the objective as a `_test.md` (`target: emulator|simulator` + `app:`) and run it with `kane-cli testrun run <path> --remote --device-name "<grid device>" --os-version <v>`. Do not tell them mobile is unavailable.
+- If the user is not on mac-arm64, local mobile is not an option — **offer the grid**: save the objective as a `_test.md` (`target: emulator|simulator` + `app:`) and run it with `kane-cli testrun run <path> --remote --device-name "<grid device>" --os-version <v> < /dev/null`. Do not tell them mobile is unavailable.
 
 ## The three targets
 
@@ -111,7 +111,7 @@ Everything else about `_test.md` (step bodies, replay/cascade, commands) is unch
 
 `kane-cli testrun run` accepts mobile `_test.md` members (0.8.7+):
 
-- **Locally** (mac-arm64 with the setup above): `kane-cli testrun run <paths> --device-name "<name>" --os-version <v>` — the device as `kane-cli devices list --target <kind>` prints it, or the members' own `device_name:`/`os_version:`.
+- **Locally** (mac-arm64 with the setup above): `kane-cli testrun run <paths> --device-name "<name>" --os-version <v> < /dev/null` — the device as `kane-cli devices list --target <kind>` prints it, or the members' own `device_name:`/`os_version:`.
 - **On the cloud grid, from any machine**: add `--remote` — next section. Full testrun flags, events, and rollup: `references/testrun.md`.
 
 ## Remote: mobile suites on the cloud grid (`testrun run --remote`)
@@ -121,9 +121,9 @@ One command turns a mobile suite into a HyperExecute job on a macOS host that bo
 ```bash
 kane-cli plugin install remote-execution                                    # once; then `kane-cli plugin doctor remote-execution`
 kane-cli devices list --target emulator --remote --agent                    # grid catalog: name + os_versions per row
-kane-cli testrun run tests/app/ --remote --device-name "Pixel 7" --os-version 14 --dry-run   # validate + resolve device, no job
-kane-cli testrun run tests/app/ --remote --device-name "Pixel 7" --os-version 14
-kane-cli testrun run tests/ios/ --remote --device-name "iPhone 15" --os-version 17.5
+kane-cli testrun run tests/app/ --remote --device-name "Pixel 7" --os-version 14 --dry-run < /dev/null   # validate + resolve device, no job
+kane-cli testrun run tests/app/ --remote --device-name "Pixel 7" --os-version 14 < /dev/null
+kane-cli testrun run tests/ios/ --remote --device-name "iPhone 15" --os-version 17.5 < /dev/null
 ```
 
 **Always `--dry-run` first** — it runs the remote preflight and resolves the device against the catalog at no cost. Use `Bash` with a long timeout (up to 600000 ms) for the real run: device setup + app install + members take several minutes.

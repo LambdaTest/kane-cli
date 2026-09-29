@@ -15,7 +15,7 @@
 ## Command
 
 ```bash
-kane-cli testrun run [paths...] [flags]     # NDJSON is automatic when stdin is not a TTY (use < /dev/null in terminal automation) — there is NO --agent flag on testrun
+kane-cli testrun run [paths...] [flags] < /dev/null   # NDJSON only when stdin is not a TTY: every line you write ends in < /dev/null — there is NO --agent flag on testrun
 ```
 
 `[paths...]` is optional — omit it to auto-discover every `*_test.md` under the cwd. Explicit paths must end in `_test.md`.
@@ -52,9 +52,9 @@ If **any** member fails preflight, the plan is invalid: nothing runs, exit `2`. 
 `kane-cli testrun run <selection> --remote` ships the cwd as the job payload, provisions a grid runtime on a **HyperExecute macOS runner** — Chrome for web members, a **virtual Android emulator or iOS simulator** for mobile members — runs every member there as its own headless `testmd run`, and brings the recordings (`output-<stem>/`) and the sealed evidence pack back into the project. It works **from any machine** with nothing local but Node and the plugin (no Chrome needed); the account needs a HyperExecute plan with macOS runners and the plugin (`kane-cli plugin install remote-execution`; check with `kane-cli plugin doctor remote-execution`). Auth is a LambdaTest username + access key — an OAuth profile is exchanged automatically. Not the same as `--ws-endpoint`, which attaches a remote browser to a run that still executes locally.
 
 ```bash
-kane-cli testrun run --tags smoke --remote --dry-run                                        # web suite: validate, dispatch nothing
-kane-cli testrun run tests/app/ --remote --device-name "Pixel 7" --os-version 14            # Android suite on the grid
-kane-cli testrun run tests/ios/ --remote --device-name "iPhone 15" --os-version 17.5        # iOS suite on the grid
+kane-cli testrun run --tags smoke --remote --dry-run < /dev/null                            # web suite: validate, dispatch nothing
+kane-cli testrun run tests/app/ --remote --device-name "Pixel 7" --os-version 14 < /dev/null   # Android suite on the grid
+kane-cli testrun run tests/ios/ --remote --device-name "iPhone 15" --os-version 17.5 < /dev/null   # iOS suite on the grid
 ```
 
 - **Always `--dry-run` first.** It runs the normal preflight plus the **remote preflight** and resolves the device against the grid catalog (`kane-cli devices list --target emulator|simulator --remote --agent`) without creating a job.
@@ -165,7 +165,7 @@ Local suites containing any mobile member require `--parallel 1`; larger values 
 
 Healing is enabled by default (three shrinking replay windows, then re-authoring of authorable steps). `--no-adaptive-heal` disables it. Retired `--retry`/`--retry-count` only print a notice and have no effect. Replay-only recorded steps retain their recordings even during healing.
 
-NDJSON selection uses stdin, not stdout: run `kane-cli testrun run <paths> < /dev/null` for automation launched from a terminal. Dry-run validates a plan, not runtime authentication or browser/device readiness. Always observe process exit, including paths without a normal completion event.
+NDJSON selection uses stdin, not stdout: every `kane-cli testrun run` line ends in `< /dev/null` (bash and zsh on macOS, Linux and Git Bash; `< NUL` in cmd.exe; from PowerShell run it through cmd: `cmd /c "kane-cli testrun run … < NUL"`). Check the first stdout line: it must be `{"type":"stream_start"…}`. Anything else means the CLI is in terminal mode: it prints the human view and, after the suite, waits for a keypress on an evidence table and never exits on its own. Stop the process and rerun with the redirect. Dry-run validates a plan, not runtime authentication or browser/device readiness. Always observe process exit, including paths without a normal completion event.
 
 ### Remote behavior still requiring verification
 

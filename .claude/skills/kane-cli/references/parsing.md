@@ -55,7 +55,7 @@ These are **untyped** — they have no `type` field. Do **not** key on `event.ty
 
 | Event (`type` field) | Key Fields | Purpose |
 |-------|-----------|---------|
-| `project_folder_auto_defaulted` | resolved project + folder (id, name) | Run-startup gate auto-resolved a project/folder when none was configured (or the cached one was stale/invalid). Fires before any progress event on `run` / `testmd run` / `generate`. Translate to plain language (see `references/test-manager.md`). |
+| `project_folder_auto_defaulted` | resolved project + folder (id, name) | Run-startup gate auto-resolved a project/folder when none was configured (or the cached one was stale/invalid). Fires before any progress event on `run` / `testmd run`. Translate to plain language (see `references/test-manager.md`). |
 | `bifurcation` | `flows[]`, `count` | Agent split objective into sub-flows |
 | `child_agent_start` | `child_id`, `objective`, `parent_step` | Child agent spawned |
 | `child_agent_end` | `child_id`, `success`, `steps_taken`, `summary` | Child agent finished |
@@ -160,6 +160,6 @@ To cancel a run:
 
 ## Command-specific completion
 
-The `run_end` parsing strategy applies to one-shot `run` only. For `testmd run`, collect `test_md_done.overall_status`, `duration_s`, `session_id`, and optional `share_url`; embedded `run_end` events can finish individual steps. Local suites emit `testrun_done`; dispatched remote suites then emit `remote_done` (retain `status`, `exit`, `sessions_path`). `generate` emits `generate_done`. Assurance conversational agent streams end in `done`; review/read verbs have their own contracts. Always check process exit too: early refusal, invalid plan or dry-run can exit without the normal completion event.
+The `run_end` parsing strategy applies to one-shot `run` only. For `testmd run`, collect `test_md_done.overall_status`, `duration_s`, `session_id`, and optional `share_url`; embedded `run_end` events can finish individual steps. Local suites emit `testrun_done`; dispatched remote suites then emit `remote_done` (retain `status`, `exit`, `sessions_path`). Assurance conversational agent streams end in `done`; review/read verbs have their own contracts. Always check process exit too: early refusal, invalid plan or dry-run can exit without the normal completion event.
 
 Progress is for live display: count only `done`/`failed` completions, retaining child and execution context when step indices repeat.

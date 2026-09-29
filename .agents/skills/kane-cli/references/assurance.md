@@ -2,9 +2,8 @@
 
 # Assurance — Agent Surface
 
-When the user has **requirements** — a PRD, a spec, acceptance notes — and wants tests designed from them, wants to know what's covered, or wants the suite kept current, use the **assurance commands** (`kane-cli context`, `design`, `cover`, `maintain`). Do not hand-write the tests, and do not reach for `generate`:
+When the user has **requirements** — a PRD, a spec, acceptance notes — and wants tests designed from them, wants to know what's covered, or wants the suite kept current, use the **assurance commands** (`kane-cli context`, `design`, `cover`, `maintain`). Do not hand-write the tests:
 
-- `kane-cli generate` = quick scenarios/cases from a one-line description. No requirement linkage.
 - **Assurance** = tests derived from the actual documents, every claim cited, every test permanently tagged with the acceptance criteria it verifies, coverage measured against requirements. Use it whenever the user cares about "what exactly is covered, and how do we know?"
 
 Everything here works over a local store (`.context/` in the project directory) that the commands create and manage themselves.
@@ -19,7 +18,7 @@ kane-cli context review --verdicts <file> --json             # 2. CHECKPOINT: us
 kane-cli design tests --use-case <uc-ref> --mode agent --max 8   # 3. design ACs, scenarios, tests
 kane-cli context review --verdicts <file> --json             # 4. CHECKPOINT: user approves the design
 kane-cli testmd run .testmuai/tests/<t>_test.md --agent      # 5. author each kept test once (real browser)
-kane-cli testrun run --match 't-'                            # 6. batch replays from then on
+kane-cli testrun run --match 't-' < /dev/null               # 6. batch replays from then on
 kane-cli cover gaps                                          # 7. designed % × proven % + per-use-case debt
 kane-cli maintain reconcile --from <new.md> --source-id <id> --mode agent   # when a source changes (§11)
 ```
@@ -35,12 +34,12 @@ Extract, design, and reconcile call the KaneAI service and consume credits; ever
 
 ## 2. The pause loop — exit 3 is a pause, NOT a failure
 
-**Scope: this rule applies to `context extract`/`context ingest`, `design tests`, and `maintain reconcile` (§11).** (For `run`/`testmd`/`testrun`/`generate`, exit 3 still means timeout/cancelled.)
+**Scope: this rule applies to `context extract`/`context ingest`, `design tests`, and `maintain reconcile` (§11).** (For `run`/`testmd`/`testrun`, exit 3 still means timeout/cancelled.)
 
 These commands take **`--mode agent`** — not `--agent`; they reject that flag, and a bare non-TTY invocation exits `2` asking for an explicit mode. In `--mode agent`, **every question pauses the run** (0.8.8+ — earlier CLIs auto-answered low/medium-risk questions with their recommended defaults and paused only on high risk):
 
 - The run exits `3`, emits `session_paused` with the session id, the questions in full (text, options, the recommended one, risk, rationale), and the verbatim resume command.
-- **Never drop a pause** (same rule as generate clarifications). Answer it: if your own context clearly resolves the question, answer it yourself; otherwise surface the question — with its options and recommendation — to your user and get their answer.
+- **Never drop a pause.** Answer it: if your own context clearly resolves the question, answer it yourself; otherwise surface the question — with its options and recommendation — to your user and get their answer.
 - **0.7.1+ sessions are durable from the first turn**: a crash that left a checkpoint exits `3` with a `session_paused` carrying `crashed: true` (no `pending_questions`) and the resume command — exit 3 always means "resumable". A crash before anything durable was saved still exits `1`; check `context sessions --json` before retrying anything paid.
 
 Three ways to resume:
@@ -119,13 +118,13 @@ kane-cli design tests --use-case <uc-ref> --mode agent --max 8
 - There is **no `--because` flag on `design tests`** — interactively the session collects the redesign reason itself; headless `--force` proceeds with an auto-stamped reason.
 - `--phase <grounding|acs|scenarios|wiring|tests>` (0.7.1+) re-enters a design at a phase, re-seeded from the committed earlier phases; missing predecessors exit 2 with the commands to run first in `next`.
 - Output: acceptance criteria, scenarios, exactly one test per scenario — written as runnable files under `.testmuai/tests/*_test.md`, each assert step tagged with the criteria it verifies. Plus **gaps** (recorded, ranked missing pieces) and **warnings** (e.g. a test claiming more criteria than its check asserts). Citations are verified against the pinned source text before commit (0.7.1+) — a `CITE_UNVERIFIED` error means a citation could not be verified even after repair.
-- **Variables (0.8.12+).** Design reads every `*.json` in the user's variable directories (names + has-value only, never values) and reuses a name that exists before inventing one. Each name it invents is declared: an empty stub lands in `.testmuai/variables/assurance.json`, never a value, never over an existing key. The stream tells you which: `variables_declared` in the tests phase, just before its `commit` event, and `variables_summary` after `session_complete` on a clean completion (a paused run sends only the first; schema in `references/assurance-parsing.md`). **Surface these as a to-do** — "2 variables need values: login_email, login_password — in .testmuai/variables/assurance.json" — because a designed test authored before they are filled types the placeholders as written (SKILL.md §3, Unresolved variables). Fill them yourself only if the user gave you the values.
+- **Variables (0.8.12+).** Design reads every `*.json` in the user's variable directories (names + has-value only, never values) and reuses a name that exists before inventing one. Each name it invents is declared: an empty stub lands in `.testmuai/variables/assurance.json`, never a value, never over an existing key. The stream tells you which: `variables_declared` in the tests phase, just before its `commit` event, and `variables_summary` after `session_complete` on a clean completion (a paused run sends only the first; schema in `references/assurance-parsing.md`). **Surface these as a to-do** — "2 variables need values: login_email, login_password — in .testmuai/variables/assurance.json" — because a designed test authored before they are filled types the placeholders as written (SKILL.md §3, Unresolved variables). Before any run of these tests, fill them: SKILL.md §3 **Fill the variables before any run**, asking with each row's `description`.
 - **Present tests, gaps, warnings, AND variables needing values** — first-class output, not noise. Then go to the review checkpoint (§4) before any authoring.
 - `kane-cli design explain <t-ref>` replays *why* a test exists (technique, boundary values, criteria) with zero AI cost — use it when the user asks "why this test?".
 
 ## 6. The authoring bridge — from designed files to batch runs
 
-A freshly designed test has never been executed. On 0.8.4+ hand the set straight to `kane-cli testrun run`: unauthored members classify as `author`, the run authors them in a real browser, and afterwards the authored and replayed evidence consolidates into one published execution — best-effort: when consolidation cannot complete, evidence stays split rather than lost. `--from-context` (0.8.4+) selects members by assurance test ids and follows edit supersessions. Designed tests may carry `{{variables}}` for values the requirements never pinned (a store URL, a product name) — supply them per `references/testmd.md`. `kane-cli testmd run <file> --agent` remains the single-test authoring path, and on pre-0.8.4 CLIs it is REQUIRED first — `testrun` there refuses never-authored members (`missing_meta`). Evidence packs seal per `references/evidence.md`.
+A freshly designed test has never been executed. On 0.8.4+ hand the set straight to `kane-cli testrun run`: unauthored members classify as `author`, the run authors them in a real browser, and afterwards the authored and replayed evidence consolidates into one published execution — best-effort: when consolidation cannot complete, evidence stays split rather than lost. `--from-context` (0.8.4+) selects members by assurance test ids and follows edit supersessions. Designed tests may carry `{{variables}}` for values the requirements never pinned (a store URL, a product name) — fill them first (SKILL.md §3), or the run types the placeholder as written. `kane-cli testmd run <file> --agent` remains the single-test authoring path, and on pre-0.8.4 CLIs it is REQUIRED first — `testrun` there refuses never-authored members (`missing_meta`). Evidence packs seal per `references/evidence.md`.
 
 ### 6.1 A designed test is the design — do not edit it by hand
 
