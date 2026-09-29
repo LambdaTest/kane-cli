@@ -9,7 +9,7 @@ Desktop (the browser) is the **default** target and the primary use of kane-cli.
 | Where the device runs | Host | Commands |
 |---|---|---|
 | **Local** (a simulator/emulator on this machine) | **macOS on Apple Silicon (arm64) only** — not Intel Macs, Linux, or Windows | `run --target …`, `testmd run`, `testrun run` |
-| **Cloud grid** (a virtual device on a HyperExecute macOS host) | **Any machine** — no Xcode / Android Studio needed. The account needs a HyperExecute plan with macOS runners | `testrun run <paths> --remote …` — see §Remote below |
+| **Cloud grid** (a virtual device on a HyperExecute macOS host) | **Any machine** — no Xcode / Android Studio needed. The account needs a HyperExecute plan with macOS runners | `testrun run <paths> --remote … < /dev/null` — see §Remote below |
 
 - **Desktop stays the default.** The `--target` axis is what selects mobile. Leave it off and you get the browser.
 - If the user is not on mac-arm64, local mobile is not an option — **offer the grid**: save the objective as a `_test.md` (`target: emulator|simulator` + `app:`) and run it with `kane-cli testrun run <path> --remote --device-name "<grid device>" --os-version <v> < /dev/null`. Do not tell them mobile is unavailable.

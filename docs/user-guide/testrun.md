@@ -14,7 +14,7 @@ Use `testrun` when you have a suite of committed tests to run together — night
 
 Members come either from explicit paths (each must end in `_test.md`) or, when no paths are given, from a recursive walk of the current directory. Two filters then apply, in order:
 
-- **`--match <regex>`** — keep tests whose project-relative path matches the regex.
+- **`--match <regex>`** — keep tests whose project-relative path matches the regex. `--match` sees the path as the OS writes it: `tests/app/` on macOS and Linux, `tests\app\` on Windows.
 - **`--tags <list>`** — keep tests whose [`tags:` frontmatter](./testmd/overview.md#frontmatter) matches **any** of the given tags (case-insensitive). Repeat the flag or pass a comma-separated list; `--tags smoke,checkout` and `--tags smoke --tags checkout` are equivalent.
 
 Duplicates are removed and the final list runs in a stable order.

@@ -201,7 +201,7 @@ kane-cli run "<one-sentence objective starting with 'Go to <url> and …'>" --ag
 
 Three rules:
 
-1. Use `--agent` for `run` and `testmd run`. `testrun run` has no `--agent`: it emits NDJSON only when **stdin** is not a TTY, so every `testrun run` line an agent writes ends in `< /dev/null` (`< NUL` in cmd.exe; from PowerShell, `cmd /c "… < NUL"`); the first stdout line must be `stream_start`, or the CLI is in terminal mode and will wait for a keypress after the suite. Assurance conversational commands use `--mode agent`. Parse command-specific completion events and process exit.
+1. Use `--agent` for `run` and `testmd run`. `testrun run` has no `--agent`: it emits NDJSON only when **stdin** is not a TTY, so every `testrun run` line an agent writes ends in `< /dev/null` (`< NUL` in cmd.exe; from PowerShell, `cmd /c "… < NUL"`); the first stdout line is `stream_start` (0.8.17+); a prose plan there means terminal mode, which after a real run waits on an evidence table until `q` or Esc. Assurance conversational commands use `--mode agent`. Parse command-specific completion events and process exit.
 2. **Use the "store as" pattern** for extraction. `"go to example.com, store the page title as 'page_title'"` — never `"read the page title"`.
 3. **One objective = one task.** If a flow has more than ~15 steps, split it into multiple `kane-cli run` calls and run them in parallel.
 
