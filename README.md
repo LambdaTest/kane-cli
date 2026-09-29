@@ -91,7 +91,7 @@ kane-cli launches your locally installed Google Chrome (stable channel) via the 
 kane-cli can also run tests against an iOS Simulator or Android Emulator. It is off by default, so your web runs are unaffected.
 
 - **Locally** — macOS Apple Silicon (arm64) only. Install the platform tooling you already use: **Xcode** (for iOS), or **Android Studio** with one `arm64-v8a` AVD (for Android); sign in and install kane-cli's managed test tooling: `kane-cli login && kane-cli doctor --target simulator --install`; then `kane-cli run "<objective>" --target simulator --app ./MyApp.zip`.
-- **On the cloud grid** — from Linux, Windows, or any Mac, with no mobile tooling: `kane-cli testrun run tests/app/ --remote --device-name "Pixel 7" --os-version 14` runs a saved mobile suite on a HyperExecute emulator or simulator (needs a LambdaTest plan with HyperExecute macOS runners and `kane-cli plugin install remote-execution`).
+- **On the cloud grid** — from Linux, Windows, or any Mac, with no mobile tooling: `kane-cli testrun run --match '^tests/app/' --remote --device-name "Pixel 7" --os-version 14` runs a saved mobile suite on a HyperExecute emulator or simulator (needs a LambdaTest plan with HyperExecute macOS runners and `kane-cli plugin install remote-execution`).
 
 > Full setup and prerequisites: [Mobile testing](docs/user-guide/mobile/overview.md) · [Remote runs on the cloud grid](docs/user-guide/remote-execution.md).
 

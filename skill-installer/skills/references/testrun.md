@@ -53,8 +53,8 @@ If **any** member fails preflight, the plan is invalid: nothing runs, exit `2`. 
 
 ```bash
 kane-cli testrun run --tags smoke --remote --dry-run < /dev/null                            # web suite: validate, dispatch nothing
-kane-cli testrun run tests/app/ --remote --device-name "Pixel 7" --os-version 14 < /dev/null   # Android suite on the grid
-kane-cli testrun run tests/ios/ --remote --device-name "iPhone 15" --os-version 17.5 < /dev/null   # iOS suite on the grid
+kane-cli testrun run --match '^tests/app/' --remote --device-name "Pixel 7" --os-version 14 < /dev/null   # Android suite on the grid
+kane-cli testrun run --match '^tests/ios/' --remote --device-name "iPhone 15" --os-version 17.5 < /dev/null   # iOS suite on the grid
 ```
 
 - **Always `--dry-run` first.** It runs the normal preflight plus the **remote preflight** and resolves the device against the grid catalog (`kane-cli devices list --target emulator|simulator --remote --agent`) without creating a job.

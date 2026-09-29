@@ -121,9 +121,9 @@ One command turns a mobile suite into a HyperExecute job on a macOS host that bo
 ```bash
 kane-cli plugin install remote-execution                                    # once; then `kane-cli plugin doctor remote-execution`
 kane-cli devices list --target emulator --remote --agent                    # grid catalog: name + os_versions per row
-kane-cli testrun run tests/app/ --remote --device-name "Pixel 7" --os-version 14 --dry-run < /dev/null   # validate + resolve device, no job
-kane-cli testrun run tests/app/ --remote --device-name "Pixel 7" --os-version 14 < /dev/null
-kane-cli testrun run tests/ios/ --remote --device-name "iPhone 15" --os-version 17.5 < /dev/null
+kane-cli testrun run --match '^tests/app/' --remote --device-name "Pixel 7" --os-version 14 --dry-run < /dev/null   # validate + resolve device, no job
+kane-cli testrun run --match '^tests/app/' --remote --device-name "Pixel 7" --os-version 14 < /dev/null
+kane-cli testrun run --match '^tests/ios/' --remote --device-name "iPhone 15" --os-version 17.5 < /dev/null
 ```
 
 **Always `--dry-run` first** — it runs the remote preflight and resolves the device against the catalog at no cost. Use `Bash` with a long timeout (up to 600000 ms) for the real run: device setup + app install + members take several minutes.
