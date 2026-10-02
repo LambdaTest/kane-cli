@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.20] - 2026-10-01
+
+### Mobile and WebView runs behave
+- **WebView perception works the same everywhere** — mobile WebView runs now use the same Appium bindings as the rest of the mobile stack, so what the agent sees matches what's on screen.
+- **Exports pick the right platform automatically** — the export platform is derived from the session target you locked in, so a mobile run no longer produces desktop code.
+- **No more spurious export errors on mobile** — code export validation is skipped for mobile runs instead of failing them.
+- **Exiting and resetting match your target** — quitting or resetting a session now cleans up the right state whether you were running locally or against the grid.
+
+### Agents that handle forms better
+- **Clearing a field is one action** — web agents get a `clear_input` tool that empties a field outright, instead of simulating a pile of keystrokes.
+
+### Secrets stay out of your logs
+- **Typed values are redacted before extraction** — anything the agent types is scrubbed before page content is pulled, so passwords and tokens don't end up in run data.
+
+### Runs land in the right project
+- **Your TMS project ID travels with the run** — kane-cli passes it through as `x-project-id`, and reads configuration fresh per request so a project switch takes effect immediately.
+
 ## [0.8.18] - 2026-09-25
 
 ### Migrated tests replay on solid ground
