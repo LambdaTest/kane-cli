@@ -83,7 +83,23 @@ Use `text` + `options[].label` + `recommended_index` + `rationale` to decide or 
 
 ## Evolve events (verb `evolve`) *(0.8.21+)*
 
-`kane-cli maintain evolve <ref> --mode agent` (or `--from-stale`) shares the envelope with `verb: "evolve"`. `evolve_batch` `{stale_nodes, use_cases}` opens a `--from-stale` run. `evolve_target` `{ref?, use_case, pairs, because?}` states the blast radius once per designed use-case, before any question. `evolve_paused` `{pending_questions, resume, next[]}` ends the run at exit `3` while a question has no answer: question ids are `evolve:<use-case>`, options `proceed` / `decline`; answer on the next call with `--answer evolve:<use-case>=1` (or `=proceed`) or `--answer evolve:<use-case>=2` (or `=decline`), which needs `--mode agent`. After a proceed: `child_start` `{child: "design", subject}`, the design run's own events stamped `verb: "design"` (every event of `design tests --mode agent` except its `done`; a paused design session arrives as `session_paused` with `sid`, `resume` and `next[]`), `child_end` `{ok, dur_s, exit_code?}`. After a clean design run: `evolve_diff` `{use_case, generation: {before, after}, superseded[], minted[], retained[], moves[]}`, pairs as `{scenario, test}` and moves as `{ac, before[], after[]}`. `evolve_skipped` `{use_case, reason: "declined" | "no-design"}` marks a use-case not evolved; `no-design` appears in `--from-stale` batches only, and an explicit never-designed target refuses with exit `2`. `error` `{message, code?}`: `MODE_USAGE` (only `interactive` and `agent` are accepted), `ANSWER_USAGE` (an answer to a question the run does not ask, even when nothing is stale, or a value that is neither option); other refusals carry the message only, and a refused answer is `error` + `done` with nothing before it. `done` `{status, exit_code, next?}`: `complete` 0, `refused` 2, `paused` 3 (evolve's question or the design session), `error` with the design run's own code; `next[]` carries every paused session's resume, uncapped, whatever the status. A `--from-stale` batch runs every use-case whatever the earlier ones did: the first child code that is neither 0 nor 3 names the exit, else 3 when any child paused, else 0.
+`kane-cli maintain evolve <ref> --mode agent` (or `--from-stale`, never both) shares the envelope with `verb: "evolve"`.
+
+| Event | When | Payload |
+|---|---|---|
+| `evolve_batch` | `--from-stale`, first | `stale_nodes`, `use_cases` |
+| `evolve_target` | once per designed use-case, before any question | `ref?`, `use_case`, `pairs` (the blast radius), `because?` |
+| `evolve_paused` | a question has no answer; the run ends here, exit `3` | `pending_questions[]` (id `evolve:<use-case>`, options `proceed` / `decline`), `resume`, `next[]` (two ready commands: proceed all, decline all) |
+| `child_start` / `child_end` | around the design run, after a proceed | `child: "design"`, `subject` / `ok`, `dur_s`, `exit_code?` |
+| *(the design run's events)* | between the two, stamped `verb: "design"` | every event of `design tests --mode agent` except its `done`; a paused design session arrives as `session_paused` with `sid`, `resume`, `next[]` |
+| `evolve_diff` | after a clean design run | `use_case`, `generation` (`before`, `after`), `superseded[]`, `minted[]`, `retained[]` (pairs as `scenario` + `test`), `moves[]` (`ac`, `before[]`, `after[]`) |
+| `evolve_skipped` | a use-case not evolved | `use_case`, `reason`: `declined`, or `no-design` in a `--from-stale` batch |
+| `error` | a refusal or failure | `message`, `code?`: `MODE_USAGE` (only `interactive` and `agent` are accepted), `ANSWER_USAGE` (an answer to a question the run does not ask, or a value that is neither option) |
+| `done` | last | `status`, `exit_code`, `next?`: `complete` 0, `refused` 2, `paused` 3, `error` with the design run's own code; `next[]` carries every paused session's resume, uncapped |
+
+- **Answering.** `--answer evolve:<use-case>=1` (or `=proceed`) and `--answer evolve:<use-case>=2` (or `=decline`), repeatable, with `--mode agent`. A refused answer is `error` + `done` with nothing before it.
+- **Refusals.** An explicit target that is fresh and has no `--because`, or that was never designed, exits `2`. A `--from-stale` run with nothing stale exits `0`.
+- **Batches.** Every use-case runs whatever the earlier ones did. The exit is the first design-run code that is neither 0 nor 3; otherwise 3 if any paused; otherwise 0.
 
 ## Sync events (verb `sync`) *(0.8.14+)*
 

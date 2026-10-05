@@ -112,6 +112,8 @@ Validation failures (bad inputs, unknown source, the fork guard) ride the stream
 | `error` | a refusal or failure: `message`, `code?` (`MODE_USAGE`, `ANSWER_USAGE`) |
 | `done` | always last: `complete` (0), `refused` (2), `paused` (3, evolve's question or the design session), `error` with the design run's own code; `next[]` carries every paused session's resume, all of them, whatever the status |
 
+A `--from-stale` batch runs every use-case whatever the earlier ones did. Its exit is the first design-run code that is neither 0 nor 3; otherwise 3 if any paused; otherwise 0.
+
 ## The pause → answer → resume loop
 
 This is the heart of driving assurance from an agent. A real exchange (events abridged, payloads shortened):

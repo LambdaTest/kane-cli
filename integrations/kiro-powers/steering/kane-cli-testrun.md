@@ -15,7 +15,7 @@ Load this file when the user wants to run **several** saved `_test.md` tests as 
 # Command
 
 ```bash
-kane-cli testrun run [paths...] [flags] < /dev/null   # NDJSON when stdin is not a TTY, on every version: end every line in < /dev/null (0.8.21+ also takes --agent)
+kane-cli testrun run [paths...] [flags] < /dev/null   # NDJSON when stdin is not a TTY: end every line in < /dev/null (0.8.21+ also takes --agent)
 ```
 
 `[paths...]` is optional — omit it to auto-discover every `*_test.md` under the cwd. Explicit paths must end in `_test.md`.

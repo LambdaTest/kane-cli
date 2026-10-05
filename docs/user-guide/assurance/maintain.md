@@ -143,7 +143,7 @@ kane-cli maintain evolve --from-stale                   # every use-case with st
 Evolve re-designs the **parent use-case** of whatever you point it at — a test, scenario, criterion, or the use-case itself. The blast radius is always stated before anything runs; declining is a clean exit.
 
 - **Staleness-gated:** a fresh target refuses. `--because "<reason>"` is the sanctioned override — your reason becomes the change context the re-design sees, on the record.
-- `--from-stale` collects every use-case with stale designed entities and walks them one confirm at a time.
+- `--from-stale` collects every use-case with stale designed entities. In a terminal it walks them one confirm at a time; with `--mode agent` it asks one question per use-case and runs nothing until all are answered.
 - *(0.8.2)* Evolve's terminal output leads with an aligned diff report, brackets its child design runs with progress-dot lines, and closes with the same session summary every interactive session prints.
 - After a clean run, evolve reports the diff between the two design generations — what was superseded, what was minted, what was **retained** unchanged, and which criteria's verifying tests moved. A re-design doesn't break what it didn't change.
 - Reconcile's MODIFY rows route here automatically — reach for evolve directly when staleness arrived outside a reconcile (an older change, a retired source). [`kane-cli cover gaps`](./coverage.md) lists stale designed entities in its ranked worklist.
@@ -159,7 +159,7 @@ kane-cli maintain evolve t-4 --mode agent --answer evolve:uc-3=1     # 1 = proce
 # evolve_target, child_start, the design run's own events (verb: design), child_end, evolve_diff, done complete, exit 0
 ```
 
-`--because` rides the resume command. With `--from-stale` there is one question per use-case and nothing runs until every one is answered; a partial set pauses again on the rest and keeps the answers given. A design session that pauses arrives as its own `session_paused`, and `done` carries its resume command: resume it, then run evolve again for the diff. After a partial answer the suggested commands carry the answers already given, so declining the rest still re-designs what you answered proceed. `--mode` accepts `interactive` and `agent` only (`MODE_USAGE` otherwise); an answer to a question the run does not ask refuses `ANSWER_USAGE`. The event table is in [Automation](./automation.md#evolves-stream).
+The resume command keeps `--because`. With `--from-stale` there is one question per use-case and nothing runs until every one is answered; a partial set pauses again on the rest and keeps the answers given. A design session that pauses arrives as its own `session_paused`, and `done` carries its resume command: resume it, then run evolve again for the diff. After a partial answer the suggested commands carry the answers already given, so declining the rest still re-designs what you answered proceed. `--mode` accepts `interactive` and `agent` only (`MODE_USAGE` otherwise); an answer to a question the run does not ask refuses `ANSWER_USAGE`. The event table is in [Automation](./automation.md#evolves-stream).
 
 ## Exit codes
 
