@@ -96,6 +96,24 @@ Two more parsing rules:
 
 Validation failures (bad inputs, unknown source, the fork guard) ride the stream as `error` + `done` with exit `2` — never stderr alone.
 
+### Evolve's stream
+
+`maintain evolve --mode agent` *(0.8.21)* speaks the same envelope with `verb: "evolve"`. The first call states the blast radius and pauses on a question; the next call answers it with `--answer evolve:<use-case>=1` (proceed) or `--answer evolve:<use-case>=2` (decline); the words `proceed` and `decline` work too.
+
+| type | payload highlights |
+|---|---|
+| `evolve_batch` | `--from-stale` only, first: `stale_nodes`, `use_cases` |
+| `evolve_target` | once per designed use-case, before any question: `ref?`, `use_case`, `pairs` (the blast radius), `because?` |
+| `evolve_paused` | a question has no answer yet; the run ends here with exit `3`: `pending_questions[]` (id `evolve:<use-case>`, options `proceed` / `decline`), `resume`, `next[]` |
+| `evolve_skipped` | a use-case not evolved: `use_case`, `reason` (`declined` \| `no-design`). `no-design` appears in `--from-stale` batches only; an explicit target that was never designed refuses with exit `2` |
+| `child_start` / `child_end` | around the design run: `child: "design"`, `subject` / `ok`, `dur_s`, `exit_code?` |
+| *(the design run's events)* | between the brackets, stamped `verb: "design"`: every event of `design tests --mode agent` except its `done`; a paused design session arrives as `session_paused` |
+| `evolve_diff` | after a clean design run: `use_case`, `generation` (`before`, `after`), `superseded[]`, `minted[]`, `retained[]` (pairs as `scenario` + `test`), `moves[]` (`ac`, `before[]`, `after[]`) |
+| `error` | a refusal or failure: `message`, `code?` (`MODE_USAGE`, `ANSWER_USAGE`) |
+| `done` | always last: `complete` (0), `refused` (2), `paused` (3, evolve's question or the design session), `error` with the design run's own code; `next[]` carries every paused session's resume, all of them, whatever the status |
+
+A `--from-stale` batch runs every use-case whatever the earlier ones did. Its exit is the first design-run code that is neither 0 nor 3; otherwise 3 if any paused; otherwise 0.
+
 ## The pause → answer → resume loop
 
 This is the heart of driving assurance from an agent. A real exchange (events abridged, payloads shortened):

@@ -60,7 +60,7 @@ warning: 2 variables have no value
   A step that sets a name first binds it; anything else is typed as written. Fill the values to bind them.
 ```
 
-`testrun run` has no `--variables` flag: fill the pool file or the member's own `variables:` frontmatter. In agent mode (stdin not a TTY) the same content arrives as one `warning` event with `code: "unresolved_variables"` right after `testrun_plan`, whose members carry their rows — see [Running tests](./running-tests.md#unresolved-variables) for the shape.
+`testrun run` has no `--variables` flag: fill the pool file or the member's own `variables:` frontmatter. In agent mode (stdin not a TTY, or `--agent` on 0.8.21+) the same content arrives as one `warning` event with `code: "unresolved_variables"` right after `testrun_plan`, whose members carry their rows — see [Running tests](./running-tests.md#unresolved-variables) for the shape.
 
 ## Mobile members
 
@@ -84,6 +84,7 @@ kane-cli testrun run --match '^tests/app/' --remote --device-name "Pixel 7" --os
 | `--on-failure <mode>` | `continue` \| `fail-fast` | `continue` |
 | `--name <label>` | Run title | derived from the selection |
 | `--dry-run` | Plan + validate only, execute nothing | off |
+| `--agent` | *(0.8.21)* NDJSON on stdout even in a terminal: the same stream a non-TTY stdin selects | off |
 | `--no-adaptive-heal` | Disable default adaptive healing after replay failure | healing enabled |
 | `--bug-detection <mode>` | `off` \| `stop` \| `continue` — see [Configuration](./configuration.md#bug-detection) | config value |
 | `--headless` | Run Chrome without a visible window | off |

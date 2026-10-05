@@ -81,6 +81,26 @@ Use `text` + `options[].label` + `recommended_index` + `rationale` to decide or 
 
 *(0.7.2+)* the stream opens with a minimal `run_start` (`session` only — no `trace`) and the re-extract child rides the SAME stream: extract-vocabulary events (`source_start`, `agent_activity`, `plan`, `commit`, …) interleave between the `reconcile_*` events, all stamped `verb: "reconcile"` — dispatch on `type`, never on position. The reconcile family: `reconcile_plan` `{source_id, plan_path, rows[], archive[]}` → per row `reconcile_row_start` `{kind, ref, stale?, direct?}` + `reconcile_row_end` `{kind, ref, outcome: applied|failed|skipped|plan-only|paused, exit_code?, detail?}` → `reconcile_paused` `{plan_path, pending[]}` when ARCHIVE rows remain (exit 3; a human resumes with `--apply <plan_path>` in a terminal) → `reconcile_summary` `{applied, skipped, deferred, plan_only, failed, paused, stale_created}` on every path → `done` always last. Validation refusals ride the stream as `error` + `done` (exit 2), never stderr alone.
 
+## Evolve events (verb `evolve`) *(0.8.21+)*
+
+`kane-cli maintain evolve <ref> --mode agent` (or `--from-stale`, never both) shares the envelope with `verb: "evolve"`.
+
+| Event | When | Payload |
+|---|---|---|
+| `evolve_batch` | `--from-stale`, first | `stale_nodes`, `use_cases` |
+| `evolve_target` | once per designed use-case, before any question | `ref?`, `use_case`, `pairs` (the blast radius), `because?` |
+| `evolve_paused` | a question has no answer; the run ends here, exit `3` | `pending_questions[]` (id `evolve:<use-case>`, options `proceed` / `decline`), `resume`, `next[]` (two ready commands: proceed all, decline all) |
+| `child_start` / `child_end` | around the design run, after a proceed | `child: "design"`, `subject` / `ok`, `dur_s`, `exit_code?` |
+| *(the design run's events)* | between the two, stamped `verb: "design"` | every event of `design tests --mode agent` except its `done`; a paused design session arrives as `session_paused` with `sid`, `resume`, `next[]` |
+| `evolve_diff` | after a clean design run | `use_case`, `generation` (`before`, `after`), `superseded[]`, `minted[]`, `retained[]` (pairs as `scenario` + `test`), `moves[]` (`ac`, `before[]`, `after[]`) |
+| `evolve_skipped` | a use-case not evolved | `use_case`, `reason`: `declined`, or `no-design` in a `--from-stale` batch |
+| `error` | a refusal or failure | `message`, `code?`: `MODE_USAGE` (only `interactive` and `agent` are accepted), `ANSWER_USAGE` (an answer to a question the run does not ask, or a value that is neither option) |
+| `done` | last | `status`, `exit_code`, `next?`: `complete` 0, `refused` 2, `paused` 3, `error` with the design run's own code; `next[]` carries every paused session's resume, uncapped |
+
+- **Answering.** `--answer evolve:<use-case>=1` (or `=proceed`) and `--answer evolve:<use-case>=2` (or `=decline`), repeatable, with `--mode agent`. A refused answer is `error` + `done` with nothing before it.
+- **Refusals.** An explicit target that is fresh and has no `--because`, or that was never designed, exits `2`. A `--from-stale` run with nothing stale exits `0`.
+- **Batches.** Every use-case runs whatever the earlier ones did. The exit is the first design-run code that is neither 0 nor 3; otherwise 3 if any paused; otherwise 0.
+
 ## Sync events (verb `sync`) *(0.8.14+)*
 
 `kane-cli context sync`, `kane-cli context push`, `kane-cli context pull` and `kane-cli context clone` under `--mode agent` (and `kane-cli context sync add`, `kane-cli context sync list`, `kane-cli context sync remove`, `kane-cli context sync status`, `kane-cli context sync doctor`) share the envelope with `verb: "sync"` and their own `sync_*` family — `sync_probe_started`/`sync_probe`, `sync_status`, `sync_pull_done`/`sync_push_done`, `sync_rebase_started`/`sync_rebase_decision`/`sync_rebase_done`/`sync_rebase_open`, `sync_error{code, detail, remedy}` — then `done`. Two of them cross into the assurance streams: `sync_behind` (an advisory on `extract`/`design`/`reconcile` streams: the location has records this store has not pulled — one line, not a failure) and `sync_error` code `SYNC_REBASE_PENDING` (the fence: a sync rebase is open, so the write verb refused; `verb` carries that verb's own name). Schema, refusal codes and the `--answer` loop: `references/context-sync.md`.

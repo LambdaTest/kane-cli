@@ -9,6 +9,7 @@ kane-cli maintain reconcile --apply [path]                          # continue a
 kane-cli maintain reconcile --from <file> --source-id <id> --mode agent   # headless — see Automation
 kane-cli maintain evolve <ref> [--because "<reason>"]               # re-design one stale use-case (interactive)
 kane-cli maintain evolve --from-stale                               # …or every use-case with stale designs
+kane-cli maintain evolve <ref> --mode agent                         # headless (0.8.21): the blast-radius question pauses the run
 ```
 
 <a name="reconcile"></a>
@@ -139,13 +140,26 @@ kane-cli maintain evolve <ref> [--because "<reason>"]   # any designed entity �
 kane-cli maintain evolve --from-stale                   # every use-case with stale designed entities
 ```
 
-Evolve re-designs the **parent use-case** of whatever you point it at — a test, scenario, criterion, or the use-case itself. It is interactive-only, and the blast radius is always stated before anything runs; declining is a clean exit.
+Evolve re-designs the **parent use-case** of whatever you point it at — a test, scenario, criterion, or the use-case itself. The blast radius is always stated before anything runs; declining is a clean exit.
 
 - **Staleness-gated:** a fresh target refuses. `--because "<reason>"` is the sanctioned override — your reason becomes the change context the re-design sees, on the record.
-- `--from-stale` collects every use-case with stale designed entities and walks them one confirm at a time.
+- `--from-stale` collects every use-case with stale designed entities. In a terminal it walks them one confirm at a time; with `--mode agent` it asks one question per use-case and runs nothing until all are answered.
 - *(0.8.2)* Evolve's terminal output leads with an aligned diff report, brackets its child design runs with progress-dot lines, and closes with the same session summary every interactive session prints.
 - After a clean run, evolve reports the diff between the two design generations — what was superseded, what was minted, what was **retained** unchanged, and which criteria's verifying tests moved. A re-design doesn't break what it didn't change.
 - Reconcile's MODIFY rows route here automatically — reach for evolve directly when staleness arrived outside a reconcile (an older change, a retired source). [`kane-cli cover gaps`](./coverage.md) lists stale designed entities in its ranked worklist.
+
+### Headless: `--mode agent` *(0.8.21)*
+
+`--mode agent` speaks the same typed stream as `design tests` and `reconcile`: one JSON object per line on stdout, `verb: "evolve"`, nothing on stderr, `done` last. Agent mode never answers for you. The blast-radius confirmation becomes a question, the run pauses with exit `3`, and the answer arrives on the next call:
+
+```bash
+kane-cli maintain evolve t-4 --mode agent
+# evolve_target (the blast radius), evolve_paused (question id evolve:uc-3, options proceed / decline), done paused, exit 3
+kane-cli maintain evolve t-4 --mode agent --answer evolve:uc-3=1     # 1 = proceed, 2 = decline
+# evolve_target, child_start, the design run's own events (verb: design), child_end, evolve_diff, done complete, exit 0
+```
+
+The resume command keeps `--because`. With `--from-stale` there is one question per use-case and nothing runs until every one is answered; a partial set pauses again on the rest and keeps the answers given. A design session that pauses arrives as its own `session_paused`, and `done` carries its resume command: resume it, then run evolve again for the diff. After a partial answer the suggested commands carry the answers already given, so declining the rest still re-designs what you answered proceed. `--mode` accepts `interactive` and `agent` only (`MODE_USAGE` otherwise); an answer to a question the run does not ask refuses `ANSWER_USAGE`. The event table is in [Automation](./automation.md#evolves-stream).
 
 ## Exit codes
 
