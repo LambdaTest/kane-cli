@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.21] - 2026-10-05
+
+### Steadier iOS simulator runs
+- **No more screenshot crash on off-screen elements** — an element centred far outside the visible screen used to fail the screen read with `IndexError: list index out of range` and end the run on its first step. It is now read normally.
+- **Mobile sub-steps use the test's planner** — a login or setup step handed to a sub-agent now runs on the same planner as its parent test, instead of always falling back to the older one.
+- **A passed mobile assertion is saved as passed** — assertion results no longer get downgraded in the saved run.
+- **A binding that rejects your session options** is now reported as a lost device, not an unexplained crash.
+
+### Mobile replay you can trust
+- **Grid-hook steps replay** — the mobile tape now plays back the grid-hook steps instead of skipping them.
+- **Output variables flow forward** — every output variable from a mobile step is handed to the next one during replay.
+- **`@deeplink` is marked replay-only** — deeplink and grid-hook steps are tagged so replay treats them correctly instead of re-executing them as fresh actions.
+
+### One word for devices and apps
+- **`target` replaces `target_kind`** — one device word (`emulator`, `simulator`) is used everywhere, including in the evidence pack, with the old fallbacks removed.
+- **App names are consistent** — one helper names the app, so the announce line and the pack always agree.
+- **A run with no target says so** — instead of guessing, kane-cli reports that no target was named.
+
+### Web actions that reach hidden elements
+- **Clicks land on elements the accessibility tree hides** — kane-cli now acts on DOM-clickable elements that never appear in the AX tree.
+- **The AX document is never blank** — actionable timing can no longer wipe it out, and the ref keys are documented.
+
+### Working with agents and automation
+- **`testrun run --agent`** — the same stream selected when stdin is not a TTY, so piped and agent-driven runs behave predictably.
+- **Piping no longer collides with the command stream** — the command stream is detached from `sys.stdin`.
+- **`maintain evolve` is clearer to review** — one batch exit rule, the design agent is told which entity it started on, refusals disclose nothing, dead entities are named honestly, and the checkpoint warning carries its cause.
+- **`maintain evolve --mode agent`** — the blast-radius question now rides the pause protocol instead of interrupting the run.
+
+### Smaller things you may notice
+- **Project listing is filtered to the KTM product** — fewer irrelevant projects to scroll past.
+
 ## [0.8.20] - 2026-10-01
 
 ### Mobile and WebView runs behave
