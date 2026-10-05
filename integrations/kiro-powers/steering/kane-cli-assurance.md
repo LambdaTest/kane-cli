@@ -1,6 +1,6 @@
 # Kane CLI — assurance steering (requirements → designed suite → coverage → upkeep)
 
-Load this file when the user has **requirement documents** (a PRD, a spec, acceptance notes) and wants tests designed from them, coverage accounting ("what exactly is covered?"), or the suite kept current when requirements change. For quick test cases from a one-line description, use `kane-cli generate` instead (load `kane-cli-generate.md`). Never write test cases by hand.
+Load this file when the user has **requirement documents** (a PRD, a spec, acceptance notes) and wants tests designed from them, coverage accounting ("what exactly is covered?"), or the suite kept current when requirements change. A description given in chat with no document is written to `requirements/<feature>.md` in the user's words and follows the same path. Never write test cases by hand.
 
 Requires kane-cli 0.6.1+ — on an older CLI, `kane-cli context …` fails as an *unknown command* (exit 2). That means the CLI is too old, not a typo: confirm with `kane-cli --version`, have the user update, and stop rather than improvising the workflow with other commands. Flags marked with a release (0.7.1+ … 0.8.6+) need at least that release — an *unknown option* error on one of them means the same thing.
 
@@ -12,7 +12,7 @@ kane-cli context review --verdicts <file> --json             # 2. CHECKPOINT: us
 kane-cli design tests --use-case <uc-ref> --mode agent --max 8   # 3. design ACs, scenarios, tests
 kane-cli context review --verdicts <file> --json             # 4. CHECKPOINT: user approves the design
 kane-cli testmd run .testmuai/tests/<t>_test.md --agent      # 5. author each kept test once (real browser)
-kane-cli testrun run --match 't-'                            # 6. batch replays from then on
+kane-cli testrun run --match 't-' < /dev/null               # 6. batch replays from then on
 kane-cli cover gaps                                          # 7. the coverage ribbon; drill in with `cover gaps <uc-id>` for commands
 ```
 
@@ -30,7 +30,7 @@ The conversational assurance commands (`context ingest`/`extract`, `design tests
 2. Resume in **plain words**: `kane-cli context extract --resume <sid> --mode agent --message "<the answer>"` — or, on 0.7.1+, by id (`--answer q1=2 --answer q2="<typed value>"`) or by landing the source the agent needs (`--with-source <path|url>` — the pending questions defer while it reads, then only what's still open is re-asked).
 3. Sessions are durable on 0.7.1+ — a crash that left a checkpoint exits 3 with the resume command. They expire in 24 h; `kane-cli context sessions --json` lists them; `sessions clean <sid>` removes one you abandoned.
 
-This exit-3 meaning applies to these assurance commands only — `run`/`testmd`/`testrun`/`generate` keep 3 = timeout/cancelled.
+This exit-3 meaning applies to these assurance commands only — `run`/`testmd`/`testrun` keep 3 = timeout/cancelled.
 
 # Design rules
 
@@ -38,7 +38,7 @@ Gates return commands, not dead ends (0.7.1+): designing an unreviewed or alread
 
 # The authoring bridge
 
-On 0.8.4+, batch designed tests directly with `kane-cli testrun run` — unauthored members classify as `author`, the run authors them, and the evidence consolidates afterwards (best-effort); `--from-context` selects members by assurance test ids. On pre-0.8.4 CLIs, `testrun` refuses never-authored members (`missing_meta`) — author each once with `kane-cli testmd run` first. Designed tests may carry `{{variables}}` for values the requirements never pinned. On 0.8.2+, `kane-cli cover gaps` is the **coverage ribbon** (one row per use-case, no commands); drill into `cover gaps <uc-id>` for every AC plus a `next` actions block, or `--json` for `ready_command` rows (`--rollup lenient|strict` picks the proven formula; `--flat` and gaps' `--from` are removed and refuse; `--mode agent` delivers the same data as one event plus `next[]`). A failing row leads with the evidence command — surface its warning that re-running an authored test against a broken app may heal the test around the failure.
+On 0.8.4+, batch designed tests directly with `kane-cli testrun run` — unauthored members classify as `author`, the run authors them, and the evidence consolidates afterwards (best-effort); `--from-context` selects members by assurance test ids. On pre-0.8.4 CLIs, `testrun` refuses never-authored members (`missing_meta`) — author each once with `kane-cli testmd run` first. Designed tests may carry `{{variables}}` for values the requirements never pinned: design declares each name it invents as an empty stub in `.testmuai/variables/assurance.json` and reports them (`variables_declared` during the run, `variables_summary` on a clean completion); surface them as a to-do and fill them before any run, per **Fill the variables before any run** in the `kane-cli-run` steering file, or the run types the placeholder as written. On 0.8.2+, `kane-cli cover gaps` is the **coverage ribbon** (one row per use-case, no commands); drill into `cover gaps <uc-id>` for every AC plus a `next` actions block, or `--json` for `ready_command` rows (`--rollup lenient|strict` picks the proven formula; `--flat` and gaps' `--from` are removed and refuse; `--mode agent` delivers the same data as one event plus `next[]`). A failing row leads with the evidence command — surface its warning that re-running an authored test against a broken app may heal the test around the failure.
 
 # When requirements change
 
