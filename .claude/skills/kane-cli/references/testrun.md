@@ -15,7 +15,7 @@
 ## Command
 
 ```bash
-kane-cli testrun run [paths...] [flags] < /dev/null   # NDJSON only when stdin is not a TTY: every line you write ends in < /dev/null — there is NO --agent flag on testrun
+kane-cli testrun run [paths...] [flags] < /dev/null   # NDJSON when stdin is not a TTY, on every version: end every line in < /dev/null (0.8.21+ also takes --agent)
 ```
 
 `[paths...]` is optional — omit it to auto-discover every `*_test.md` under the cwd. Explicit paths must end in `_test.md`.
@@ -165,7 +165,7 @@ Local suites containing any mobile member require `--parallel 1`; larger values 
 
 Healing is enabled by default (three shrinking replay windows, then re-authoring of authorable steps). `--no-adaptive-heal` disables it. Retired `--retry`/`--retry-count` only print a notice and have no effect. Replay-only recorded steps retain their recordings even during healing.
 
-NDJSON selection uses stdin, not stdout: every `kane-cli testrun run` line ends in `< /dev/null` (bash and zsh on macOS, Linux and Git Bash; `< NUL` in cmd.exe; from PowerShell run it through cmd: `cmd /c "kane-cli testrun run … < NUL"`). Check the first stdout line: on 0.8.17+ it is `{"type":"stream_start"…}`. A prose plan there instead means the CLI is in terminal mode: it prints the human view and, after a real run, opens an evidence table that waits until `q` or Esc, so the process never exits on its own. Stop it and rerun with the redirect. An empty stdout with a message on stderr is a usage error: read it. Dry-run validates a plan, not runtime authentication or browser/device readiness. Always observe process exit, including paths without a normal completion event.
+NDJSON selection uses stdin, not stdout (on 0.8.21+ `--agent` selects the same stream): every `kane-cli testrun run` line ends in `< /dev/null` (bash and zsh on macOS, Linux and Git Bash; `< NUL` in cmd.exe; from PowerShell run it through cmd: `cmd /c "kane-cli testrun run … < NUL"`). Check the first stdout line: on 0.8.17+ it is `{"type":"stream_start"…}`. A prose plan there instead means the CLI is in terminal mode: it prints the human view and, after a real run, opens an evidence table that waits until `q` or Esc, so the process never exits on its own. Stop it and rerun with the redirect. An empty stdout with a message on stderr is a usage error: read it. Dry-run validates a plan, not runtime authentication or browser/device readiness. Always observe process exit, including paths without a normal completion event.
 
 ### Remote behavior still requiring verification
 
