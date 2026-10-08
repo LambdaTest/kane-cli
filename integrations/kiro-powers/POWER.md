@@ -468,7 +468,7 @@ Do not configure Kane CLI via environment variables — env-var passthrough is n
 | Need | Where to go |
 |---|---|
 | Bug reports / feature requests | [GitHub Issues](https://github.com/LambdaTest/kane-cli/issues/new/choose) |
-| Questions, discussion, releases | [Discord](https://discord.gg/kanQPEx9) |
+| Questions, discussion, releases | [Discord](https://discord.gg/SqVMtNeWEf) |
 | Security vulnerabilities (never file publicly) | security@testmuai.com — see [SECURITY.md](https://github.com/LambdaTest/kane-cli/blob/main/SECURITY.md) |
 | User guide | [docs/user-guide](https://github.com/LambdaTest/kane-cli/tree/main/docs/user-guide) |
 | Agent reference | [testmuai.com/kane-cli/agents.md](https://testmuai.com/kane-cli/agents.md) |
