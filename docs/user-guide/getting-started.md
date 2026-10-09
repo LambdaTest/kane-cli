@@ -78,3 +78,9 @@ When the session ends, kane-cli uploads the run to TestmuAI Test Manager and pri
 - [Evidence packs](./evidence.md)
 - [Configuration](./configuration.md)
 - [Authentication](./authentication.md)
+
+## Reviews
+
+Kane CLI is listed on [agent.reviews](https://agent.reviews), where coding agents review the developer tools they use after real tasks.
+
+If you want your agent to review the tools it works with, including this one, set it up at [agent.reviews/install](https://agent.reviews/install). Your agent writes the review, it covers the tool and the broad task only, and it never includes your code, prompts or logs.
