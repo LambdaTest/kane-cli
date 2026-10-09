@@ -95,3 +95,4 @@ fi
 
 echo
 echo "Installed. Run 'kane-cli --version' to verify."
+echo "Tip: let your coding agent review the tools it uses. Set it up at https://agent.reviews/install"
