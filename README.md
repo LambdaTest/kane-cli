@@ -1,4 +1,11 @@
-# Kane CLI - TestMu AI (Formerly LambdaTest)
+<div align="center">
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset=".github/assets/kane-mascot-dark.gif">
+  <img src=".github/assets/kane-mascot-light.gif" alt="Kane, the Kane CLI helmet mascot" width="200">
+</picture>
+
+# Kane CLI
 
 **The validation layer for AI coding agents. Natural-language web and mobile-app automation, plus requirements-to-coverage assurance, called from your CLI or IDE.**
 
@@ -6,6 +13,12 @@
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
 ![Platforms](https://img.shields.io/badge/platforms-macOS%20%7C%20Linux%20%7C%20Windows-brightgreen)
 [![Discord](https://img.shields.io/badge/Discord-Join%20the%20community-5865F2?logo=discord&logoColor=white)](https://discord.gg/SqVMtNeWEf)
+
+[Install](#install) · [First run](#first-run-under-60-seconds) · [User guide](docs/user-guide/README.md) · [For AI agents](#for-ai-coding-agents-reading-this) · [Commands](#commands)
+
+<sub>Built by <a href="https://www.testmuai.com">TestMu AI</a> (formerly LambdaTest)</sub>
+
+</div>
 
 ---
 
@@ -18,10 +31,17 @@
 - [Commit tests as Markdown (`testmd`)](#commit-tests-as-markdown-testmd)
 - [Every run produces evidence](#every-run-produces-evidence)
 - [From requirements to a designed suite](#from-requirements-to-a-designed-suite)
+- [For AI coding agents reading this](#for-ai-coding-agents-reading-this)
 - [Commands](#commands)
+- [NDJSON output (`--agent` mode)](#ndjson-output---agent-mode)
+- [Exit codes](#exit-codes)
+- [Configuration](#configuration)
 - [Troubleshooting](#troubleshooting)
+- [Supported platforms](#supported-platforms)
 - [Updating](#updating)
 - [Documentation, support, contributing](#documentation-support-contributing)
+- [LambdaTest is now TestMu AI](#-lambdatest-is-now-testmu-ai)
+- [License](#license)
 
 ---
 
@@ -32,9 +52,9 @@ You give `kane-cli` a plain-English **objective**. It launches a real Chrome bro
 ```bash
 $ kane-cli run "Go to https://news.ycombinator.com and store the title of the top story as 'top_story'" --agent
 
-{"step":1,"status":"passed","remark":"Opened news.ycombinator.com"}
-{"step":2,"status":"passed","remark":"Identified the top story by position"}
-{"step":3,"status":"passed","remark":"Stored the title as 'top_story'"}
+{"step":1,"status":"done","remark":"Opened news.ycombinator.com"}
+{"step":2,"status":"done","remark":"Identified the top story by position"}
+{"step":3,"status":"done","remark":"Stored the title as 'top_story'"}
 {"type":"run_end","status":"passed","duration":7.4,"final_state":{"top_story":"Show HN: A new SQLite extension for…"},"summary":"Captured the top Hacker News title.","test_url":"https://test-manager.lambdatest.com/…"}
 ```
 
@@ -72,7 +92,11 @@ brew install LambdaTest/kane/kane-cli
 curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh | sh
 ```
 
-Pin a version: append `-s -- --version 0.2.6`.
+Pin a version by passing it to the script:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh | sh -s -- --version 0.8.21
+```
 
 ### Chrome (required)
 
@@ -94,6 +118,8 @@ kane-cli can also run tests against an iOS Simulator or Android Emulator. It is 
 - **On the cloud grid** — from Linux, Windows, or any Mac, with no mobile tooling: `kane-cli testrun run --match '^tests/app/' --remote --device-name "Pixel 7" --os-version 14` runs a saved mobile suite on a HyperExecute emulator or simulator (needs a LambdaTest plan with HyperExecute macOS runners and `kane-cli plugin install remote-execution`).
 
 > Full setup and prerequisites: [Mobile testing](docs/user-guide/mobile/overview.md) · [Remote runs on the cloud grid](docs/user-guide/remote-execution.md).
+
+---
 
 ## First run (under 60 seconds)
 
@@ -201,7 +227,11 @@ kane-cli run "<one-sentence objective starting with 'Go to <url> and …'>" --ag
 
 Three rules:
 
-1. Use `--agent` for `run` and `testmd run`. `testrun run` emits NDJSON when **stdin** is not a TTY (0.8.21+ also takes `--agent`, which selects the same stream), so every `testrun run` line an agent writes ends in `< /dev/null` (`< NUL` in cmd.exe; from PowerShell, `cmd /c "… < NUL"`); the first stdout line is `stream_start` (0.8.17+); a prose plan there means terminal mode, which after a real run waits on an evidence table until `q` or Esc. Assurance conversational commands use `--mode agent`. Parse command-specific completion events and process exit.
+1. **Ask for machine-readable output.**
+   - `run` and `testmd run`: add `--agent`.
+   - `testrun run`: emits NDJSON when **stdin** is not a TTY (0.8.21+ also takes `--agent`, which selects the same stream), so end every `testrun run` command with `< /dev/null` (`< NUL` in cmd.exe; from PowerShell, `cmd /c "… < NUL"`). The first stdout line is `stream_start` (0.8.17+). A prose plan there means terminal mode, which after a real run waits on an evidence table until `q` or Esc.
+   - Assurance conversational commands: use `--mode agent`.
+   - Parse each command's own completion event, and check the process exit code.
 2. **Use the "store as" pattern** for extraction. `"go to example.com, store the page title as 'page_title'"` — never `"read the page title"`.
 3. **One objective = one task.** If a flow has more than ~15 steps, split it into multiple `kane-cli run` calls and run them in parallel.
 
@@ -319,8 +349,8 @@ TUI slash commands (`/run`, `/mobile`, `/desktop`, `/doctor`, `/login`, `/logout
 | `--local-context <file>`    | `.testmuai/context.md` (cwd)          | Override project-local agent context.                                   |
 | `--username <user>`         | none                                  | Basic auth username (skips OAuth).                                      |
 | `--access-key <key>`        | none                                  | Basic auth access key (skips OAuth).                                    |
-| `--code-export`             | config (`true` by default) | Generate a code export of the run after upload.                         |
-| `--code-language <lang>`    | `python`                              | Code-export language (`python` or `javascript` supported today).                   |
+| `--code-export`             | config (`true` by default)            | Generate a code export of the run after upload.                         |
+| `--code-language <lang>`    | `python`                              | Code-export language (`python` or `javascript` supported today).        |
 | `--skip-code-validation`    | on                                    | Skip post-codegen worker-side validation.                               |
 | `--no-skip-code-validation` | off                                   | Force post-codegen worker-side validation.                              |
 
@@ -408,12 +438,12 @@ for each line of stdout:
 
 ## Exit codes
 
-| Code | Meaning                                               |
-| ---- | ----------------------------------------------------- |
-| `0`  | Passed                                                |
-| `1`  | Failed (objective ran but did not pass)               |
-| `2`  | Error (auth, setup, infrastructure — Chrome, network) |
-| `3`  | Timeout or cancelled                                  |
+| Code | Meaning                                                                            |
+| ---- | ---------------------------------------------------------------------------------- |
+| `0`  | Passed                                                                             |
+| `1`  | Failed (the objective did not pass, or the upload failed)                          |
+| `2`  | Error (auth, configuration, Chrome, unknown subcommand, or an unhandled exception) |
+| `3`  | Cancelled, or hit the `--timeout`                                                  |
 
 Use these in CI: `kane-cli run … --agent --headless` exits non-zero on any failure, which gates your pipeline naturally.
 
@@ -518,6 +548,8 @@ For a longer list of failure patterns and a full debugging flow (reading per-ste
 
 Signature verification details: [SECURITY.md](SECURITY.md).
 
+---
+
 ## Updating
 
 `kane-cli` checks for updates once per 24h (non-blocking). To update manually:
@@ -541,13 +573,14 @@ curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh
   - Assurance: [overview](docs/user-guide/assurance/overview.md) · [context graph](docs/user-guide/assurance/context.md) · [test design](docs/user-guide/assurance/design.md) · [coverage](docs/user-guide/assurance/coverage.md) · [maintain](docs/user-guide/assurance/maintain.md) · [automation](docs/user-guide/assurance/automation.md)
   - [Test Manager integration](docs/user-guide/test-manager-integration.md) · [CI/CD recipes](docs/user-guide/cicd.md) · [Troubleshooting](docs/user-guide/troubleshooting.md)
 - **Agent setup guide** (deep reference for AI coding agents): [testmuai.com/kane-cli/agents.md](https://testmuai.com/kane-cli/agents.md)
-- **Community:** [Join us on Discord](https://discord.gg/kanQPEx9) — questions, discussion, and release announcements
+- **Community:** [Join us on Discord](https://discord.gg/SqVMtNeWEf) — questions, discussion, and release announcements
 - **Issues / bug reports:** [GitHub Issues](https://github.com/LambdaTest/kane-cli/issues/new/choose)
 - **Reviews:** Kane CLI is listed on [agent.reviews](https://agent.reviews), where coding agents review the tools they use after real tasks. To let your agent do the same, see [agent.reviews/install](https://agent.reviews/install)
 - **Security:** see [SECURITY.md](SECURITY.md)
 - **Contributing:** see [CONTRIBUTING.md](CONTRIBUTING.md) — improvements to documentation and skills are welcome
 - **Changelog:** [CHANGELOG.md](CHANGELOG.md)
 
+---
 
 ## 🚀 LambdaTest is Now TestMu AI
 
@@ -565,8 +598,8 @@ As software development entered the AI era, testing had to evolve, too. We rebui
 
 That evolution earned a new name: **TestMu AI**, built for an AI-first future of quality engineering. TestMu is not a new name for us. It is the name of our annual community conference, which has brought together 100,000+ quality engineers to discuss how AI would reshape testing, long before that became an industry norm. TestMu AI reflects our commitment to community-driven innovation and AI-native architecture.
 
+---
 
 ## License
 
 [Apache-2.0](LICENSE)
-
