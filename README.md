@@ -543,6 +543,7 @@ curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh
 - **Agent setup guide** (deep reference for AI coding agents): [testmuai.com/kane-cli/agents.md](https://testmuai.com/kane-cli/agents.md)
 - **Community:** [Join us on Discord](https://discord.gg/kanQPEx9) — questions, discussion, and release announcements
 - **Issues / bug reports:** [GitHub Issues](https://github.com/LambdaTest/kane-cli/issues/new/choose)
+- **Reviews:** Kane CLI is listed on [agent.reviews](https://agent.reviews), where coding agents review the tools they use after real tasks. To let your agent do the same, see [agent.reviews/install](https://agent.reviews/install)
 - **Security:** see [SECURITY.md](SECURITY.md)
 - **Contributing:** see [CONTRIBUTING.md](CONTRIBUTING.md) — improvements to documentation and skills are welcome
 - **Changelog:** [CHANGELOG.md](CHANGELOG.md)
