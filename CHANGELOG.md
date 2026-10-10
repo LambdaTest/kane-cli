@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.22] - 2026-10-09
+
+### Mobile runs match web runs
+- **Replay parity across platforms** — mobile replay now handles hub settings, until loops,and empty steps the same way web replay does.
+- **`prefer_intent` works on mobile too** — the mobile executor accepts the same option as the web executor.
+- **App launches no longer sink a run** — `activate_app` runs off the main loop and won't fail the run, and the label guard that blocked it is gone.
+- **Cleaner mobile recordings** — each step keeps its own label, and no stray navigate step gets inserted.
+- **Appium logs where you expect them** — the Appium binding's log now lands in the run log next to the web binding's.
+
+### Imports resolve the way you'd expect
+- **An imported file sees its importer's variables** — no more surprise unresolved references.
+- **`@import` bindings resolve in the importing file's scope** — and a bare reference in an `@import` row resolves as a bare reference, nothing more.
+
+### Exports that mirror the run
+- **`until` inside a taken branch stays inside that branch** — it exports as a loop in the branch rather than being hoisted out.
+- **Platform-aware lowering** — the export oracle lowers an `until` op using the tape's platform.
+
+### Account and config commands
+- **`kane-cli balance` is unambiguous** — it reports available credits only.
+- **`kane-cli config reset-url`** — clears the configured default URL.
+
 ## [0.8.21] - 2026-10-05
 
 ### Steadier iOS simulator runs
