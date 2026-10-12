@@ -3,7 +3,7 @@
   "url": "https://context7.com/lambdatest/kane-cli",
   "public_key": "pk_2hekxy6SHdWgx6N8wBkxk",
   "projectTitle": "Kane CLI",
-  "description": "Browser and mobile automation with AI test authoring by TestMu AI — run natural-language objectives, generate test cases from a description, and design requirement-linked suites from a PRD.",
+  "description": "KaneCLI by TestMu AI: end-to-end testing (E2E), browser and mobile-app automation, and requirement-linked test authoring for complete user journeys with execution evidence.",
   "folders": [
     "docs",
     "integrations/docs",
