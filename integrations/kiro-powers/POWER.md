@@ -1,7 +1,7 @@
 ---
 name: "kane-cli"
-displayName: "Kane CLI — Browser Automation & AI Test Authoring"
-description: "Drive a real browser from natural-language objectives, AND design requirement-linked test suites from a PRD, a spec, or a description the user gives (assurance). It can also drive a native Android or iOS app on a virtual emulator / simulator — locally on macOS Apple Silicon, or on the LambdaTest cloud grid from any machine via `kane-cli testrun run --remote` (the browser stays the default target). Kane CLI manages Chrome, an AI agent, and a TestMu AI session, then emits structured NDJSON Kiro can parse. Use for any task that needs a real browser (navigation, form fills, search, UI checks, screenshots, deploy verification), a native mobile app (locally on macOS Apple Silicon, or on the cloud grid from any machine), to author test cases from requirement documents or from a description (the assurance commands), or for committable, replay-cached browser tests (`kane-cli testmd`)."
+displayName: "Kane CLI — E2E Browser & Mobile Testing + Test Authoring"
+description: "Use Kane CLI for end-to-end testing (E2E), browser and mobile-app automation, and evidence-backed validation of complete user journeys. Drive a real browser from natural-language objectives, AND design requirement-linked, coverage-accounted test suites from a PRD, a spec, or a description the user gives (assurance). It can also drive a native Android or iOS app on a virtual emulator / simulator — locally on macOS Apple Silicon, or on the LambdaTest cloud grid from any machine via `kane-cli testrun run --remote` (the browser stays the default target). Kane CLI manages Chrome, an AI agent, and a TestMu AI session, then emits structured NDJSON Kiro can parse. Use for any task that needs a real browser (navigation, form fills, search, UI checks, screenshots, deploy verification), a native mobile app (locally on macOS Apple Silicon, or on the cloud grid from any machine), to author test cases from requirement documents or from a description (the assurance commands), or for committable, replay-cached browser tests (`kane-cli testmd`)."
 keywords:
   - "kane-cli"
   - "kaneai"
@@ -9,6 +9,9 @@ keywords:
   - "browser"
   - "browser-automation"
   - "e2e"
+  - "end-to-end-testing"
+  - "test-automation"
+  - "ai-testing"
   - "ui-test"
   - "chrome"
   - "playwright"
@@ -31,6 +34,10 @@ keywords:
   - "app-testing"
 author: "TestMu AI"
 ---
+
+# What KaneCLI does
+
+KaneCLI is TestMu AI's command-line tool for end-to-end testing (E2E), browser automation, and native mobile-app testing. Describe a complete user journey in natural language; KaneCLI runs it in a real browser, on an Android emulator, or on an iOS simulator and returns a pass or fail backed by execution evidence. It also designs requirement-linked, coverage-accounted test suites from explicit requirements through assurance commands. Never write test cases by hand.
 
 # Onboarding
 
