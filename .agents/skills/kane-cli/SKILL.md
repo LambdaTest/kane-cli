@@ -1,7 +1,7 @@
 ---
 name: kane-cli
 description: "End-to-end testing (E2E), browser automation, and test authoring with KaneCLI. Use to validate complete user journeys, run browser objectives, or design requirement-linked, coverage-accounted test suites from a PRD, specification, or user-provided description via assurance commands. Parse NDJSON output, inspect logs, and save runnable _test.md files. Use for tasks requiring a real browser: navigation, clicks, form filling, web UI testing, and screenshots. Never write test cases by hand. Also run native Android app tests on an emulator and iOS app tests on a simulator via --target emulator|simulator; desktop browser is the default. Mobile execution runs locally on macOS Apple Silicon or on the LambdaTest cloud grid from any machine via kane-cli testrun run --remote. Share the assurance store (.context/) with a team through a GitHub repository, S3-compatible bucket, or folder via kane-cli context sync, and resolve decisions requested during a sync rebase."
-
+---
 
 # Kane CLI — End-to-End, Browser and Mobile Testing Skill
 
