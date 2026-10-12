@@ -72,7 +72,6 @@ Pick the earliest fault the pack proves.
 |---|---|
 | Matching a screenshot to a step by step number | Step numbers are counted per file. Use the sheet's join |
 | Reading a screenshot as the result of its step | It is the screen before the action. Look one step later |
-| Trusting a `passed` step | Passed means the action returned, not that the screen changed |
 | Blaming the step that carries the failure record | Check the `UNMAPPED` list for actions after it first |
 | Repeating the triage inside the pack | Check it against the log signals and the screen table first |
 | Reading an off-target marker as a wrong click | The marker is drawn on a screenshot taken before the action. Confirm the click in the actions log |
