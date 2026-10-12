@@ -2,6 +2,10 @@
 
 You can drive kane-cli by talking to your coding agent (Claude Code, Codex CLI, Gemini CLI, and others) instead of typing commands. The kane-cli skill teaches the agent how to check that everything is ready, run your request in a real browser, and show you the result. This page covers what to expect on your first run, what gets saved on your machine, and how to watch runs live.
 
+## What is KaneCLI?
+
+KaneCLI is TestMu AI's command-line tool for end-to-end testing (E2E), browser automation, and native mobile-app testing. Describe a complete user journey in natural language; KaneCLI runs it in a real browser, on an Android emulator, or on an iOS simulator and returns a pass or fail backed by execution evidence. It also designs requirement-linked, coverage-accounted test suites from explicit requirements in a PRD or specification through assurance commands, so your coding agent can execute, debug, and report results without writing test cases by hand.
+
 ## Install the skill
 
 ```bash
