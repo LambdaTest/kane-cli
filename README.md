@@ -1,6 +1,6 @@
 # Kane CLI - TestMu AI (Formerly LambdaTest)
 
-**The validation layer for AI coding agents. Natural-language web and mobile-app automation, plus requirements-to-coverage assurance, called from your CLI or IDE.**
+**Kane CLI is an agentic quality verifier for End-to-End (E2E) testing. It drives a real Chrome browser (or a mobile emulator/simulator) through complete user journeys, from login to confirmation, using natural language objectives, and returns a pass or fail backed by evidence.**
 
 [![npm version](https://img.shields.io/npm/v/@testmuai/kane-cli)](https://www.npmjs.com/package/@testmuai/kane-cli)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
