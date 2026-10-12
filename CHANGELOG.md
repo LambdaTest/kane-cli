@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.23] - 2026-10-12
+
+### Changed
+
+- Maintenance release — packaging/pipeline fixes only, no user-facing changes.
+
 ## [0.8.22] - 2026-10-09
 
 ### Mobile runs match web runs
