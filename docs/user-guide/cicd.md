@@ -68,7 +68,7 @@ jobs:
         uses: browser-actions/setup-chrome@v1
 
       - name: Install kane-cli
-        run: npm install -g kane-cli
+        run: npm install -g @testmuai/kane-cli
 
       - name: Run test
         env:
@@ -97,7 +97,7 @@ kane-cli:
     - wget -qO- https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
     - echo "deb http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list
     - apt-get update && apt-get install -y google-chrome-stable
-    - npm install -g kane-cli
+    - npm install -g @testmuai/kane-cli
   script:
     - |
       kane-cli run "Verify the homepage loads and the login button is visible" \
@@ -127,7 +127,7 @@ pipeline {
     stages {
         stage('Install') {
             steps {
-                sh 'npm install -g kane-cli'
+                sh 'npm install -g @testmuai/kane-cli'
             }
         }
 
