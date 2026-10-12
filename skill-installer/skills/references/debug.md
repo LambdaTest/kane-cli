@@ -1,4 +1,4 @@
-<!-- Read this when a kane-cli run failed and you need to diagnose. Owns the evidence-pack layout (the only source of run logs), how to read a sealed pack, the debugging flow, how to read failure.yaml (and why a designed test is not fixed by rephrasing), the common-failure-patterns table, and when to file a bug report vs not. -->
+<!-- Read this when a kane-cli run failed and you need to diagnose. Owns the evidence-pack layout (the only source of run logs), step identity and the join rules, what a step folder holds, how to read a sealed pack, the debugging flow, how to read failure.yaml (and why a designed test is not fixed by rephrasing), the common-failure-patterns table, and when to file a bug report vs not. -->
 
 # Failure Handling & Log Inspection
 
@@ -17,7 +17,7 @@ unzip -l <pack>                                            # list entries
 unzip -p <pack> "tests/*/result.yaml"                      # verdict + per-step outcomes
 unzip -p <pack> "tests/*/steps/*/failure.yaml"             # failure records (failed steps only)
 unzip -p <pack> "tests/*/logs/0-console.ndjson"            # browser console, run 0
-unzip <pack> "tests/*/steps/*/screenshot.png" -d /tmp/ev   # extract screenshots to view
+unzip <pack> "tests/*/steps/*/screenshot.*" -d /tmp/ev     # extract screenshots to view
 ```
 
 Pack layout (per test):
@@ -33,18 +33,49 @@ tests/<test-id>/
 │   ├── <n>-actions.ndjson     # agent actions per run — the old runs/<n>/ actions log, now in-pack
 │   ├── <n>-console.ndjson     # browser console, per-step attributed
 │   └── <n>-network.har        # network traffic, per-step attributed
-├── steps/<ordinal>-<step-id>/ # screenshot.png, annotated.png, step.json,
+├── steps/<ordinal>-<step-id>/ # step.json, screenshot.* (png or jpg), annotated.png (some steps),
 │                              #   failure.yaml (failed steps only)
 ├── auteur/execution.json      # full execution trajectory
 └── v16-trajectory/            # per-run planning summaries
 ```
 
+### Step identity and joins
+
+One step has a different name in each file. Join on `action_id`, never on a step number.
+
+| Name | Where | Meaning |
+|---|---|---|
+| ordinal | leading number of the step folder; `result.yaml` `ordinal` | order in the pack |
+| id | rest of the folder name; `step.json` `id`; `result.yaml` `id` | `<run index>-<agent step>` for a step that ran |
+| action_id | `step.json`, the `result.yaml` row, the `<n>-actions.ndjson` line, `auteur/execution.json` `operations[].operation_id` | the join key across files |
+| step | `<n>-actions.ndjson` `step` | counted per file; never a join key |
+
+Join a step folder to the other files by `id`, then `action_id`, then ordinal. The run index `<n>` of a step id `<n>-<m>` is the prefix of its logs: `logs/<n>-run.log`, `logs/<n>-actions.ndjson`.
+
+Where the intent of a step lives:
+
+| Source | Fields | Notes |
+|---|---|---|
+| `auteur/execution.json` | `instruction`, `reasoning`, `status`, `error_message`; `operations[].intent` | The authored steps. In a replay pack this describes the run that authored the test, so its `status` is the authored outcome |
+| `logs/<n>-actions.ndjson` | `action_type`, `action_instruction`, `rationale`, `action_params`, `selectors`, `status`, `error`, `timestamp` | What this run did |
+| `step.json` | `kind`, `summary`, `status`, `duration_ms`, `url` | One-line view of the step |
+
+### What is and is not in a step folder
+
+- **The screenshot is taken before the step's action runs**, in an authoring run and in a replay. The effect of a step is in the next step's screenshot.
+- `annotated.png` draws the action's marker on that same before-the-action screenshot. Not every step has one.
+- Steps the run never reached are `skipped` rows in `result.yaml` and have no folder.
+- An action can have a line in `<n>-actions.ndjson` and no folder: it has no screenshot of its own.
+
+`scripts/evidence-map.mjs` prints all of this as one step sheet (`references/triage.md` §1).
+
 ## Debugging Flow
 
 1. **Parse the `run_end` event** from stdout — `status`, `reason`, `summary`, plus `session_dir`.
 2. **Open the pack**: the failed step's `failure.yaml` (error + page state), then that step's slice of `<n>-console.ndjson` / `<n>-network.har` — a 4xx/5xx or JS error usually explains the failure; cite it in plain language.
-3. **Look at the failing step's `annotated.png`** — it highlights the element the agent acted on; makes "clicked the wrong thing" / "element missing" obvious. Render it inline.
+3. **Look at the failing step's `screenshot.*` and `annotated.png`.** They show the page **before** the step's action ran, with a marker on what the agent was about to act on; that makes "aimed at the wrong thing", "element missing" and "something covers it" obvious. Whether an action took effect is in the **next** step's screenshot. Render the image inline.
 4. **Check `tui.log`** (in the pack's `logs/`, or `{session_dir}/tui.log`) for session-level issues (Chrome launch, auth, upload).
+5. **Still unexplained, a pass that looks wrong, or the person asks whose fault it is?** Do the full triage: `references/triage.md`.
 
 Offer the user the visual route too: `kane-cli evidence serve <pack>` opens it in the hosted viewer. If a pack won't open, `kane-cli evidence validate <pack>` tells you whether it's truncated/unsealed.
 
