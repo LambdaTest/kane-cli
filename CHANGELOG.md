@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-15
+
+### Real-device runs
+- **Run on real devices from `kane-cli run` or the TUI** — real devices are selectable in both, and a live device window shows the session as it happens.
+- **Real-device runs work from any machine** — no local device setup required, and `--remote` now picks sensible device defaults.
+- **You're told exactly which plan a real device needs** — when the hub refuses a request on plan grounds, the message names the required plan instead of a generic failure.
+- **Clean refusals instead of confusing hangs** — if the hub has no devices for a platform, or a saved app can't run on the chosen device, kane-cli says so and why.
+- **Evidence matches the device you actually got** — the run record keeps the hub-allocated device name and slug, the device profile names that device, and the session's alert/permission setting is recorded on the mobile test.
+
+### Variables that resolve at runtime
+- **`{{global.…}}`, `{{smart.…}}` resolve when the objective starts** — the agent gets real values, not raw placeholders.
+- **Templates with two references work, and captures survive** — multi-reference strings resolve correctly and captured values stay available for later steps.
+- **Smart variables now work on Windows** — timezone data ships with kane-cli, so date and time variables resolve instead of erroring.
+
+### Working with uploaded files
+- **Reference uploads by alias anywhere in a test** — `{{file.<alias>}}` resolves to the session's cached copy of the file.
+- **Aliases are yours for the whole session** — a local alias is reserved up front and can't collide with another file mid-run.
+
+### Control and privacy
+- **Each testmd objective can set its own step cap** — `max_steps` applies per objective, with a defined fallback when it isn't set.
+- **Live view addresses stay private** — the live view address is no longer exposed, and Chrome profiles created for a run are cleaned up afterward.
+
 ## [0.8.23] - 2026-10-12
 
 ### Changed
