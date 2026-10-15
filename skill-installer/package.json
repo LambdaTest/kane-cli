@@ -1,6 +1,6 @@
 {
   "name": "@testmuai/kane-cli-skill",
-  "version": "1.3.0",
+  "version": "0.1.2",
   "description": "Agentic end-to-end testing (E2E) and browser automation CLI with natural-language tests, requirement-linked coverage and execution evidence.",
   "type": "module",
   "bin": "./cli.js",
