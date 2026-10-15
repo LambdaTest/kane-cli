@@ -1,20 +1,32 @@
 # Mobile testing
 
-kane-cli can run tests against mobile virtual devices: Apple's **iOS Simulator** and Google's **Android Emulator**. You author and run mobile tests the same way you already do for the browser. The differences are that a mobile test runs against an **app you provide** and that the target device is a simulator or emulator instead of a browser.
+kane-cli can run tests against **real Android and iOS devices** in the TestMu AI cloud, and against mobile virtual devices: Apple's **iOS Simulator** and Google's **Android Emulator**. You author and run mobile tests the same way you already do for the browser. The difference is that a mobile test runs against an **app you provide** on a device instead of a browser.
 
-There are two places that device can live:
+There are three places that device can live:
 
 | | Where the device runs | Host requirement | How |
 |---|---|---|---|
-| **Local** | A simulator or emulator on your machine | **macOS on Apple Silicon (arm64)** with Xcode and/or Android Studio | `kane-cli run … --target emulator\|simulator`, `kane-cli testmd run`, `kane-cli testrun run` |
-| **Cloud grid** | A virtual device on a **HyperExecute macOS host** | **Any machine** — Linux, Windows, Intel or Apple Silicon Mac, no mobile tooling needed. Your LambdaTest plan must include HyperExecute with macOS runners | `kane-cli testrun run … --remote` — see [Remote runs](../remote-execution.md) |
+| **Real device** | A real Android or iOS device in the **TestMu AI cloud** | **Any machine**, no mobile tooling. Your account needs **KaneAI Max** (one real device) or **KaneAI credits + Real Device Plus Automation Cloud** | `kane-cli run … --target android\|ios`, `testmd run`, `testrun run` (local or `--remote`) — see [Real devices](./real-device.md) |
+| **Local virtual device** | A simulator or emulator on your machine | **macOS on Apple Silicon (arm64)** with Xcode and/or Android Studio | `kane-cli run … --target emulator\|simulator`, `kane-cli testmd run`, `kane-cli testrun run` |
+| **Cloud grid virtual device** | A virtual device on a **HyperExecute macOS host** | **Any machine** — Linux, Windows, Intel or Apple Silicon Mac, no mobile tooling needed. Your LambdaTest plan must include HyperExecute with macOS runners | `kane-cli testrun run … --remote` — see [Remote runs](../remote-execution.md) |
 
-> **Local mobile runs need macOS on Apple Silicon (arm64).** Intel Macs, Linux, and Windows cannot boot the simulator or emulator locally — on those hosts, run mobile suites on the cloud grid with `--remote`. The setup sections below are for the local path.
+> **Local emulator and simulator runs need macOS on Apple Silicon (arm64).** Intel Macs, Linux, and Windows cannot boot the simulator or emulator locally — on those hosts, use a [real device](./real-device.md), or run virtual-device suites on the cloud grid with `--remote`. The setup sections below are for the local virtual-device path. Real devices need no setup beyond `kane-cli login`.
 
 ## What "mobile" means here
 
 - **Native app testing.** A mobile test drives an installed app. You pass a build (or an app id from a previous upload) with `--app`; kane-cli installs it on the device and runs your objective against it. Pointing a mobile run at a website is not supported yet. WebViews inside the app under test are handled.
-- **Two targets.** `emulator` is a virtual Android device, `simulator` is a virtual iOS device. The default target stays **desktop** (the browser), so nothing changes for your existing web runs.
+- **Four mobile targets.** `emulator` is a virtual Android device and `simulator` is a virtual iOS device, both on your Mac. `android` and `ios` are real devices in the TestMu AI cloud. The default target stays **desktop** (the browser), so nothing changes for your existing web runs.
+
+| | `emulator` / `simulator` | `android` / `ios` |
+|---|---|---|
+| Device | Virtual, on your Mac (or the grid with `--remote`) | Real, in the TestMu AI cloud |
+| Host | macOS on Apple Silicon (any machine with `--remote`) | Any machine |
+| Setup | Xcode / Android Studio + `kane-cli doctor --install` | `kane-cli login` |
+| Builds | `.apk` (Android), `.zip` of the `.app` (iOS) | `.apk` / `.aab` (Android), `.ipa` (iOS) |
+| Device choice | `--device-name` **and** `--os-version` | Either one alone, or neither (the hub picks) |
+| Adaptive heal on replay | Yes | No |
+| Live view | The simulator/emulator window | A view-only Chrome window |
+| Plan | — (HyperExecute macOS for `--remote`) | KaneAI Max, or KaneAI credits + Real Device Plus Automation Cloud |
 
 ## Why a single architecture for local runs
 
@@ -79,6 +91,7 @@ Three things differ from a local run: the device comes from the **grid catalog**
 
 ## Next steps
 
+- [Real devices](./real-device.md): real Android and iOS devices from any machine
 - [Remote runs on the cloud grid](../remote-execution.md): mobile suites from any machine
 - [iOS Simulator setup (mac-arm64)](./simulator.md)
 - [Android Emulator setup (mac-arm64)](./emulator.md)

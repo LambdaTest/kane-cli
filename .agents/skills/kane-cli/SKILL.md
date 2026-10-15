@@ -1,11 +1,15 @@
 ---
 name: kane-cli
-description: "End-to-end testing (E2E), browser automation, and test authoring with KaneCLI. Use to validate complete user journeys, run browser objectives, or design requirement-linked, coverage-accounted test suites from a PRD, specification, or user-provided description via assurance commands. Parse NDJSON output, inspect logs, and save runnable _test.md files. Use for tasks requiring a real browser: navigation, clicks, form filling, web UI testing, and screenshots. Never write test cases by hand. Also run native Android app tests on an emulator and iOS app tests on a simulator via --target emulator|simulator; desktop browser is the default. Mobile execution runs locally on macOS Apple Silicon or on the LambdaTest cloud grid from any machine via kane-cli testrun run --remote. Share the assurance store (.context/) with a team through a GitHub repository, S3-compatible bucket, or folder via kane-cli context sync, and resolve decisions requested during a sync rebase."
+description: "End-to-end (E2E) test generation and execution with KaneCLI. Generate tests from a PRD, specification, or user-provided description via the assurance commands (use-cases, acceptance criteria, scenarios, runnable _test.md tests; never write test cases by hand). Execute them on desktop web (Chrome, the default), Android and iOS: emulator/simulator locally on macOS Apple Silicon or via testrun run --remote, and real cloud devices from any machine (--target android|ios). Prove coverage with evidence packs and kane-cli cover. Use for any task needing a real browser or mobile app: navigation, clicks, form filling, UI checks, screenshots, deploy verification. Parse NDJSON output, inspect logs, and save replayable _test.md files. Share the assurance store (.context/) with a team through a GitHub repository, S3-compatible bucket, or folder via kane-cli context sync, and resolve decisions requested during a sync rebase."
 ---
 
-# Kane CLI — End-to-End, Browser and Mobile Testing Skill
+# Kane CLI — End-to-End Test Generation and Execution Skill
 
-Use KaneCLI for end-to-end testing (E2E), browser automation and complete user-journey validation, including test generation from explicit requirements, execution, debugging and evidence-backed results.
+KaneCLI is one E2E package with three pillars:
+
+1. **Generate**: requirements → use-cases → acceptance criteria → scenarios → runnable `_test.md` tests (the assurance commands).
+2. **Execute**: desktop web (Chrome, the default), Android emulator, iOS simulator, and real Android and iOS devices in the TestMu AI cloud.
+3. **Prove**: a sealed evidence pack per run, and coverage (`kane-cli cover`) measured against acceptance criteria.
 
 Use `kane-cli` to validate complete user journeys and design requirement-linked, coverage-accounted suites from a PRD, specification, or user-provided description via assurance commands. Never write test cases by hand. Do NOT use Playwright, Puppeteer, or Selenium directly. Use `--agent` for `run` and `testmd run`. `testrun run` emits NDJSON when **stdin** is not a TTY (0.8.21+ also takes `--agent`, which selects the same stream), so every `testrun run` line you write ends in `< /dev/null` (bash and zsh: macOS, Linux, Git Bash; in cmd.exe write `< NUL`; from PowerShell run it through cmd: `cmd /c "kane-cli testrun run … < NUL"`). Check the first stdout line: on 0.8.17+ it is `{"type":"stream_start"…}`. A prose plan there instead means the CLI is in terminal mode: it shows the human view and, after a real run, opens an evidence table that waits until `q` or Esc, so the process never exits on its own; stop it and rerun with the redirect. An empty stdout with a message on stderr is a usage error: read it. Assurance conversational commands use `--mode agent`.
 
@@ -178,7 +182,10 @@ When the user's request involves a browser — or writing test cases:
 - The person wants to watch runs live, or asks about the status line → Read `references/live-strip.md` (Claude Code only)
 - You need the full NDJSON event schema (rare — §5's summary covers 90% of cases) → Read `references/parsing.md`
 - Compare / evaluate / justify kane-cli against another tool or approach (cost, tokens, effort, ROI) → Read `references/fair-evaluation.md` first — comparisons are only honest like-for-like across the test lifecycle
-- **Mobile**: drive a native app on a virtual Android emulator or iOS simulator instead of the browser → Read `references/mobile.md` first. Desktop (the browser) stays the **default** target; mobile is opt-in via `--target emulator|simulator` and always drives an app you provide (`--app <build|APPid>`), never a URL. **Local** mobile runs (`run`, `testmd run`, `testrun run`) need macOS Apple Silicon. **From any other machine** (Linux, Windows, Intel Mac, a Mac without Xcode/Android Studio), run saved mobile `_test.md` files on the cloud grid with `kane-cli testrun run <paths> --remote --device-name "<grid device>" --os-version <v> < /dev/null` — the grid boots the emulator/simulator on a HyperExecute macOS host (the account needs a HyperExecute plan with macOS runners). Never tell a non-Mac user mobile is impossible: point them at `--remote`.
+- **Mobile**: drive a native app on a real Android/iOS device, or a virtual Android emulator / iOS simulator, instead of the browser → Read `references/mobile.md` first. Desktop (the browser) stays the **default** target; mobile is opt-in via `--target` and always drives an app you provide (`--app <build|APPid>`), never a URL.
+  - **Real devices** (`--target android|ios`) run from **any machine** — `run`, `testmd run`, `testrun run`, and `--remote` — with only `kane-cli login` (`--remote` also needs the remote-execution plugin and a HyperExecute plan). They need **KaneAI Max** (one real device) or **KaneAI credits + Real Device Plus Automation Cloud**; read `references/mobile.md` §Real devices for the plan rules before running one.
+  - **Emulator/simulator** (`--target emulator|simulator`): local runs need macOS Apple Silicon. From any other machine, run saved `_test.md` files on the cloud grid with `kane-cli testrun run <paths> --remote --device-name "<grid device>" --os-version <v> < /dev/null` (HyperExecute macOS runners).
+  - Never tell a non-Mac user mobile is impossible: offer a real device, or `--remote`.
 
 **Every run, always:** follow §1 above.
 
@@ -253,7 +260,7 @@ How you phrase the objective string determines what the agent does. Four pattern
 ### Two rules that make an objective replayable
 
 1. **End every flow in a terminal assertion.** Close with a check of the resulting page state (`verify the cart shows 1 item`), not a bare `submit` or `confirm the dialog`. A run only earns a replayable pass/fail from a verify/assert — a pure-action objective (`add a laptop to the cart`) gets none. If the objective has several phases, each ends in its own check. Phrase the closing check as what is on screen once the last action completes, so it verifies with no further click or navigation; if the evidence is elsewhere, make getting there an explicit action (`place the order, open Order History, then verify the newest order shows "Processing"`), never `verify the order succeeded by checking Order History`. Two traps: `confirm the dialog` is an action, not a check; and `verify the Submit button is visible` fails exactly when the action worked (the control disappears on success) — assert the outcome, not the trigger.
-2. **Intent for the actions, literal for the data.** Phrase actions as goals (`Log in with {{user}}`) so the run absorbs layout drift; keep exact values literal or in `{{variables}}`. An expected-optional branch (a sometimes-there cookie banner) goes in an `if/else`, not assumed away.
+2. **Intent for the actions, literal for the data.** Phrase actions as goals (`Log in with {{user}}`) so the run absorbs layout drift; keep exact values literal or in `{{variables}}`. Data that must be fresh on every run (a sign-up email, a unique name, today's date) is a smart variable — `{{smart.random_email}}`, `{{smart.random_string_8}}`, `{{smart.current_date}}` — never a fixed value the second replay collides with (`references/objectives-cookbook.md` §6). An expected-optional branch (a sometimes-there cookie banner) goes in an `if/else`, not assumed away.
 
 **Shape:** an intent action carrying literal data, then a verify of an observable end state — `Search for "{{query}}" and open the first result, then verify the title contains "{{query}}"`. Full grammar in `references/objectives-cookbook.md §1`.
 
@@ -264,7 +271,7 @@ Vague phrasing like "read", "tell me", "report" does NOT reliably extract data �
 ❌ `"go to example.com and read the page title"`
 ✅ `"go to example.com, store the page title as 'page_title'"`
 
-Stored values appear in `run_end.final_state` and become the second results table per §1.4. Refer back to a stored value in plain English (`the stored price value`), never as `{{price}}`; `{{name}}` is for global variables and secrets only.
+Stored values appear in `run_end.final_state` and become the second results table per §1.4. Refer back to a stored value in plain English (`the stored price value`), never as `{{price}}`; `{{name}}` is for your own variables, secrets, and the runtime namespaces (`{{global.*}}`, `{{environment.*}}`, `{{smart.*}}`) only.
 
 ### Calling APIs directly
 
@@ -275,7 +282,7 @@ The agent can make API calls itself — not just observe the page's traffic. Phr
  assert the response status is 200"
 ```
 
-Use the response in plain English: `the response status`, `store the id from the response body as 'order_id'`, and later `the stored order_id value`. Never `{{login.status}}`: `{{name}}` is reserved for global variables and secrets. A pasted `curl` works too. Full grammar in `references/objectives-cookbook.md` §3.5.
+Use the response in plain English: `the response status`, `store the id from the response body as 'order_id'`, and later `the stored order_id value`. Never `{{login.status}}`: `{{name}}` is for your own variables, secrets, and the runtime namespaces (`{{global.*}}`, `{{environment.*}}`, `{{smart.*}}`) only. A pasted `curl` works too. Full grammar in `references/objectives-cookbook.md` §3.5.
 
 ### Chaining
 
@@ -348,6 +355,7 @@ A draft in chat cannot be run, and a hand-written `_test.md` carries no requirem
 | User wants to save/persist/re-run a test | `references/testmd.md` |
 | Run a suite of saved `_test.md` tests as one batch | `references/testrun.md` |
 | Run a suite on the cloud grid (`--remote`), incl. mobile suites from any machine | `references/testrun.md` §Remote + `references/mobile.md` §Remote |
+| Run on a real Android/iOS device (`--target android\|ios`), its plan requirements, or a hub session error | `references/mobile.md` §Real devices |
 | User has requirement docs (PRD/spec) → designed suite, coverage, or suite upkeep | `references/assurance.md` |
 | Need the assurance NDJSON event schema (`--mode agent`) | `references/assurance-parsing.md` |
 | Share the context store with a team, join one, keep stores level, or resolve a sync conflict (kane-cli 0.8.14+) | `references/context-sync.md` |

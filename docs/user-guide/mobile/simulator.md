@@ -66,4 +66,5 @@ When the iOS checks pass, your simulator setup is complete. Address a simulator 
 
 - [Android Emulator setup (mac-arm64)](./emulator.md)
 - [Mobile testing overview](./overview.md)
+- [Real devices](./real-device.md): real Android and iOS devices from any machine, no local setup
 - [Remote runs on the cloud grid](../remote-execution.md): run simulator suites from any machine

@@ -17,7 +17,7 @@ Opened in the viewer (or unzipped), a pack contains:
 - **Run logs** — the CLI and runner logs for the execution.
 - **Failure records** — on failed runs, a per-step record with the error message, the page state at failure, and references into the console/network logs.
 
-For a mobile run, the result summary records the **device** in the run environment (for example the device model and OS version), and the per-step logs include **device logs** from the emulator or simulator alongside the usual browser logs.
+For a mobile run, the result summary records the **device** and the **app** in the run environment (for example the device model, OS version, and the app id or build file name), and the per-step logs include **device logs** alongside the usual browser logs. On a [real device](./mobile/real-device.md), `device` is the device the hub actually allocated, never the name or pattern you asked for, and `device_slug` is derived from it; the environment also records `target: android|ios`.
 
 The pack is the **only** place run artifacts live — there is no separate per-run log directory on disk.
 
@@ -199,6 +199,6 @@ Runs that upload to Test Manager attach their sealed pack automatically. Replaye
 
 ## Evidence merge identity
 
-For ordinary runs, default merge identity distinguishes the test and commit (`external_id.test_id`, `external_id.commit_id`) and the environment (`environment.os`, `environment.os_version`, `environment.browser`, `environment.browser_version`). Re-runs with the same identity nest as attempts; a different environment produces a separate sibling.
+For ordinary runs, default merge identity distinguishes the test and commit (`external_id.test_id`, `external_id.commit_id`) and the environment (`environment.os`, `environment.os_version`, `environment.browser`, `environment.browser_version`, `environment.device`, `environment.app`). Re-runs with the same identity nest as attempts; a different environment produces a separate sibling, so one test run on two devices or two builds gets two entries.
 
 Explicit collision policies can change grouping; a custom `--rules` file replaces the default rules rather than extending them. Check the selected identity rules before interpreting two runs as retries of the same test.

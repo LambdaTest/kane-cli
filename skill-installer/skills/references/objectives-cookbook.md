@@ -286,7 +286,7 @@ A pasted `curl` works too and is kept verbatim (method, headers, body, auth):
 curl -X POST https://api.example.com/login -H 'Content-Type: application/json' -d '{"u":"a","p":"b"}', save the response as login
 ```
 
-Once the call is made, use the response in plain English. `{{name}}` is reserved for global variables and secrets (§6); a value the run produces is never written that way.
+Once the call is made, use the response in plain English. `{{name}}` is reserved for your own variables, secrets, and the runtime namespaces (§6); a value the run produces is never written that way.
 
 | To use | Say |
 |---|---|
@@ -334,7 +334,7 @@ For DevTools extractions, the same rule applies — use "store" or "extract":
 
 Stored values land in `run_end.final_state` and feed the second results table per `SKILL.md §1.4`.
 
-Refer back to a stored value in plain English (`the stored price value`, `the same version as the stored api_tag value`), never as `{{price}}`. The `{{name}}` form is for global variables and secrets only (§6).
+Refer back to a stored value in plain English (`the stored price value`, `the same version as the stored api_tag value`), never as `{{price}}`. The `{{name}}` form is for your own variables, secrets, and the runtime namespaces only (§6).
 
 ---
 
@@ -398,6 +398,52 @@ Mark credentials with `secret: true` in the variables JSON so they're masked in 
   "password": { "value": "s3cret!", "secret": true }
 }
 ```
+
+### Runtime namespaces
+
+Requires kane-cli 0.9.0 or later (check `kane-cli --version`); on an older release, write the literal value instead. Besides the user's own `{{name}}` variables, an objective can use values kane-cli resolves at run time:
+
+| Reference | Resolves to |
+|---|---|
+| `{{global.<name>}}` | A Test Manager global variable (locally, a pool / `--variables` value with the same name wins) |
+| `{{environment.<name>}}` | A variable of the run's Test Manager environment |
+| `{{smart.<name>}}` | A generated value (table below) |
+| `{{secrets.<…>}}`, `{{totp.<…>}}` | A secret / a one-time code at type time — never shown to the agent |
+
+- `global`, `environment` and `smart` resolve **when each objective starts**, so the agent sees the real value. The saved test keeps the reference, so every replay rolls a fresh value.
+- **`{{…}}` only** — `${…}` is a dataset column, never a namespace. `{{a}}{{b}}` is two references.
+- An unresolvable `global` / `environment` reference fails the run **before step 1**; tell the user the variable is missing in Test Manager rather than retrying. A misspelled `smart` name silently becomes an empty string — double-check spelling against the table.
+- Don't declare a namespaced name in a variables file; files hold bare names only.
+
+### Smart variables: fresh test data on every run
+
+Use a smart variable whenever a value must differ between runs (a second sign-up with the same email fails) or must track today's date. They take no arguments.
+
+| Need | Use | Value |
+|---|---|---|
+| Unique email | `{{smart.random_email}}` | 10 random chars `@example.com` |
+| Unique short string / password | `{{smart.random_string_8}}` | 8 letters + digits |
+| Long random string | `{{smart.random_string_56}}` | 56 letters + digits |
+| Number | `{{smart.random_int}}` / `{{smart.random_float}}` | 100–999 / 1–100, 2 decimals |
+| Phone number | `{{smart.random_phone}}` | 10 digits |
+| Today / tomorrow / yesterday | `{{smart.current_date}}` / `{{smart.next_day}}` / `{{smart.previous_day}}` | `YYYY-MM-DD` |
+| Week / month bounds | `{{smart.start_of_week}}`, `{{smart.end_of_week}}`, `{{smart.start_of_month}}`, `{{smart.end_of_month}}` | `YYYY-MM-DD` (week = Monday–Sunday) |
+| Date parts | `{{smart.current_day}}`, `{{smart.current_month}}`, `{{smart.current_month_number}}`, `{{smart.current_year}}` | `Thursday`, `October`, `10`, `2026` |
+| Time | `{{smart.current_hour}}`, `{{smart.current_minute}}`, `{{smart.current_timestamp}}`, `{{smart.current_timezone}}` | `14`, `05`, `2026-10-15 14:05:09`, `UTC` |
+| The user's TestMu AI username | `{{smart.user_name}}` | |
+
+Browser-run dates are **UTC**. Values are `YYYY-MM-DD`; a page may show the date differently (`Oct 16`), so assert on the meaning (`tomorrow's date`) rather than the raw value. For a format or offset the table lacks, describe it in words (`pick the date one week from today`).
+
+Objective patterns:
+
+```text
+"Sign up at https://shop.example.com/register with email {{smart.random_email}} and password {{smart.random_string_8}}, then verify the welcome banner shows"
+"Create a project named QA {{smart.random_int}}, then verify it appears in the project list"
+"Book a table for {{smart.next_day}} at 7 PM, then verify the confirmation shows tomorrow's date"
+"Filter the orders by date from {{smart.start_of_month}} to {{smart.current_date}}, then verify the list is not empty"
+```
+
+When to suggest one: the user's objective has a placeholder-ish literal that would collide or go stale on replay (`test@example.com` on a sign-up form, `"My Project"` on a create form with unique names, a hard-coded date). Offer the smart variable in one line; keep the literal if the user wants a fixed value.
 
 For the full variables-loading precedence and context-file behavior, Read `references/setup-and-config.md`.
 

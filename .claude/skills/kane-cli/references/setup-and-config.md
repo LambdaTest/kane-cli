@@ -6,7 +6,7 @@
 
 Before first use, verify installation and auth.
 
-> **Local mobile setup (macOS Apple Silicon)** is separate: install Xcode 16+ (iOS) or Android Studio with one `arm64-v8a` AVD (Android), then `kane-cli login` and `kane-cli doctor --target emulator|simulator --install` (installs kane-cli's managed test tooling); `kane-cli doctor --target <kind>` checks readiness. Not needed for `testrun run --remote`, which runs mobile suites on the cloud grid from any machine (see §Remote execution plugin). Read `references/mobile.md`.
+> **Local mobile setup (macOS Apple Silicon)** is separate: install Xcode 16+ (iOS) or Android Studio with one `arm64-v8a` AVD (Android), then `kane-cli login` and `kane-cli doctor --target emulator|simulator --install` (installs kane-cli's managed test tooling); `kane-cli doctor --target <kind>` checks readiness. Not needed for `testrun run --remote`, which runs mobile suites on the cloud grid from any machine (see §Remote execution plugin), nor for **real devices** (`--target android|ios`), which need only `kane-cli login` and a KaneAI Max or KaneAI credits + Real Device Plus Automation Cloud plan. Read `references/mobile.md`.
 
 ### Install
 
