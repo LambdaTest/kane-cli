@@ -10,7 +10,7 @@
 - One test → `kane-cli testmd run` (`references/testmd.md`).
 - Multiple ad-hoc `run` objectives (not saved tests) → `references/parallel.md` still applies.
 - A **mobile** `_test.md` (Android emulator / iOS simulator) is a normal member (0.8.7+): locally it needs a mac-arm64 host with the mobile setup and `--device-name`/`--os-version` (or the file's `device_name:`/`os_version:`); with `--remote` it runs on a grid emulator/simulator **from any machine**. Read `references/mobile.md` (§Remote) for the device catalog and app rules.
-- A **real-device** `_test.md` (`target: android|ios`) runs from **any machine**, locally or with `--remote`. Each member opens its own hub session, so `--parallel` is allowed — but only up to the account's real devices (KaneAI Max = **one**: keep `--parallel 1`; extra sessions queue 10 min, then fail). With `--remote` it is a HyperExecute job on **Linux** runners. Read `references/mobile.md` §Real devices.
+- A **real-device** `_test.md` (`target: android|ios`) runs from **any machine**, locally or with `--remote`. Each member opens its own hub session, so `--parallel` is allowed — but only up to the account's real devices (KaneAI Max = **one**: keep `--parallel 1`; extra sessions queue up to 15 min, then fail). With `--remote` it is a HyperExecute job on **Linux** runners. Read `references/mobile.md` §Real devices.
 - The user wants the suite on the **cloud grid** (no local Chrome, or a mobile suite from a non-Mac / a Mac without Xcode or Android Studio) → `kane-cli testrun run … --remote < /dev/null` (§Remote below).
 
 ## Command

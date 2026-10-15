@@ -8,7 +8,7 @@ Desktop (the browser) is the **default** target and the primary use of kane-cli.
 
 | Where the device runs | Host | Commands |
 |---|---|---|
-| **Real device** (`android` / `ios`, in the TestMu AI cloud) | **Any machine**, no mobile tooling — only `kane-cli login`. Needs **KaneAI Max** or **KaneAI credits + Real Device Plus Automation Cloud** (§Real devices) | `run --target android\|ios`, `testmd run`, `testrun run`, `testrun run --remote` |
+| **Real device** (`android` / `ios`, in the TestMu AI cloud) | **Any machine**, no mobile tooling — only `kane-cli login` (`--remote` also needs the remote-execution plugin and a HyperExecute plan). Needs **KaneAI Max** or **KaneAI credits + Real Device Plus Automation Cloud** (§Real devices) | `run --target android\|ios`, `testmd run`, `testrun run`, `testrun run --remote` |
 | **Local** (a simulator/emulator on this machine) | **macOS on Apple Silicon (arm64) only** — not Intel Macs, Linux, or Windows | `run --target …`, `testmd run`, `testrun run` |
 | **Cloud grid** (a virtual device on a HyperExecute macOS host) | **Any machine** — no Xcode / Android Studio needed. The account needs a HyperExecute plan with macOS runners | `testrun run <paths> --remote … < /dev/null` — see §Remote below |
 
@@ -158,13 +158,13 @@ The account needs one of these ([pricing](https://www.testmuai.com/pricing/)):
 | **KaneAI Max** | **One** real device: one real-device session at a time. |
 | **KaneAI credits + Real Device Plus Automation Cloud** | As many at once as the automation plan's parallel tests. Credits are account-wide, so credits from any KaneAI plan qualify. |
 
-A session beyond the plan's devices **queues for up to 10 minutes**; if a device frees up it runs, otherwise the run fails with `failed to open the mobile hub session: <reason>`. An account with neither plan fails the same way.
+A session beyond the plan's devices **queues for up to 15 minutes**; if a device frees up it runs, otherwise the run fails with `failed to open the mobile hub session: <reason>`. An account with neither plan fails the same way.
 
 How to act on it:
 
 - **Before suggesting a real-device run**, if the user hasn't said which plan they have, mention the requirement once in a sentence. Do not block on it or quiz them.
-- **On `failed to open the mobile hub session: …`**: stop. Do not retry. Show the hub's reason and tell the user a real-device run needs KaneAI Max or KaneAI credits + Real Device Plus Automation Cloud, and that a session over the plan's devices queues for 10 minutes before failing. Link the pricing page.
-- **On KaneAI Max (one device)**: never pass `--parallel` above 1 for real-device members, and never start a second real-device run while one is open (including a TUI session the user left open) — the second one just queues and can fail after 10 minutes.
+- **On `failed to open the mobile hub session: …`**: stop. Do not retry. Show the hub's reason and tell the user a real-device run needs KaneAI Max or KaneAI credits + Real Device Plus Automation Cloud, and that a session over the plan's devices queues for up to 15 minutes before failing. Link the pricing page.
+- **On KaneAI Max (one device)**: never pass `--parallel` above 1 for real-device members, and never start a second real-device run while one is open (including a TUI session the user left open) — the second one just queues and can fail after 15 minutes.
 - **On Real Device Plus Automation Cloud**: `--parallel N` is fine up to the plan's parallel tests.
 
 ### Running
