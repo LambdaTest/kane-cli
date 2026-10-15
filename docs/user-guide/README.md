@@ -1,11 +1,16 @@
 # kane-cli user guide
 
-kane-cli does two jobs: it **runs browser tests written in plain English** — one-shot objectives, committed `_test.md` files, whole suites — and it **builds the suite in the first place**: point it at your requirements and it extracts use-cases, designs requirement-linked tests, and reports exactly what's covered.
+kane-cli is one end-to-end testing package with three pillars:
+
+1. **Generate**: point it at your requirements (a PRD, a spec, or a description) and it designs the suite: use-cases, acceptance criteria, scenarios, and one runnable `_test.md` test per scenario.
+2. **Execute**: run plain-English tests on **desktop web** (Chrome), the **Android emulator**, the **iOS simulator**, and **real Android and iOS devices** in the TestMu AI cloud: one-shot objectives, committed `_test.md` files, or whole suites.
+3. **Prove**: every run seals an evidence pack, and coverage reports what execution proved against each acceptance criterion and what is still owed.
 
 ```
-requirements ──► use-cases ──► designed tests ──► runs ──► evidence ──► coverage ──► maintenance
-  (ingest)       (extract       (design)         (testmd,   (sealed      (cover)     (reconcile)
-                  + review)                       testrun)    packs)
+  GENERATE                                              EXECUTE                          PROVE
+requirements ──► use-cases ──► acceptance ──► scenarios ──► tests ──► runs ──────────────────► evidence ──► coverage ──► maintenance
+  (ingest)       (extract       criteria                  (_test.md)  (web, emulator,           (sealed      (cover)     (reconcile)
+                  + review)     (design)                               simulator, real device)   packs)
 ```
 
 Every page below is standalone — start wherever your job starts.
@@ -17,34 +22,44 @@ Every page below is standalone — start wherever your job starts.
 - [Authentication](./authentication.md) — OAuth, username/access-key, profiles, CI logins.
 - [Using kane-cli from an AI coding agent](./agents.md): what your agent does on a first run, your preferences, and the live status strip.
 
-## Mobile testing
+## 1. Generate tests
 
-Run tests against real Android and iOS devices in the TestMu AI cloud from **any machine**, or against virtual devices — locally on **macOS Apple Silicon (arm64)**, or on the cloud grid from any machine.
+- **[The assurance lifecycle](./assurance/overview.md) — start here**: the journey, the vocabulary, and when to use it instead of `generate`.
+- [Building the context graph](./assurance/context.md) — ingest sources, extract use-cases, review what's trusted.
+- [Designing tests](./assurance/design.md) — acceptance criteria, scenarios, and one runnable test per scenario.
+- [Generate test cases](./generate-test-cases/overview.md) — scenarios and cases from a plain-language description ([workflow](./generate-test-cases/workflow.md)).
+- [Sharing the context graph with your team](./assurance/sharing.md) — one shared location (GitHub, S3-compatible, or a folder); publishing, taking your teammates' records, cloning, and decisions when two people change the same thing.
+- [Automation](./assurance/automation.md) — the headless contract: modes, NDJSON streams, exit codes, CI shapes.
 
-- **[Mobile testing overview](./mobile/overview.md)**: start here for the real-device, local, and cloud-grid paths and what each needs.
-- [Real devices](./mobile/real-device.md): real Android and iOS devices in the TestMu AI cloud, from any machine (`--target android|ios`).
-- [Remote runs on the cloud grid](./remote-execution.md): `testrun run --remote` — emulator, simulator, and real-device suites with no local mobile tooling.
-- [iOS Simulator setup](./mobile/simulator.md): install Xcode, then let kane-cli install its tooling (local runs).
-- [Android Emulator setup](./mobile/emulator.md): install Android Studio and an arm64 AVD, then let kane-cli install its tooling (local runs).
+## 2. Execute tests
 
-## Run and author tests
+| Target | Flag | Runs from |
+|---|---|---|
+| Desktop web (Chrome) | default | macOS, Linux, Windows |
+| Android emulator | `--target emulator` | macOS Apple Silicon, or any machine with `testrun run --remote` |
+| iOS simulator | `--target simulator` | macOS Apple Silicon, or any machine with `testrun run --remote` |
+| Android real device | `--target android` | Any machine ([plan required](./mobile/real-device.md#plan-requirements)) |
+| iOS real device | `--target ios` | Any machine ([plan required](./mobile/real-device.md#plan-requirements)) |
+
+### Web and every target
 
 - [Running tests](./running-tests.md) — objectives, the TUI, run flags, slash commands.
 - test.md files: [overview](./testmd/overview.md) (the file format) · [running](./testmd/running.md) (replay, caching, CI) · [composition](./testmd/composition.md) (`@import` and shared helpers).
 - [Batch runs (testrun)](./testrun.md) — many tests, one execution, one evidence pack.
 - [Remote runs (`--remote`)](./remote-execution.md) — the same suite as one HyperExecute job: grid browsers, grid emulators/simulators, and real devices from any machine.
-- [Generate test cases](./generate-test-cases/overview.md) — scenarios and cases from a plain-language description ([workflow](./generate-test-cases/workflow.md)).
+
+### Mobile
+
+- **[Mobile testing overview](./mobile/overview.md)**: start here for the real-device, local, and cloud-grid paths and what each needs.
+- [Real devices](./mobile/real-device.md): real Android and iOS devices in the TestMu AI cloud, from any machine (`--target android|ios`).
+- [iOS Simulator setup](./mobile/simulator.md): install Xcode, then let kane-cli install its tooling (local runs).
+- [Android Emulator setup](./mobile/emulator.md): install Android Studio and an arm64 AVD, then let kane-cli install its tooling (local runs).
+
+## 3. Prove and maintain
+
 - [Evidence packs](./evidence.md) — the sealed proof every run produces: screenshots, logs, results, the viewer.
-
-## Design from requirements — assurance
-
-- **[The assurance lifecycle](./assurance/overview.md) — start here**: the journey, the vocabulary, and when to use it instead of `generate`.
-- [Building the context graph](./assurance/context.md) — ingest sources, extract use-cases, review what's trusted.
-- [Designing tests](./assurance/design.md) — acceptance criteria, scenarios, and one runnable test per scenario.
 - [Coverage](./assurance/coverage.md) — what execution proved vs what the design still owes.
 - [Maintaining the suite](./assurance/maintain.md) — reconcile the suite when a requirement document changes.
-- [Sharing the context graph with your team](./assurance/sharing.md) — one shared location (GitHub, S3-compatible, or a folder); publishing, taking your teammates' records, cloning, and decisions when two people change the same thing.
-- [Automation](./assurance/automation.md) — the headless contract: modes, NDJSON streams, exit codes, CI shapes.
 
 ## Checks and assertions
 

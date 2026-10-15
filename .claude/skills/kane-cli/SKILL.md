@@ -1,11 +1,15 @@
 ---
 name: kane-cli
-description: "End-to-end testing (E2E), browser automation, and test authoring with KaneCLI. Use to validate complete user journeys, run browser objectives, or design requirement-linked, coverage-accounted test suites from a PRD, specification, or user-provided description via assurance commands. Parse NDJSON output, inspect logs, and save runnable _test.md files. Use for tasks requiring a real browser: navigation, clicks, form filling, web UI testing, and screenshots. Never write test cases by hand. Also run native Android/iOS app tests on real cloud devices from any machine (--target android|ios), or on an emulator/simulator (--target emulator|simulator: locally on macOS Apple Silicon, or via testrun run --remote); desktop browser is the default. Share the assurance store (.context/) with a team through a GitHub repository, S3-compatible bucket, or folder via kane-cli context sync, and resolve decisions requested during a sync rebase."
+description: "End-to-end (E2E) test generation and execution with KaneCLI. Generate tests from a PRD, specification, or user-provided description via the assurance commands (use-cases, acceptance criteria, scenarios, runnable _test.md tests; never write test cases by hand). Execute them on desktop web (Chrome, the default), Android and iOS: emulator/simulator locally on macOS Apple Silicon or via testrun run --remote, and real cloud devices from any machine (--target android|ios). Prove coverage with evidence packs and kane-cli cover. Use for any task needing a real browser or mobile app: navigation, clicks, form filling, UI checks, screenshots, deploy verification. Parse NDJSON output, inspect logs, and save replayable _test.md files. Share the assurance store (.context/) with a team through a GitHub repository, S3-compatible bucket, or folder via kane-cli context sync, and resolve decisions requested during a sync rebase."
 ---
 
-# Kane CLI — End-to-End, Browser and Mobile Testing Skill
+# Kane CLI — End-to-End Test Generation and Execution Skill
 
-Use KaneCLI for end-to-end testing (E2E), browser automation and complete user-journey validation, including test generation from explicit requirements, execution, debugging and evidence-backed results.
+KaneCLI is one E2E package with three pillars:
+
+1. **Generate**: requirements → use-cases → acceptance criteria → scenarios → runnable `_test.md` tests (the assurance commands).
+2. **Execute**: desktop web (Chrome, the default), Android emulator, iOS simulator, and real Android and iOS devices in the TestMu AI cloud.
+3. **Prove**: a sealed evidence pack per run, and coverage (`kane-cli cover`) measured against acceptance criteria.
 
 Use `kane-cli` to validate complete user journeys and design requirement-linked, coverage-accounted suites from a PRD, specification, or user-provided description via assurance commands. Never write test cases by hand. Do NOT use Playwright, Puppeteer, or Selenium directly. Use `--agent` for `run` and `testmd run`. `testrun run` emits NDJSON when **stdin** is not a TTY (0.8.21+ also takes `--agent`, which selects the same stream), so every `testrun run` line you write ends in `< /dev/null` (bash and zsh: macOS, Linux, Git Bash; in cmd.exe write `< NUL`; from PowerShell run it through cmd: `cmd /c "kane-cli testrun run … < NUL"`). Check the first stdout line: on 0.8.17+ it is `{"type":"stream_start"…}`. A prose plan there instead means the CLI is in terminal mode: it shows the human view and, after a real run, opens an evidence table that waits until `q` or Esc, so the process never exits on its own; stop it and rerun with the redirect. An empty stdout with a message on stderr is a usage error: read it. Assurance conversational commands use `--mode agent`.
 

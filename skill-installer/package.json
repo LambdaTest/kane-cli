@@ -1,7 +1,7 @@
 {
   "name": "@testmuai/kane-cli-skill",
   "version": "1.3.0",
-  "description": "Agentic end-to-end testing (E2E) and browser automation CLI with natural-language tests, requirement-linked coverage and execution evidence.",
+  "description": "End-to-end (E2E) test generation and execution: generate use-cases, acceptance criteria, scenarios and tests from requirements, then run them on desktop web, Android and iOS (emulators, simulators and real devices) with execution evidence and coverage.",
   "type": "module",
   "bin": "./cli.js",
   "files": [
@@ -28,6 +28,11 @@
     "ai-agent",
     "e2e",
     "end-to-end-testing",
+    "test-generation",
+    "mobile-testing",
+    "android",
+    "ios",
+    "real-device",
     "test-automation",
     "ai-testing"
   ],

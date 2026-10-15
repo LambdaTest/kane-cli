@@ -1,6 +1,6 @@
 # Getting started
 
-This guide takes you from a fresh install to a passing run in under five minutes.
+This guide takes you from a fresh install to a passing run in under five minutes. It uses desktop web, the default target. For Android and iOS (emulator, simulator, or real device), see [Mobile testing](./mobile/overview.md). To generate a whole suite from your requirements, see [the assurance lifecycle](./assurance/overview.md).
 
 ## 1. Install
 
