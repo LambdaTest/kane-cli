@@ -119,7 +119,7 @@ The two platforms bind the device differently:
 
 `target: android` / `target: ios` tests run on real devices in the TestMu AI cloud. The job runs on a **HyperExecute Linux runner**, and each member opens its own device session, so:
 
-- `--parallel N` runs N members at once, up to the real devices your plan allows. A session beyond that queues for up to 10 minutes (see [Plan requirements](./mobile/real-device.md#plan-requirements)).
+- `--parallel N` runs N members at once, up to the real devices your plan allows. A session beyond that queues for up to 15 minutes (see [Plan requirements](./mobile/real-device.md#plan-requirements)).
 - Android and iOS real-device members can share one job.
 - A job can't mix real-device members with web, emulator, or simulator members (`mobile_remote_mixed`).
 

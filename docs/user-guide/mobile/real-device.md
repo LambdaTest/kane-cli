@@ -20,7 +20,7 @@ A real-device run needs one of these on your TestMu AI account (see [pricing](ht
 | **KaneAI Max** | **One real device.** One real-device session runs at a time. |
 | **KaneAI credits + Real Device Plus Automation Cloud** | Real devices from the automation plan, as many at once as its parallel tests allow. Credits are account-wide, so credits from any KaneAI plan qualify. |
 
-When you start more real-device sessions than your plan allows (for example `--parallel 2` on KaneAI Max), the extra session **queues for up to 10 minutes**. If a device frees up in that time, it runs. Otherwise the run fails with `failed to open the mobile hub session: <reason>`.
+When you start more real-device sessions than your plan allows (for example `--parallel 2` on KaneAI Max), the extra session **queues for up to 15 minutes**. If a device frees up in that time, it runs. Otherwise the run fails with `failed to open the mobile hub session: <reason>`.
 
 A run on an account with neither plan fails the same way, with the hub's reason after the colon.
 
