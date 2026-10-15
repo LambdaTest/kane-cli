@@ -17,7 +17,6 @@ skill-installer/skills/SKILL.md
 | Subfolder | Target harness | Update guide |
 |---|---|---|
 | `kiro-powers/` | [Kiro IDE](https://kiro.dev/) — packaged as a Kiro "power" (`POWER.md` + `steering/` + sample hook). | `integrations/docs/kiro-powers.md` |
-| `/AGENTS.md` (repo root, with `CLAUDE.md` and `GEMINI.md` importing it) | Any agent that reads an instruction file: Codex CLI, Cursor, GitHub Copilot, Windsurf, Amp, Jules, Claude Code, Gemini CLI. One self-contained file. | `integrations/docs/agents-md.md` |
 
 When adding a new integration target (Cursor, Continue, Cline, Aider, etc.), follow the same pattern: a subfolder per harness, plus an update guide at `integrations/docs/<harness>.md` that explains the mapping back to `SKILL.md`.
 
