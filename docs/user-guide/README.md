@@ -19,10 +19,11 @@ Every page below is standalone — start wherever your job starts.
 
 ## Mobile testing
 
-Run tests against mobile virtual devices — locally on **macOS Apple Silicon (arm64)**, or on the cloud grid from **any machine**.
+Run tests against real Android and iOS devices in the TestMu AI cloud from **any machine**, or against virtual devices — locally on **macOS Apple Silicon (arm64)**, or on the cloud grid from any machine.
 
-- **[Mobile testing overview](./mobile/overview.md)**: start here for the local and cloud-grid paths and what each needs.
-- [Remote runs on the cloud grid](./remote-execution.md): `testrun run --remote` — emulator and simulator suites with no local mobile tooling.
+- **[Mobile testing overview](./mobile/overview.md)**: start here for the real-device, local, and cloud-grid paths and what each needs.
+- [Real devices](./mobile/real-device.md): real Android and iOS devices in the TestMu AI cloud, from any machine (`--target android|ios`).
+- [Remote runs on the cloud grid](./remote-execution.md): `testrun run --remote` — emulator, simulator, and real-device suites with no local mobile tooling.
 - [iOS Simulator setup](./mobile/simulator.md): install Xcode, then let kane-cli install its tooling (local runs).
 - [Android Emulator setup](./mobile/emulator.md): install Android Studio and an arm64 AVD, then let kane-cli install its tooling (local runs).
 
@@ -31,7 +32,7 @@ Run tests against mobile virtual devices — locally on **macOS Apple Silicon (a
 - [Running tests](./running-tests.md) — objectives, the TUI, run flags, slash commands.
 - test.md files: [overview](./testmd/overview.md) (the file format) · [running](./testmd/running.md) (replay, caching, CI) · [composition](./testmd/composition.md) (`@import` and shared helpers).
 - [Batch runs (testrun)](./testrun.md) — many tests, one execution, one evidence pack.
-- [Remote runs (`--remote`)](./remote-execution.md) — the same suite as one HyperExecute job: grid browsers, and grid emulators/simulators from any machine.
+- [Remote runs (`--remote`)](./remote-execution.md) — the same suite as one HyperExecute job: grid browsers, grid emulators/simulators, and real devices from any machine.
 - [Generate test cases](./generate-test-cases/overview.md) — scenarios and cases from a plain-language description ([workflow](./generate-test-cases/workflow.md)).
 - [Evidence packs](./evidence.md) — the sealed proof every run produces: screenshots, logs, results, the viewer.
 

@@ -78,6 +78,6 @@ The pack is the first place to look on a failure: the failed step's **failure re
 
 ## Evidence merge identity
 
-For ordinary runs, default merge identity distinguishes the test and commit (`external_id.test_id`, `external_id.commit_id`) and the environment (`environment.os`, `environment.os_version`, `environment.browser`, `environment.browser_version`). Re-runs with the same identity nest as attempts; a different environment produces a separate sibling.
+For ordinary runs, default merge identity distinguishes the test and commit (`external_id.test_id`, `external_id.commit_id`) and the environment (`environment.os`, `environment.os_version`, `environment.browser`, `environment.browser_version`, `environment.device`, `environment.app`). Re-runs with the same identity nest as attempts; a different environment produces a separate sibling, so one test on two devices or two builds is two entries. On a real device, `environment.device` is the device the hub allocated (never the requested pattern) and `device_slug` is derived from it.
 
 Explicit collision policies can change grouping; a custom `--rules` file replaces the default rules rather than extending them. Check the selected identity rules before interpreting two runs as retries of the same test.

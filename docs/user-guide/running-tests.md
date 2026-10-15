@@ -16,7 +16,7 @@ Two habits make an objective reliable enough to save and replay.
 
 **End every flow in a check of the result.** Close with an assertion about the resulting page state — `verify the cart shows 1 item` — not a bare `submit` or `confirm the dialog`. Without a closing check, "done" only means the agent believed it finished; with one, the run passes or fails on the real end state. Name the outcome, never the control that triggered it: `verify the Submit button is visible` fails exactly when the action worked, because the button disappears on success. If an objective has several phases (log in, then search, then check out), each phase ends in its own check. Make the closing check something the agent can see on the screen the last action leaves it on, with no further click or navigation. If the proof lives on another page, get there with an explicit action first: `place the order, open Order History, then verify the newest order shows "Processing"`, not `verify the order succeeded by checking Order History`. A check that has to find its own way to the evidence is an action hiding inside an assertion, and the route it improvises can differ from run to run.
 
-**Say the goal, not the clicks.** Phrase actions as goals — `Log in as {{tester}}`, `Complete checkout with the saved card` — so a run absorbs a reordered form or a new popup instead of breaking on it. Keep exact values such as credentials, prices, and URLs literal or in `{{variables}}`. For a step that only sometimes appears, such as a cookie banner, write it as a condition (`if a cookie banner appears, dismiss it`) rather than assuming it away.
+**Say the goal, not the clicks.** Phrase actions as goals — `Log in as {{tester}}`, `Complete checkout with the saved card` — so a run absorbs a reordered form or a new popup instead of breaking on it. Keep exact values such as credentials, prices, and URLs literal or in `{{variables}}`. When a test needs fresh data on every run — a new sign-up email, a unique name, today's date — use a [smart variable](./variables-and-context.md#smart-variables) such as `{{smart.random_email}}` or `{{smart.current_date}}` instead of a fixed value that the second run would collide with. For a step that only sometimes appears, such as a cookie banner, write it as a condition (`if a cookie banner appears, dismiss it`) rather than assuming it away.
 
 ### Examples
 
@@ -27,13 +27,18 @@ one result appears with a price under $200.
 
 ```text
 Fill the registration form at example.com/signup with name "Test User",
-email "test@example.com", and a 12-character random password. Submit and
-verify the confirmation page loads.
+email {{smart.random_email}}, and password {{smart.random_string_8}}. Submit
+and verify the confirmation page loads.
 ```
 
 ```text
 Open https://app.example.com, log in with the credentials in {{tester}},
 navigate to Settings > Billing, and verify the current plan is "Pro".
+```
+
+```text
+Open https://booking.example.com, search for a room with check-in
+{{smart.next_day}}, and verify at least one room is listed for that date.
 ```
 
 ```text
@@ -93,7 +98,7 @@ Typing `/` in chat mode opens an autocomplete palette. Continue typing to filter
 | `/balance` | | Show credit balance. |
 | `/profiles` | `list\|switch\|delete` | Manage profiles. |
 | `/config` | `show\|set-window\|set-url\|set-mode\|chrome-profile\|project\|folder` | Manage configuration. |
-| `/mobile` | | Switch the session to an emulator or simulator. |
+| `/mobile` | | Switch the session to a device: an emulator, a simulator, or a real Android/iOS device. |
 | `/desktop` | | Switch the session back to Desktop (Chrome). |
 | `/doctor` | | Check mobile tooling & devices. |
 | `/new` | | Start a fresh session (uploads the current session and seals its evidence pack first). |
@@ -207,7 +212,7 @@ For variables and context file behavior, see [./variables-and-context.md](./vari
 
 ### Mobile runs
 
-By default a run targets the **desktop** browser (Chrome), so every example above is unchanged. On macOS Apple Silicon you can instead point a run at a virtual mobile device on this machine: an `emulator` (a virtual Android device) or a `simulator` (a virtual iOS device). Every mobile run needs an app under test. (From any other machine, run a saved mobile suite on the cloud grid with [`testrun run --remote`](./remote-execution.md).)
+By default a run targets the **desktop** browser (Chrome), so every example above is unchanged. From any machine you can instead point a run at a [real device](./mobile/real-device.md) in the TestMu AI cloud: `android` or `ios`. On macOS Apple Silicon you can also use a virtual mobile device on this machine: an `emulator` (a virtual Android device) or a `simulator` (a virtual iOS device). Every mobile run needs an app under test. (From any other machine, run a saved emulator/simulator suite on the cloud grid with [`testrun run --remote`](./remote-execution.md).)
 
 ```bash
 # desktop (default): nothing changes for web runs
@@ -218,15 +223,20 @@ kane-cli run "Add the first item to the cart" --target emulator --app ./builds/a
 
 # simulator (iOS): install a .zip build and run against it
 kane-cli run "Sign in and open the account tab" --target simulator --app ./builds/MyApp.zip
+
+# real device (any machine): the hub picks a free device unless you name one
+kane-cli run "Sign in and open the account tab" --target ios --app ./builds/MyApp.ipa
+kane-cli run "Add the first item to the cart" --target android --device-name "Pixel.*" --app ./builds/app-release.apk
 ```
 
 The mobile run flags:
 
-- `--target desktop|emulator|simulator`: which target to run against. Defaults to the saved session target, otherwise `desktop`.
-- `--device-name <name>` + `--os-version <version>`: pick a device as `kane-cli devices list --target emulator|simulator` prints it (a name needs a version; a version alone matches any device on it). In the TUI/TTY, omitting them opens a one-time picker and the choice is saved; in non-interactive runs a device must already be set (via the flags or `kane-cli config set-device-name` / `set-os-version`) or the run exits with the fix spelled out.
-- `--app <path|APPid>`: the app under test, required for every mobile run. Pass a build (emulator: `.apk`, simulator: `.zip`) or an uploaded app id (`APP` followed by six or more digits; `kane-cli apps list --target <kind>` lists yours). On the `desktop` target, the device flags and `--app` are ignored.
+- `--target desktop|emulator|simulator|android|ios`: which target to run against. Defaults to the saved session target, otherwise `desktop`.
+- `--device-name <name>` + `--os-version <version>`: pick a device as `kane-cli devices list --target emulator|simulator` prints it (on an emulator or simulator a name needs a version; a version alone matches any device on it; on a real device either one alone is enough, a name can be a pattern, and with neither the hub picks — list real devices with `kane-cli devices list --target android|ios --remote`). In the TUI/TTY, omitting them opens a one-time picker and the choice is saved; in non-interactive runs a device must already be set (via the flags or `kane-cli config set-device-name` / `set-os-version`) or the run exits with the fix spelled out.
+- `--app <path|APPid>`: the app under test, required for every mobile run. Pass a build (emulator: `.apk`, simulator: `.zip`, android: `.apk` or `.aab`, ios: `.ipa`) or an uploaded app id (`APP` followed by six or more digits; `kane-cli apps list --target <kind>` lists yours). On the `desktop` target, the device flags and `--app` are ignored.
+- `--no-stream`: on a real device, don't open its live view for this run (it opens in its own Chrome window by default at a terminal; never for agents).
 
-In the interactive TUI, a first run offers a Desktop / Emulator / Simulator chooser, and you can switch targets with `/mobile` and `/desktop` before the first dispatch; afterwards use `/new` before switching. Run `/doctor` to check mobile tooling and devices.
+In the interactive TUI, a first run offers a chooser of the targets this machine can run (a machine that can't run emulators or simulators sees Desktop / Android / iOS), and you can switch targets with `/mobile` and `/desktop` before the first dispatch; afterwards use `/new` before switching. Run `/doctor` to check mobile tooling and devices.
 
 For setup (Xcode or Android Studio, `kane-cli login`, and `kane-cli doctor --target emulator|simulator --install`) and the app formats each target accepts, see [Mobile testing](./mobile/overview.md).
 

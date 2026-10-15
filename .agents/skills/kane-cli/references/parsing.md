@@ -68,6 +68,8 @@ These are **untyped** — they have no `type` field. Do **not** key on `event.ty
 
 **Note:** The `run` stream has no `run_start` event; startup metadata or errors can precede progress.
 
+**Real devices (`--target android|ios`)** add stderr lines, not events: `Connecting to a real <OS> device…`, `Running on: Real device · <name> · <OS> <ver> · App <APP id>` (the allocated device — report it), `note: adaptive heal is off on real devices…` on a replay, and `warning: <reason> — the run continues, but the device and OS version are not checked…` when the device list can't be read. A hub refusal ends the run with `failed to open the mobile hub session: <reason>` — a plan/concurrency problem, never retry it (see `references/mobile.md` §Real devices).
+
 ### `warning` with `code: "unresolved_variables"` (0.8.15+)
 
 Emitted by `run`, `testmd run` and (after `testrun_plan`) `testrun run` when an authored step references a `{{name}}` that has no value. The run goes ahead: the name is typed as written unless a step sets it first. The warning does not change the exit code. A run given a Test Manager dataset row can emit a second `warning` with the same code for `${x}` names that are no column of that row, still before any progress.

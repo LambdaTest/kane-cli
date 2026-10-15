@@ -77,4 +77,5 @@ When the Android checks pass and your AVD is listed, your emulator setup is comp
 
 - [iOS Simulator setup (mac-arm64)](./simulator.md)
 - [Mobile testing overview](./overview.md)
+- [Real devices](./real-device.md): real Android and iOS devices from any machine, no local setup
 - [Remote runs on the cloud grid](../remote-execution.md): run emulator suites from any machine

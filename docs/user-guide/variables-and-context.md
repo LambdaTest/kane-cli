@@ -73,7 +73,7 @@ Project-local variables override global variables but are overridden by file and
 
 ### Global variables
 
-For values you want available across every project on your machine, place `*.json` files in `~/.testmuai/kaneai/variables/`.
+For values you want available across every project on your machine (not to be confused with `{{global.<name>}}`, which reads a Test Manager global variable — see [Runtime namespaces](#runtime-namespaces-global-environment-smart)), place `*.json` files in `~/.testmuai/kaneai/variables/`.
 
 ```text
 ~/.testmuai/kaneai/variables/
@@ -103,7 +103,7 @@ kane-cli run "Log in with email {{username}} and password {{password}}, then ver
   --variables-file ./vars.json
 ```
 
-Before the objective is sent to the agent, `{{username}}` and `{{password}}` are rewritten to internal namespaced forms; the agent sees the resolved values at runtime.
+Before the objective is sent to the agent, `{{username}}` is rewritten to `{{global.username}}` and the secret `{{password}}` to a secrets reference; the agent sees the resolved values at runtime. Saved `_test.md` files keep the bare `{{name}}` form.
 
 ### Secrets
 
@@ -116,6 +116,66 @@ Mark a variable as secret by setting `"secret": true`.
 ```
 
 Secret values are masked in displayed output and logs, and are routed to TestmuAI's secrets store instead of being synced to TMS as plain variables. Use this for credentials, tokens, and anything else that should not appear in shareable artifacts.
+
+### Runtime namespaces: `global`, `environment`, `smart`
+
+> Requires kane-cli 0.9.0 or later. Check with `kane-cli --version`.
+
+Besides your own variables, an objective can use values that kane-cli resolves at run time from a namespace:
+
+| Reference | Resolves to |
+|---|---|
+| `{{global.<name>}}` | A global variable from Test Manager. Locally, a value you pass with the same name (pool file or `--variables`) wins. |
+| `{{environment.<name>}}` | A variable of the run's Test Manager environment. |
+| `{{smart.<name>}}` | A generated value: a date, random test data, or session info (table below). |
+| `{{secrets.<…>}}`, `{{totp.<…>}}` | A secret, or a one-time code generated when it is typed. These are never shown to the agent. |
+
+How they behave:
+
+- **Resolved when each objective starts.** The agent sees the real value, so it can type it, reason about it, and assert on it. The saved test keeps the reference, not the value, so every replay resolves it fresh: a `{{smart.random_email}}` is a new address on every run, and in an interactive session on every objective.
+- **`{{…}}` only.** `${global.x}` is not a namespace reference: `${…}` is reserved for dataset columns.
+- **Two references can sit side by side.** `{{smart.random_int}}.{{smart.random_int}}` is two values joined by a dot.
+- **A value the test stored wins.** If an earlier step stored a value under the same name, that value is used.
+- **A `global` or `environment` reference that can't be resolved stops the run before step 1**, with the reason. A `smart` reference never stops a run: an unknown name resolves to an empty string, so check the spelling.
+
+### Smart variables
+
+| Variable | Example value | Format |
+|---|---|---|
+| `{{smart.current_date}}` | `2026-10-15` | `YYYY-MM-DD` |
+| `{{smart.current_day}}` | `Thursday` | Day name |
+| `{{smart.current_month}}` | `October` | Month name |
+| `{{smart.current_month_number}}` | `10` | Two digits |
+| `{{smart.current_year}}` | `2026` | Four digits |
+| `{{smart.current_hour}}` | `14` | 24-hour, two digits |
+| `{{smart.current_minute}}` | `05` | Two digits |
+| `{{smart.current_timestamp}}` | `2026-10-15 14:05:09` | `YYYY-MM-DD HH:MM:SS` |
+| `{{smart.current_timezone}}` | `UTC` | Zone name |
+| `{{smart.next_day}}` | `2026-10-16` | Tomorrow, `YYYY-MM-DD` |
+| `{{smart.previous_day}}` | `2026-10-14` | Yesterday, `YYYY-MM-DD` |
+| `{{smart.start_of_week}}` | `2026-10-12` | This week's Monday |
+| `{{smart.end_of_week}}` | `2026-10-18` | This week's Sunday |
+| `{{smart.start_of_month}}` | `2026-10-01` | First day of this month |
+| `{{smart.end_of_month}}` | `2026-10-31` | Last day of this month |
+| `{{smart.random_int}}` | `482` | Integer from 100 to 999 |
+| `{{smart.random_float}}` | `37.42` | 1 to 100, two decimals |
+| `{{smart.random_string_8}}` | `aZ3kP9qL` | 8 letters and digits |
+| `{{smart.random_string_56}}` | `Xk2…` | 56 letters and digits |
+| `{{smart.random_email}}` | `k3j9x0a1bq@example.com` | 10 random characters `@example.com` |
+| `{{smart.random_phone}}` | `7294810356` | 10 digits |
+| `{{smart.user_name}}` | `jane` | Your TestMu AI username |
+
+- Smart variables take no arguments. For a date format or offset the table doesn't have, describe it in the objective instead ("pick the date one week from today").
+- Dates and times in a browser run are in **UTC**, not your machine's time zone. Keep that in mind around midnight.
+- On Windows, releases before 0.9.0 resolved smart variables to empty strings.
+
+Examples:
+
+```bash
+kane-cli run "Sign up with email {{smart.random_email}} and password {{smart.random_string_8}}, then verify the welcome page"
+kane-cli run "Search for hotels in Paris with check-in {{smart.next_day}} and verify results are listed"
+kane-cli run "Create a project named Demo {{smart.random_int}} and verify it appears in the project list"
+```
 
 ### Variables declared by `kane-cli design tests`
 
