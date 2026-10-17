@@ -255,6 +255,12 @@ npx @testmuai/kane-cli-skill
 
 This installs the skill for Claude Code, Codex CLI, and Gemini CLI in one command. On your first request the agent checks that kane-cli is ready, runs it, and shows a result card. What to expect, your saved preferences and the live status strip are covered in [Using kane-cli from an AI coding agent](docs/user-guide/agents.md).
 
+**Using another agent, or want the instructions in your repo?** Copy [testmuai.com/kane-cli-agent/AGENTS.md](https://www.testmuai.com/kane-cli-agent/AGENTS.md) into your project as `AGENTS.md`, `CLAUDE.md` or `GEMINI.md`. It is one self-contained file that any coding agent reads. Open it at [testmuai.com/kane-cli-agent](https://www.testmuai.com/kane-cli-agent/), or append it from the terminal:
+
+```bash
+curl -fsSL https://www.testmuai.com/kane-cli-agent/AGENTS.md >> AGENTS.md
+```
+
 ---
 
 ## Commands
