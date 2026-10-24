@@ -31,7 +31,7 @@ Nothing reaches the project until `kane-cli context sessions save`. Other assura
 
 ## 2. Stream shape
 
-**Assurance stream** (`context …`, `design tests`, `maintain …`, `cover`): one JSON object per line, envelope `{"type": "<name>", "v": 1, "verb": "<verb>", …}`. No `stream_start`, and don't rely on a `ts` field here. Verbs: `extract` (ingest and extract; `reconcile` from the upload on when the ingest is a new version of a source the project holds), `design`, `evolve`, `reconcile`, `save`, `discard`, `cover`. Refusals of `context sessions` (list, show, clean) are stamped `save`.
+**Assurance stream** (`context …`, `design tests`, `maintain …`, `cover`): one JSON object per line, envelope `{"type": "<name>", "v": 1, "verb": "<verb>", …}`. No `stream_start`, and don't rely on a `ts` field here. Verbs: `sync` (`context pull` in a linked folder; its entry refusals carry `pull`), `extract` (ingest and extract; `reconcile` from the upload on when the ingest is a new version of a source the project holds), `design`, `evolve`, `reconcile`, `save`, `discard`, `cover`. Refusals of `context sessions` (list, show, clean) are stamped `save`.
 
 **Run stream** (`testmd run`, `testrun run`): opens with `stream_start {cli_version, surface, pid}`; every line carries `v` and `ts`. Shapes: `references/testmd.md`, `references/testrun.md`; linked-folder additions in §3.7.
 

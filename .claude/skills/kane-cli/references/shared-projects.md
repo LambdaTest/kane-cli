@@ -184,6 +184,7 @@ kane-cli context pull --use-case <uc> --mode agent       # only that use-case's 
 kane-cli context pull --overwrite --mode agent           # replace test files changed here with the project's
 ```
 
+- The pull's own events and refusals carry `verb: "sync"`; a refusal at the folder's entry (sign-in, access, the link) carries `verb: "pull"`. Dispatch on `type`, as always.
 - One `pull_test` event per test: `{test, title, file, outcome, first_run?, imported?, reason?}`, where `outcome` is
   `new`, `updated`, `unchanged`, `kept` (changed here, left alone), `replaced` (with `--overwrite`) or `not_written`.
 - `first_run: true` means the test hasn't run in this folder: its first run writes its steps in a real browser, which
@@ -200,10 +201,10 @@ kane-cli context pull --overwrite --mode agent           # replace test files ch
 
 | Code | When | Do |
 |---|---|---|
-| `NOT_SET_UP` | `context pull` in a folder that isn't linked and has no store, without `--project` (also `--use-case` there). Only the pull says this: `cover` and `context list` in such a folder keep their usual "no context store here" line | its `next`: `kane-cli projects list --agent`, then `kane-cli context pull --project <id> --mode agent` |
+| — | `context pull` with no flags in a folder that isn't linked: it is the location pull, as before. In a new folder its message is "no context store here" | to join the team's project and bring its tests, run `kane-cli context pull --project <id> --mode agent` (`kane-cli projects list --agent` for the id) |
 | `PULL_LOCATION_LINKED` | a location flag (a location name, `--rebase`, `--yes`, `--answer`) in a linked folder | `kane-cli context pull --mode agent` |
 | `PULL_FLAGS_MIXED` | project flags mixed with location flags | use one set |
-| `PULL_FLAGS_LINKED_ONLY` | `--use-case` or `--overwrite` in a folder with its own local store | those work only in a linked folder |
+| `PULL_FLAGS_LINKED_ONLY` | `--use-case` or `--overwrite` without `--project` in a folder that isn't linked (a new one, or one with its own local store) | link it first with `--project <id>`, or drop those flags |
 | `USE_CASE_UNKNOWN` | the project has no such use-case | `kane-cli context list --mode agent` for the ids |
 | `PULL_FAILED` (exit 1) | the project's tests couldn't be read; nothing was written | try once more; then give the person the support id |
 
