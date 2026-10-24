@@ -86,7 +86,7 @@ Files ending in `_test.md` are tests (valid entry points). Any other `.md` is a 
 
 ## The replay & cascade rule (CRITICAL)
 
-On the **first** run of a test, the agent authors each step and saves a recording. On **every later run**, each step replays from its recording — no authoring agent, so it mostly avoids the authoring cost and runs much faster. A replay that heals (below) re-authors the failing steps, so it costs more.
+On the **first** run of a test, the agent authors each step and saves a recording. On **every later run**, each unchanged step that has a recording replays from it — no authoring agent, so it mostly avoids the authoring cost and runs much faster. A step whose text changed, whose recording is missing, or that failed when recorded is authored again. A replay that heals (below) re-authors the failing steps, so it costs more.
 
 An authorable step replays only if **all** of these hold (replay-only marked steps always require their recording):
 - A recording for that step exists,

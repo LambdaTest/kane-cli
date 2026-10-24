@@ -21,7 +21,7 @@ before the first `context ingest`:
 
 | The person… | Do |
 |---|---|
-| works in a folder that already has its own `.context/` | keep working locally, as before (`assurance.md`); to share that store, see below |
+| works in a folder that already has its own `.context/` (and no link) | keep working locally, as before (`assurance.md`); to share that store, see below |
 | works with a team, or names a Test Manager project | link this folder to that project (§2–3) |
 | works alone, or asks to keep it on this machine | work locally: the journey in `assurance.md` §1 |
 | isn't clear | ask once: "Should this work go to your team's Test Manager project, or stay in this folder?" |
@@ -110,7 +110,7 @@ session there.
 
 **What things cost.** These are approximate figures from real runs of small documents; the person's billing page is
 the authority. On the assurance commands (`context ingest`, `context extract`, `design tests` …) the stream's
-`usage.total_credits` gives the real figure. A `testrun run` stream carries no credits figure (not on `testrun_done`,
+`usage.total_credits` gives the real figure. A local `testrun run` stream carries no credits total (not on `testrun_done`,
 a member's end event, `testrun_summary` or `coverage`), so run `kane-cli balance` before and after the run and give the
 difference:
 

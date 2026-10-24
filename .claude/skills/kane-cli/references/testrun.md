@@ -69,7 +69,7 @@ that case from the test's `id` and `base`.
 - Before a first run, tell the person how many tests will write their steps and the likely cost
   (`shared-projects.md` §4), and let them choose. Don't add `--no-adaptive-heal`, `--author` or other flags that change
   what the run does on your own (`--headless` from the watch preference is fine); heal is on by default.
-- **Credits.** A local run's output (and each test's own log) carries no credits figure: note `kane-cli balance`
+- **Credits.** A local run's own stream carries no credits total: note `kane-cli balance`
   before the run and again after it, and give the person the difference. (A `--remote` run's `testrun_summary.totals.creditsConsumed`,
   when present, adds up what the grid's runs reported.)
 - Run the files a save or a pull named: `kane-cli testrun run <files> --agent < /dev/null`. A bare `testrun run` takes
@@ -152,7 +152,7 @@ All typed; stdout; one JSON object per line. **Local completion: `testrun_done`.
 | `testrun_investigations_wait` | `count` | Failed replays left investigations running; the coordinator waits before sealing. Narrate as "investigating N failures". |
 | `testrun_evidence_ingest` | `status: "ok"\|"failed"`, `evidence_id`, `stage?` | Pack published to the dashboard. Absent when publish is skipped. |
 | `testrun_summary` | `totals: {tests, passed, failed, broken, skipped, authored}`, `duration_s`, `upload`, `cancelled`, `execution: {id, status}` | Build the rollup table from this. |
-| `testrun_done` | `execution_id`, `overall_status: "passed"\|"failed"\|"cancelled"`, `coverage?: {status, pct?}` | Local completion; remote runs continue through `remote_done`. `coverage` repeats the run's coverage figure (`pct` only when `status` is `written`). |
+| `testrun_done` | `execution_id`, `overall_status: "passed"\|"failed"\|"cancelled"` (`"refused"` for an invalid plan in a linked folder), `coverage?: {status, pct?}` | Local completion; remote runs continue through `remote_done`. `coverage` repeats the run's coverage figure (`pct` only when `status` is `written`). |
 
 ### Each test's own log, and `--stream-members` (0.8.17+)
 
@@ -173,7 +173,7 @@ With `--remote`, the stream is wrapped in typed `remote_*` events (all on stdout
 | `remote_app` | `path`, `app_id`, `source: uploaded\|cache\|dry-run` | One per distinct local build uploaded from the laptop (mobile); `app_id` is empty on a dry run |
 | `remote_dispatched` | `job_id`, `job_url` | The HyperExecute job exists — give the user `job_url` |
 | *(0.8.17+)* member events on remote | `testrun_start`, then a start and end event per test, each with `post_hoc: true` | The grid reports per-test detail **after the job ends**, in plan order, just before `testrun_summary`. Their `ts` is the grid's own time. Same fields as local, including `log_path` and `failure`. `testrun_progress` is not emitted on remote. On 0.8.17+ `remote_dispatched` arrives as soon as the job exists, not at the end |
-| `remote_error` | `code`, `detail`, `remedy?`, `support_id?` | Remote preflight refused (table above), or a designed test can't run on its case (§Designed tests in a shared project); expect `testrun_done` failed + exit 2 |
+| `remote_error` | `code`, `detail`, `remedy?`, `support_id?` | Remote preflight refused (table above), or a designed test can't run on its case (§Designed tests in a shared project); expect `testrun_done` failed + exit 2. `code: "internal_error"` is a crash of the remote run itself: `testrun_done` and `remote_done` failed, exit 1 |
 | `remote_import_tape`, `remote_exec_sync`, `remote_coverage` | `status`, `reason`, `detail?` | Informational; sync/coverage are `skipped` when the project has no `.context` store |
 | `remote_done` | `status`, `exit`, `job_id`, `sessions_path` | Follows `testrun_done`; `sessions_path` holds the members' grid session logs |
 

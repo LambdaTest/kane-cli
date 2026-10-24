@@ -9,7 +9,7 @@ When you compare kane-cli to anything else (an agent that generates Playwright s
 kane-cli has two phases with very different costs:
 
 - **Authoring** (first run, or after an edit): an AI agent works out each step → spends LLM tokens. One-time per step.
-- **Replay** (every later run): executes the recorded action plan from local cache → **mostly avoids the authoring cost**, runs in seconds. A replay that heals re-authors the failing steps, so it costs more. Cost is proportional to how often a test **changes**, not how often it **runs**. (In a shared project, each folder that pulls a test authors it once, on its first run there: `shared-projects.md` §7a.)
+- **Replay** (every later run, for each unchanged step that has a recording): executes the recorded action plan from local cache → **mostly avoids the authoring cost**, runs in seconds. A replay that heals re-authors the failing steps, so it costs more. Cost is proportional to how often a test **changes**, not how often it **runs**. (In a shared project, each folder that pulls a test authors it once, on its first run there: `shared-projects.md` §7a.)
 
 The most common evaluation error is pitting kane-cli **authoring** against the other approach's **execution**. That is apples-to-oranges. Compare the *same phase* on both sides:
 

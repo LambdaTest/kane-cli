@@ -47,7 +47,7 @@ Nothing reaches the project until `kane-cli context sessions save`. Other assura
 | `context pull` (linked, or `--project`) | `folder_linked` (with `--project`), else `pull_test` or `error`; a project with no tests sends `done` alone | `done` (`shared-projects.md` §7a) |
 | `cover` | `coverage` | `done` |
 | `testmd run <designed test>`, stopped on its Test Manager case | `stream_start` | `error` (no `test_md_done`) |
-| `testrun run`, refused | `stream_start`; then `error` before any plan for `--from-context` in a linked folder; else `testrun_plan` | `PROJECT_MISMATCH`: `error`, the last line outside a linked folder. Another invalid plan, or no tests: no `error`, the stream ends at `testrun_plan` (read the exit code). **In a linked folder only**, from the release that carries the fix, every one of these (`PROJECT_MISMATCH` too) ends `error` then `testrun_done{overall_status:"refused"}`; handle both shapes. Everywhere else these shapes don't change |
+| `testrun run`, refused | `stream_start`; then `error` before any plan for `--from-context` in a linked folder; else `testrun_plan` | `PROJECT_MISMATCH`: `error`, the last line outside a linked folder. Another invalid plan, or no tests: no `error`, the stream ends at `testrun_plan` (read the exit code). **In a linked folder only**, from the release that carries the fix, every one of these (`PROJECT_MISMATCH` too) ends `error` then `testrun_done{overall_status:"refused"}` (the `--from-context` refusal still ends on its `error`); handle both shapes. Everywhere else these shapes don't change |
 
 Outputs that are **not** the envelope and have **no `done`** (read the exit code):
 
@@ -150,7 +150,7 @@ Every pause has `sid`, `expires_at: null` and `pending_questions[]` (empty unles
 |---|---|---|---|
 | `coverage` | `cover --mode agent` | `source: "project"`, `pct`, `usecases`, `criteria`, `perUc`, `perAc`, `flags`, `recent_run?{may_not_count_yet: true, up_to_minutes: 5}` | "Coverage is N% across <project>'s K use-cases." With `recent_run`: "a run from the last 5 minutes may not count yet" |
 | `coverage` (computing) | the project is still working it out; exit 0 | `{source: "project", state: "computing"}` | run `next` (`kane-cli cover --mode agent`) in a moment |
-| `done` | last | `next?`: designs to make, `testrun run` while nothing has run; `kane-cli context pull --mode agent` first (and no run) when this folder has none of the project's tests yet | offer them, adding the agent flag (§4) |
+| `done` | last | `next?`: designs to make, `testrun run` while nothing has run; `kane-cli context pull --mode agent` first (and no run) when the project has designs and this folder has no designed test files yet | offer them, adding the agent flag (§4) |
 
 ### 3.7 `testmd run` and `testrun run` in a linked folder
 
@@ -234,7 +234,7 @@ On the assurance verbs, `3` is a **pause** (resumable), not a failure: run the p
 | `CONNECTION_FAILED` | 2 | couldn't connect (or for 2 minutes); nothing was started | check the network; `<the command>` once more |
 | `PREFLIGHT` | 2 | kane-cli's check before a session opens failed: unreachable, sign-in unchecked or rejected, or "assurance sessions aren't available here yet" | unreachable: `<the command>` once more later. Sign-in: `kane-cli login --oauth`. Not available: stop and pass on the support id in `remedy` |
 | `VERSION_MISMATCH` | 2 | this kane-cli is too old, or the shared project doesn't support it yet | too old: ask the person to update (`npm install -g @testmuai/kane-cli@latest`). Not supported yet: stop and pass on the support id in `remedy` |
-| `PROJECT_BUSY` | 2 | a live session holds the project, use-case or source: `held_by{sid, verb, use_case, mine, status}` | no `next`. `mine: true`: `remedy` names the resume (`kane-cli context extract --resume <sid> --mode agent`, or `kane-cli design tests --resume <sid> --mode agent`); running it takes the session over and stops it in the other terminal, so ask the person first; otherwise wait for that run to finish. A resume refused this way has no such command: wait. Someone else's: tell the person a teammate's session holds it; wait; `<the command>` later |
+| `PROJECT_BUSY` | 2 | a live session holds the project, use-case or source: `held_by{sid, verb, use_case, mine, status}` | no `next`. When `remedy` names a resume (`kane-cli context extract --resume <sid> --mode agent`, or `kane-cli design tests --resume <sid> --mode agent`; only for the person's own session, `mine: true`), running it takes the session over and stops it in the other terminal, so ask the person first; otherwise wait for that run to finish. When `remedy` only says to wait (a resume refused this way, or a design while the person's own extract holds the project), wait. Someone else's: tell the person a teammate's session holds it; wait; `<the command>` later |
 | **Sessions** | | | |
 | `SESSION_NOT_FOUND` | 2 | no session with that id is theirs (a colleague's can't be resumed or saved) | `kane-cli context sessions --mode agent`; use a `sid` whose `owner` is `you` |
 | `SESSION_FINISHED` | 2 | resume of a finished session | on the person's word: `kane-cli context sessions save <sid> --yes --mode agent` |

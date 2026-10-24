@@ -60,7 +60,7 @@ On Windows PowerShell: `$env:KANE_CLI_USER_AGENT='<your-runtime>'; kane-cli run 
 
 **Watch mode.** Use the person's saved preference (`references/agent-config.md`). With none saved, show the browser unless the preflight says there is no display, an SSH session, or CI: then add `--headless`.
 
-**Keeping runs.** When the person's saved purpose is `suite` or `ask`, add `--name <short-slug>` to every one-off `run`. A named run is recorded as a `_test.md` while it runs, so keeping it afterwards costs nothing, and a run launched without a name cannot be kept without running again. With `one-off`, leave the flag out. Details: `references/first-run.md` §4. In a linked folder, one-off runs go in a folder that isn't linked: a named run there writes its test beside the project's and can mix two projects (`references/shared-projects.md` §9).
+**Keeping runs.** When the person's saved purpose is `suite` or `ask`, add `--name <short-slug>` to every one-off `run`. A named run is recorded as a `_test.md` while it runs, so keeping it afterwards costs nothing, and a run launched without a name cannot be kept without running again. With `one-off`, leave the flag out. Details: `references/first-run.md` §4. Run one-offs from a folder that isn't linked: a named run in a linked folder writes its test beside the project's and can mix two projects (`references/shared-projects.md` §9).
 
 Bash blocks until kane-cli exits, then hands you the complete stdout. Parse it, summarize what happened, and present the result card. Wait for process completion on `testmd run` too, but parse its own completion event, `test_md_done`. An intermediate `run_end` does not finish a saved test.
 
@@ -170,7 +170,7 @@ When the user's request involves a browser — or writing test cases:
 - Ready ↓
 
 **Where does the work go?** (before any assurance command)
-- The folder holds its own `.context/` → it works locally, as before: `references/assurance.md` (to share that store with a team, `references/context-sync.md`). The rows below are for a folder without one
+- The folder holds its own `.context/` and no link → it works locally, as before (with a link too, kane-cli refuses it `BOTH_STORES`): `references/assurance.md` (to share that store with a team, `references/context-sync.md`). The rows below are for a folder without one
 - The folder holds `.testmuai/assurance.json`, or the person works with a team or names a Test Manager project → a **shared project**: Read `references/shared-projects.md` first. In a linked folder never use `kane-cli run` for a first result; its tests go to another project (§9 there)
 - The person works alone, or asks to keep the work on this machine → the local store: `references/assurance.md`
 - Not clear → ask once: "Should this work go to your team's Test Manager project, or stay in this folder?"

@@ -59,12 +59,12 @@ These are **untyped** — they have no `type` field. Do **not** key on `event.ty
 | `project_folder_auto_defaulted` | resolved project + folder (id, name) | Run-startup gate auto-resolved a project/folder when none was configured (or the cached one was stale/invalid). Fires before any progress event on `run` / `testmd run`. Translate to plain language (see `references/test-manager.md`). |
 | `bifurcation` | `flows[]`, `count` | Agent split objective into sub-flows |
 | `ask_user` | `question`, `step_index`, `options?` | Agent needs user input |
-| `error` | `message` | Error occurred. On `testmd run` / `testrun run` in a folder linked to a shared project it also carries `code`, `remedy`, `support_id?` (`agent-contract.md` §3.7) |
+| `error` | `message` | Error occurred. On `testmd run` / `testrun run` in a folder linked to a shared project it also carries a `code`, and `remedy`, `next` or `support_id` when kane-cli has one (`agent-contract.md` §3.7) |
 | `warning` | `code`, `message`, … | *(0.8.15+)* Before any progress event: `code: "unresolved_variables"` — a `{{name}}` had no value; the run continues. Schema below. |
 | `test_md_evidence_ingest` | `status: "ok"\|"failed"`, `evidence_id`, `stage?` (failure only) | `testmd run` only: a replay's evidence pack published to the dashboard. Informational. |
 | `test_md_bundle_sync` | `status: "ok"\|"failed"`, `commit_id`, `bytes?` (success) / `stage?` (failure) | `testmd run` / `testmd sync`: test bundle pushed to the cloud after an authored commit. Informational. |
 | `coverage` | `status` (`written`, `none`, `skipped`, `failed`), `pct?`, `reason?`, `pack` | `run` / `testmd run`: one per sealed pack, just before the completion event, which repeats it as `coverage`. `skipped` (nothing to measure here, as in a folder with no assurance work): say nothing. In a linked folder: `agent-contract.md` §3.7 |
-| `update_available` | `current`, `latest`, `severity` | `run` only, at any point before `run_end`, or not at all: a newer kane-cli exists. Mention it once, after the result |
+| `update_available` | `current`, `latest`, `severity` | `run` (also `generate --agent`), at any point before `run_end`, or not at all: a newer kane-cli exists. Mention it once, after the result |
 | `skill_update_available` | `current`, `latest`, `install_cmd` | `run` only, like `update_available`: a newer skill exists. After the result, offer `kane-cli install skill` once (`references/ready-check.md` §4a) |
 | `testrun_*` family | see `references/testrun.md` | Emitted only by `kane-cli testrun run`; terminal event is `testrun_done`, not `run_end`. |
 

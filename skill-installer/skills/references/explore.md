@@ -59,7 +59,8 @@ kane-cli explore context sync <exploration-id> --agent    # ask for a job now
 ```
 
 It emits `explore_context_sync {exploration_id, state, …}`: `launched`, `launching`, `pending` (behind a running job),
-`running` and `up_to_date` all end exit 0. A refusal's `error` message starts with its code:
+`running` and `up_to_date` all end exit 0. A known refusal's `error` message starts with its code (other failures are
+plain words: read the message and the exit code):
 
 | Refusal | Exit | Means | Do |
 |---|---|---|---|
