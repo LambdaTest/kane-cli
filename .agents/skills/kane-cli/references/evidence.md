@@ -20,8 +20,7 @@ A `.evidence` file is a standard zip: `unzip -l <pack>` lists it, `unzip -p <pac
     │                                 #   <n>-console.ndjson, <n>-network.har
     ├── steps/<ordinal>-<step-id>/    # screenshot.png, annotated.png, step.json
     │                                 #   (+ failure.yaml on failed steps)
-    ├── auteur/execution.json         # full execution trajectory
-    └── v16-trajectory/               # per-run planning summaries
+    └── …                             # the full execution record and planning notes (not needed to diagnose)
 ```
 
 Reading and debugging from the pack (unzip recipes, failure records): `references/debug.md`.
@@ -36,7 +35,7 @@ Reading and debugging from the pack (unzip recipes, failure records): `reference
 
 ## The stderr hint — and how to act on it
 
-After a successful agent-mode run, kane-cli prints one hint line to **stderr** (it is NOT an NDJSON event; never look for it on stdout):
+After an agent-mode run whose evidence pack sealed (passed or failed), kane-cli prints one hint line to **stderr** (it is NOT an NDJSON event; never look for it on stdout):
 
 ```
 evidence: view locally with `kane-cli evidence serve <packPath>`
@@ -70,7 +69,7 @@ Exit `0` valid · `1` invalid · `2` not found. Use it when a pack won't open in
 kane-cli evidence merge <targets...> --run-id <id>
 ```
 
-Combines packs (execution ids or paths, order-significant) into one, sealed by default at `.testmuai/evidence/<run-id>.evidence`. `--run-id` is required. Exit `0` merged · `1` policy abort (e.g. mixed projects, duplicate run ids) · `2` usage. Full policy detail is in the user guide — for anything beyond a simple merge, point the user there rather than improvising flags.
+Combines packs (execution ids or paths, order-significant) into one, sealed by default at `.testmuai/evidence/<run-id>.evidence`. `--run-id` is required. Exit `0` merged · `1` policy abort (e.g. packs from different projects or organisations, or a pack that isn't sealed and valid; a pack whose run id repeats is skipped, not an abort) · `2` usage. Full policy detail is in the user guide — for anything beyond a simple merge, point the user there rather than improvising flags.
 
 ## Debugging with a pack
 
@@ -78,6 +77,6 @@ The pack is the first place to look on a failure: the failed step's **failure re
 
 ## Evidence merge identity
 
-For ordinary runs, default merge identity distinguishes the test and commit (`external_id.test_id`, `external_id.commit_id`) and the environment (`environment.os`, `environment.os_version`, `environment.browser`, `environment.browser_version`, `environment.device`, `environment.app`). Re-runs with the same identity nest as attempts; a different environment produces a separate sibling, so one test on two devices or two builds is two entries. On a real device, `environment.device` is the device the hub allocated (never the requested pattern) and `device_slug` is derived from it.
+For ordinary runs, default merge identity distinguishes the test, commit and dataset row (`external_id.test_id`, `external_id.commit_id`, `external_id.dataset_row_id`) and the environment (`environment.os`, `environment.os_version`, `environment.browser`, `environment.browser_version`, `environment.device`, `environment.app`). Re-runs with the same identity nest as attempts; a different environment produces a separate sibling, so one test on two devices, or on two builds with different app identities, is two entries (two local builds with the same file name can group together). On a real device, `environment.device` is the device the hub allocated (never the requested pattern) and `device_slug` is derived from it.
 
 Explicit collision policies can change grouping; a custom `--rules` file replaces the default rules rather than extending them. Check the selected identity rules before interpreting two runs as retries of the same test.

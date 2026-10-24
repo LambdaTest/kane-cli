@@ -36,7 +36,48 @@ The panel always shows **both** axes: the pack's proven depth, then the live-gra
 - Coverage reflects **this run**: sealed packs cover only what the run touched. Project-wide coverage lives in the graph axis, unaffected by any single pack.
 - `--json` emits the full panel as structured data.
 
+## In a shared project
+
+In a folder linked to a [shared project](./shared-projects.md), `kane-cli cover` shows the **project's** coverage: every use-case in the project, measured from everyone's runs on its test cases in Test Manager, not only yours.
+
+```bash
+kane-cli cover
+```
+
+```text
+using project "Checkout revamp", shared with your team
+
+coverage: 40% across "Checkout revamp"'s 5 use-cases
+  2 proven · 1 partial · 1 not run · 1 not designed
+```
+
+A state with no use-cases in it is left out of that line. Then comes one row per use-case, with its coverage and what's proven, failing or not run yet, and the next steps:
+
+```text
+next: for UC-5 "Apply a coupon", run:
+  kane-cli design tests --use-case uc-5
+```
+
+| State | Meaning |
+|---|---|
+| `proven` | Every acceptance criterion's newest counted run passed |
+| `partial` | Some criteria passed and none failed; the rest haven't run, or have no tests |
+| `failing` | At least one criterion's newest counted run failed |
+| `not run` | It has tests, but no run of them counts yet |
+| `not designed` | No tests designed for it yet |
+| `no criteria` | It has no acceptance criteria yet |
+
+- **A new run takes a few minutes to count.** When a run in this folder ended in the last 5 minutes, `cover` adds `a new run can take up to 5 minutes to count`. Run it again a little later.
+- **Still working it out.** `coverage: "Checkout revamp" is still working it out; run the command again in a moment` means just that.
+- **A project with no runs yet** reads 0% with `nothing run yet`, and its `next` is `kane-cli testrun run`.
+- **`cover --from <pack>`** still reads one evidence pack's own figure, on this machine.
+- **`cover gaps`** isn't available in a linked folder. `cover` shows each use-case's state.
+
+In agent mode, `kane-cli cover --mode agent` prints one `coverage` event (`source: "project"`, with `pct`, `usecases` and `criteria`, and `recent_run` when a new run may not count yet), then `done` with a `next` list.
+
 ## `cover gaps` — the coverage ribbon *(0.8.2)*
+
+Not available in a folder linked to a shared project: use `kane-cli cover`.
 
 The default output is one continuous band-table over two axes, entirely graph-fed — no pack is opened or needed:
 

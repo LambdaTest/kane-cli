@@ -9,7 +9,7 @@ When you compare kane-cli to anything else (an agent that generates Playwright s
 kane-cli has two phases with very different costs:
 
 - **Authoring** (first run, or after an edit): an AI agent works out each step → spends LLM tokens. One-time per step.
-- **Replay** (every later run): executes the recorded action plan from local cache → **zero LLM cost**, runs in seconds. Cost is proportional to how often a test **changes**, not how often it **runs**.
+- **Replay** (every later run, for each unchanged step that has a recording): executes the recorded action plan from local cache → **mostly avoids the authoring cost**, runs in seconds. A replay that heals re-authors the failing steps, so it costs more. Cost is proportional to how often a test **changes**, not how often it **runs**. (In a shared project, each folder that pulls a test authors it once, on its first run there: `shared-projects.md` §7a.)
 
 The most common evaluation error is pitting kane-cli **authoring** against the other approach's **execution**. That is apples-to-oranges. Compare the *same phase* on both sides:
 
@@ -30,7 +30,7 @@ Compare kane **authoring** to the other approach's **creation effort** (the toke
 
 ## Mandatory corrections (real errors seen under time pressure)
 
-- ❌ "kane spends LLM tokens on every test run." → **Wrong.** Tokens are spent only when a step is *authored* (first run or after an edit). Replay of unchanged steps is zero-LLM. State this before any cost claim.
+- ❌ "kane spends LLM tokens on every test run." → **Wrong.** The authoring cost is spent when a step is *authored* (first run, after an edit, or when a replay heals). Replay of unchanged steps mostly avoids it. State this before any cost claim.
 - ❌ "The Playwright scripts already exist, so their creation cost is $0." → **Sunk-cost trap.** The creation effort was still spent (tokens or engineer hours). For an adoption/ROI decision, either count creation on **both** sides, or compare the **forward maintenance trajectory** — never zero out one side's creation while charging the other's.
 - ❌ "Free CI runs vs. tokens per test." → Phase mismatch (execution vs. authoring). Both execute cheaply; the real differentiators are creation effort and maintenance under UI churn.
 - ❌ Judging a single isolated run. → The right unit is the **suite over its lifetime** (many runs + UI changes). kane's advantage widens with run count and churn.

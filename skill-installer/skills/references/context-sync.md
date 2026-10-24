@@ -2,6 +2,13 @@
 
 # Context sync — Agent Surface
 
+> **Not for shared projects.** Location sync shares a **local** `.context/` store through a Git repository, a bucket or a
+> folder. A team that works in a Test Manager project uses a shared project instead (`shared-projects.md`). A folder
+> linked to one refuses `kane-cli context sync`, `kane-cli context push` and `kane-cli context clone`
+> (`REMOTE_UNSUPPORTED`), and a location pull (a location name, `--rebase`, `--yes` or `--answer`:
+> `PULL_LOCATION_LINKED`); a plain `kane-cli context pull --mode agent` there brings the project's tests, when
+> `kane-cli context pull --help` lists `--project` (`shared-projects.md` §7). Never use both in one folder.
+
 The assurance store (`.context/`, `references/assurance.md` §8) is one person's. **Context sync** shares it with a team through a **location**: a GitHub repository, an S3-compatible bucket, or a folder. Each person keeps their own store and publishes to the location; nothing on a location is ever overwritten or deleted. Reach for this reference when the user wants to share their context store, join a teammate's, get two stores level, or resolve a sync conflict. Sync never calls the KaneAI service — no credits, no model.
 
 **Version gate.** `kane-cli context sync`, `kane-cli context push`, `kane-cli context pull` and `kane-cli context clone` exist on **kane-cli 0.8.14 and later**. On an older CLI they fail as an *unknown command* (exit 2, a "did you mean" line) — the CLI is too old, not a typo. Confirm with `kane-cli --version`, have the user update, stop.

@@ -2,9 +2,10 @@
 # kane-cli ready check (preflight).
 #
 # Prints, in one call, everything an agent needs to know before it starts a
-# kane-cli run. It only reads status. It changes nothing: no sign-in, no
-# config write, no install, no network call of its own. It never reads
-# credential files. It always exits 0, and problems show up in the text.
+# kane-cli run. It only reads status: no sign-in, no config write, no install,
+# no network call of its own, and it never reads credential files itself. The
+# kane-cli status commands it runs use the saved sign-in, and whoami may renew
+# one that is about to expire. It always exits 0, and problems show up in the text.
 #
 # Usage: sh preflight.sh [--mobile emulator|simulator] [--grid]
 #
@@ -13,6 +14,7 @@
 #   whoami        kane-cli whoami, then exit=<code>
 #   balance       kane-cli balance, then exit=<code>
 #   settings      kane-cli config show, then exit=<code>
+#   link          project= and project_id= of a linked folder, "none", or "unreadable"
 #   agent-config  saved agent preferences, or the word "none"
 #   env           ci= ssh= display= os= arch= node=
 #   chrome        found=<path> and override=<KANE_CLI_CHROME_PATH>
@@ -125,6 +127,33 @@ emit_cmd balance kane-cli balance
 
 echo "## settings"
 emit_cmd settings kane-cli config show
+
+echo "## link"
+# A folder linked to a shared project holds .testmuai/assurance.json; print only its project's name and id, read as
+# kane-cli reads them, or "unreadable" when kane-cli can't read the link either.
+link_file=".testmuai/assurance.json"
+if [ -e "$link_file" ]; then
+  link_out=""
+  if command -v node >/dev/null 2>&1; then
+    link_out=$(node -e '
+      try {
+        const b = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+        const one = (s) => s.replace(/[\r\n]+/g, " ");
+        if (b && typeof b === "object" && !Array.isArray(b) && typeof b.projectId === "string" && b.projectId !== "" && typeof b.projectName === "string") {
+          process.stdout.write("project=" + one(b.projectName) + "\nproject_id=" + one(b.projectId) + "\n");
+        }
+      } catch (e) {}
+    ' "$link_file" 2>/dev/null </dev/null)
+  elif [ -f "$link_file" ] && [ -r "$link_file" ]; then
+    # No node (kane-cli itself needs it): a best-effort read of the two fields.
+    link_name=$(sed -n 's/.*"projectName"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$link_file" | head -n 1)
+    link_id=$(sed -n 's/.*"projectId"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$link_file" | head -n 1)
+    if [ -n "$link_id" ]; then link_out=$(printf 'project=%s\nproject_id=%s' "$link_name" "$link_id"); fi
+  fi
+  if [ -n "$link_out" ]; then printf '%s\n' "$link_out"; else echo "unreadable"; fi
+else
+  echo "none"
+fi
 
 echo "## agent-config"
 agent_config="$HOME/.testmuai/kaneai/agent-config/config.json"

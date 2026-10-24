@@ -2,6 +2,11 @@
 
 # Assurance NDJSON — Wire Contract
 
+> In a folder linked to a shared project (kane-cli 0.10.0+) the same commands add their own events (for example
+> `folder_linked`, `nothing_new`, `remote_*` progress, `session_save`, `session_discard`, `session_ended`, `pull_test`)
+> and refusal codes, and `session_complete` there carries the save's `next`. They are in `agent-contract.md` §3 and §6;
+> this page covers the local store.
+
 `kane-cli context extract --mode agent`, `kane-cli context ingest … --mode agent`, and `kane-cli design tests --mode agent` speak a versioned NDJSON vocabulary on stdout — one JSON object per line, envelope `{"type": "<name>", "v": 1, "verb": "extract"|"design", ...}`. On 0.7.2+ the stream is **strict**: stdout carries only NDJSON and stderr stays silent (crash traces excepted); on 0.7.1, prose diagnostics could ride stderr. `maintain reconcile --mode agent` (verb `reconcile`) and `cover`/`cover gaps --mode agent` (verbs `cover`/`gaps`) share the envelope with their own event sets (below).
 
 **The vocabulary is open**: new event types and fields may appear in any release — tolerate unknowns, never fail on them.
@@ -19,7 +24,7 @@ for each line:
   else                             → per-type handling below
 ```
 
-A stream that ends **without** `done` means the process crashed — outcome unknown; inspect `context sessions --json` and `context list` before retrying anything paid. One designed exception: `kane-cli context review --mode agent` keeps its `--json` shape — verdict and drift listings are one JSON object per line with no `done` (an empty listing prints nothing, exit `0`); its early refusals — no store, an open rebase, a verdict queue that needs a terminal (`TTY_REQUIRED`) — are typed events followed by `done`; its later refusals exit without `done`. Read its exit code instead. One version-scoped rule for merged-ingest landing failures (bad path, unsupported media, refused URL, a misused `--mode` or `--as`): on 0.7.2+ they ride the stream as `error` (codes `MODE_USAGE`, `AS_SINGLE_SOURCE`, `UNSUPPORTED_URL`, `INGEST_FAILED`) + `done` — the guarantee covers the whole invocation; on 0.7.1 they end with prose + exit `1`/`2` **before any NDJSON begins** — no stream at all is a refusal to fix, not a crash, and the guarantee starts with the extraction stream.
+A stream that ends **without** `done` means the process crashed — outcome unknown; inspect `context sessions --json` and `context list` before retrying anything paid. No stream at all, with one line on stderr and exit `2`, is a command-line refusal before anything ran (for example `--json` with `--mode agent`): fix the command, don't treat it as a crash. One designed exception: `kane-cli context review --mode agent` keeps its `--json` shape — verdict and drift listings are one JSON object per line with no `done` (an empty listing prints nothing, exit `0`); its early refusals — no store, an open rebase, a verdict queue that needs a terminal (`TTY_REQUIRED`) — are typed events followed by `done`; its later refusals exit without `done`. Read its exit code instead. One version-scoped rule for merged-ingest landing failures (bad path, unsupported media, refused URL, a misused `--mode` or `--as`): on 0.7.2+ they ride the stream as `error` (codes `MODE_USAGE`, `AS_SINGLE_SOURCE`, `UNSUPPORTED_URL`, `INGEST_FAILED`) + `done` — the guarantee covers the whole invocation; on 0.7.1 they end with prose + exit `1`/`2` **before any NDJSON begins** — no stream at all is a refusal to fix, not a crash, and the guarantee starts with the extraction stream.
 
 ## Events (extract / design)
 
@@ -93,12 +98,12 @@ Use `text` + `options[].label` + `recommended_index` + `rationale` to decide or 
 | `child_start` / `child_end` | around the design run, after a proceed | `child: "design"`, `subject` / `ok`, `dur_s`, `exit_code?` |
 | *(the design run's events)* | between the two, stamped `verb: "design"` | every event of `design tests --mode agent` except its `done`; a paused design session arrives as `session_paused` with `sid`, `resume`, `next[]` |
 | `evolve_diff` | after a clean design run | `use_case`, `generation` (`before`, `after`), `superseded[]`, `minted[]`, `retained[]` (pairs as `scenario` + `test`), `moves[]` (`ac`, `before[]`, `after[]`) |
-| `evolve_skipped` | a use-case not evolved | `use_case`, `reason`: `declined`, or `no-design` in a `--from-stale` batch |
+| `evolve_skipped` | a use-case not evolved | `use_case`, `reason`: `declined`, `no-design` in a `--from-stale` batch, or `source_changed` (out of date only because its source changed; `next?` reviews that change with `kane-cli maintain reconcile`, `remedy?`) |
 | `error` | a refusal or failure | `message`, `code?`: `MODE_USAGE` (only `interactive` and `agent` are accepted), `ANSWER_USAGE` (an answer to a question the run does not ask, or a value that is neither option) |
 | `done` | last | `status`, `exit_code`, `next?`: `complete` 0, `refused` 2, `paused` 3, `error` with the design run's own code; `next[]` carries every paused session's resume, uncapped |
 
 - **Answering.** `--answer evolve:<use-case>=1` (or `=proceed`) and `--answer evolve:<use-case>=2` (or `=decline`), repeatable, with `--mode agent`. A refused answer is `error` + `done` with nothing before it.
-- **Refusals.** An explicit target that is fresh and has no `--because`, or that was never designed, exits `2`. A `--from-stale` run with nothing stale exits `0`.
+- **Refusals.** An explicit target that is fresh and has no `--because`, that was never designed, or that is out of date only because its source changed (`evolve_skipped` `source_changed`; `--because` lets it run), exits `2`. A `--from-stale` run with nothing stale exits `0`, and one whose every stale use-case is source-changed sends those `evolve_skipped` events and exits `0`.
 - **Batches.** Every use-case runs whatever the earlier ones did. The exit is the first design-run code that is neither 0 nor 3; otherwise 3 if any paused; otherwise 0.
 
 ## Sync events (verb `sync`) *(0.8.14+)*

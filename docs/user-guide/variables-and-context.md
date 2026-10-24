@@ -191,6 +191,23 @@ For each name it declares, `kane-cli` writes an **empty stub** into `.testmuai/v
 
 Fill `value`. `kane-cli` never overwrites a key that already exists in any of your variable files, so a stub cannot replace a value you set. A value you type in chat stays a literal in the step; a variable is created only when the value is unknown.
 
+### Variables in a shared project
+
+In a folder linked to a [shared project](./assurance/shared-projects.md), the tests are shared but the values aren't. The project holds each test's `{{name}}` references, never a value. Each person fills the values in their own folder.
+
+- **Design writes the stubs where it ran.** When a design ends, and again when it's saved, kane-cli writes an empty stub for each value the tests need into `.testmuai/variables/assurance.json` in that folder, as it does locally.
+<!-- release: needs context pull -->
+- **A teammate's folder has no values.** When the project's tests come to another folder through [`kane-cli context pull`](./assurance/shared-projects.md#bringing-the-projects-tests-into-your-folder), the pull writes no stubs. It names the values the tests need, and where to add them:
+
+  ```text
+  ⚒ 2 variables need values before these tests run: login_email and login_password
+      add them to .testmuai/variables/assurance.json
+  ```
+
+- **A run sends its values to Test Manager.** Every run sends the non-secret values it loads to Test Manager: those in your global and folder variable files, in `--variables` and `--variables-file`, and in the test's own `variables:`. Test Manager keeps one value per name for your whole organisation, so each run's value replaces the one before it, for everyone. An empty stub is sent as an empty value. Values marked `"secret": true` go to your account's secrets instead, never to Test Manager's variables.
+
+So fill real values before a run, keep test accounts and passwords `secret`, and never fill a value only to quiet the warning.
+
 ### Before a run: unresolved variables
 
 `kane-cli run`, `kane-cli testmd run` and `kane-cli testrun run` check every `{{name}}` an authored step references **before anything starts**. A name with no value is a warning: the run goes ahead and types the name as written, unless a step sets it first:

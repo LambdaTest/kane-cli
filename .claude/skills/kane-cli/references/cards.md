@@ -73,7 +73,7 @@ Exit code `1`, or `status: "failed"`. Show the failing step's screenshot under t
 
 ## 4. Didn't start
 
-Exit code `2`: nothing ran and no credits were used. Causes include no start URL, sign-in or setup errors, a test file that does not parse, an invalid suite plan, a cloud grid refusal.
+Exit code `2`: nothing ran and no credits were used. Causes include no start URL, sign-in or setup errors, a test file that does not parse, an invalid suite plan, a cloud grid refusal. A designed test in a shared project that stopped on its Test Manager case before any step (an `error` with a `TEST_*` code) is this card too, even when it exits `1`.
 
 ```markdown
 | | |
@@ -173,3 +173,38 @@ On kane-cli older than 0.8.17 the end event has no reason: read it from the evid
 A test that comes back broken with zero steps on the grid was refused before it launched: say so, point to the job link, and suggest checking that the app id belongs to this account.
 
 An invalid plan is a `🟡 Didn't start` card (§4) with one line per rejected test.
+
+**In a shared project** a suite's card adds a coverage row from the run's `coverage` event, and a line for each first
+run (`authored`):
+
+```markdown
+| 📈 **Coverage** | <pct>% of "<project>" · this run reached <n> use cases · it can take up to 5 minutes to count |
+| ✍️ **First runs** | <n> tests wrote their steps on this run; later runs replay them |
+```
+
+Only a `coverage` event with `status: "written"` has a `pct`. With any other status, the 📈 row says
+`The project's coverage isn't ready yet · I can check again in a few minutes` (`kane-cli cover --mode agent`).
+
+A member that stopped on its Test Manager case shows `failed` with a reason such as "isn't in Test Manager yet": say what
+it needs (`testrun.md` §Designed tests in a shared project), not "the test failed".
+
+## 9. Coverage (`kane-cli cover`)
+
+Fields: the `coverage` event's `pct`, `usecases` (`total`, `proven`, `partial`, `failing`, `not_run`, `not_designed`,
+`no_criteria`), `note`, and `recent_run` when a run is under 5 minutes old; then `done.next`. A `coverage` event with
+`state: "computing"` has none of these: say the project is still working its figure out, draw no card, and run
+`done.next` again in a minute.
+
+```markdown
+| | |
+|---|---|
+| 📈 **Coverage** | <pct>% across "<project>"'s <total> use cases |
+| ✅ **Proven** | <proven> · ⚠️ partial <partial> · ❌ failing <failing> |
+| ⏳ **Not yet** | <not_run> not run · <not_designed> without tests · <no_criteria> with no criteria yet |
+| 🕒 **Recent run** | still counting: check again in a few minutes *(only with `recent_run.may_not_count_yet`)* |
+| ➡️ **Next** | <the first `done.next` command in plain words, e.g. run every test · design tests for "<use case>"> |
+```
+
+`note: "nothing_run_yet"` with `total: 0` means no use case exists yet: offer `kane-cli context ingest <file>`, not a run.
+`done.next` commands carry their agent flag; run them as given, ending a `testrun run` line in `< /dev/null`. If one
+has no agent flag, add the one that command takes.

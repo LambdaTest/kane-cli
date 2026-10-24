@@ -133,14 +133,63 @@ When the agent needs an answer you're not there to give (or you Ctrl+C, or the p
 kane-cli context sessions                       # list resumable sessions + their resume commands
 kane-cli context extract --resume <sid>         # re-presents only what's still unanswered
 kane-cli context extract --resume <sid> --message "Account required — the update supersedes the old section"
-kane-cli context extract --resume <sid> --mode agent --answer q1=2 --answer q3="staging URL"
+kane-cli context extract --resume <sid> --mode agent --answer q1=2 --answer q3="https://app.example.com"
 kane-cli context extract --resume <sid> --with-source ./addendum.md
 ```
 
 `--message` answers **in plain words** — the agent maps your statement to its own pending questions; a statement that answers nothing pending is treated as steering. `--answer` *(0.7.1)* answers **by id** for scripted resumes (`--resume --mode agent` only). Resume is honest about what happened in between: questions answered elsewhere are never re-asked, defaults assumed in your absence are reported (`N default(s) were assumed while you were away`), and your earlier answers pre-fill rather than auto-submit.
 
+## In a shared project
+
+In a folder linked to a [shared project](./shared-projects.md), `context ingest` and `context extract` add documents and use-cases to the project instead of to a local store. The first `ingest` or `extract` in a new folder is also how you [link it](./shared-projects.md#link-a-folder-to-the-project).
+
+```bash
+kane-cli context ingest prd.md                 # at a terminal: upload, then the extract chat
+kane-cli context ingest prd.md --mode agent    # an agent: upload and extract on one stream
+```
+
+**Ingest** uploads each document to the project, then goes straight into the extract chat in the same session. It takes the same kinds of source as a local store: files, and web, Jira, Confluence and Linear addresses, which are fetched on your machine with your own access. It says what it added:
+
+```text
+✔ added prd.md to this session
+```
+
+or, for a document already in the project, `✔ prd.md is already in "Checkout revamp", unchanged`. A **new version** of a document the project already has opens a review of what changed, one card per change, instead of a new extract. Add a new version on its own: with other documents in the same command, nothing is added.
+
+With no terminal and no `--mode` (CI, a pipe), ingest only uploads, and leaves the session for later:
+
+```text
+added prd.md to session <sid>, not saved yet
+extract: kane-cli context extract --resume <sid>
+```
+
+**Extract** proposes use-cases from the documents the project hasn't read yet. When there's nothing left to read, it opens no session:
+
+```text
+nothing new to extract: every source is already read
+next: to add more, run:
+  kane-cli context ingest <files>
+```
+
+**Finish and save.** In the chat, `looks good — finish the session` approves the use-cases this session proposed, then asks `save this session to "<project>"?`. Choose `save now`, and the use-cases reach the project. In agent mode the session ends with `session_complete` and saves nothing: run its `next`, `kane-cli context sessions save <sid> --yes --mode agent`.
+
+**Approving use-cases.** `context review` isn't available in a linked folder, so finishing the chat is how use-cases are approved. An extract in agent mode leaves its use-cases **proposed**, and designing one then needs `--allow-unreviewed`: see [Designing tests](./design.md#in-a-shared-project).
+
+**Pausing.** Press `Ctrl+C`, close the lid, or lose the connection, and the session pauses: `your work is safe — resume it from any machine`. Go on with `kane-cli context extract --resume <sid>`. An extract that read two or more documents and then paused can't be resumed or saved. It says so, and prints the commands that discard it and start again with the same documents. To keep every extract resumable, add one document at a time.
+
+**What's different in a linked folder:**
+
+- `--mode ci` isn't available on `context extract`. Use `--mode agent`.
+- `context ingest --plan` and `--mode override` aren't available.
+- `context extract --plan` and `--with-source` don't apply.
+- `context list` shows the project's sources, use-cases, scenarios and tests. `--type` takes `source`, `usecase`, `scenario` or `test`; `--all` isn't available.
+- `context review`, `context explain`, `context view` and the housekeeping commands (`retire`, `name`, `revert`, `fsck`, `rebuild`) work on a local store only.
+- Each agent turn of the extract uses credits, as it does locally.
+
 <a name="review"></a>
 ## `context review` — review outside the extract session
+
+In a folder linked to a shared project, `context review` isn't available: see [In a shared project](#in-a-shared-project).
 
 ```bash
 kane-cli context review [--queue derived|skipped|archived|drift] [--verdicts <file>] [--json]

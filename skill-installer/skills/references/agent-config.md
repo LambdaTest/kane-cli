@@ -34,7 +34,7 @@ They follow the person across agents and projects, and they survive a skill rein
 | Key | Values | Meaning |
 |---|---|---|
 | `preferences.watch` | `visible` · `quiet` · `results-only` | `visible`: no `--headless`. `quiet`, `results-only`: `--headless`. `results-only` also skips the progress summary |
-| `preferences.purpose` | `one-off` · `suite` · `ask` | Whether to offer keeping passing runs as saved tests. With `suite` or `ask`, launch every one-off run with `--name <short-slug>` so keeping it costs nothing (`references/first-run.md` §4) |
+| `preferences.purpose` | `one-off` · `suite` · `ask` | Whether to offer keeping passing runs as saved tests. With `suite` or `ask`, launch every one-off run with `--name <short-slug>` so keeping it costs nothing (`references/first-run.md` §4), except in a folder linked to a shared project (`shared-projects.md` §9) |
 | `preferences.narration` | `quiet` · `milestones` · `every-step` | How much of the run you recount afterwards. Default `milestones` |
 | `onboarding.asked` | list of `watch`, `results`, `purpose` | What was already asked. Never ask these again |
 | `onboarding.first_run_explained` | boolean | The tour was shown |
@@ -90,4 +90,4 @@ Before you write, tell the person in one line what you are saving and where. The
 
 ## 5. Changing preferences later
 
-When the person says "kane preferences" (or asks to change how runs behave), show the current values in plain words, ask what to change, and write the file again. To change where results go, use the flow in `references/test-manager.md`: that setting is global and belongs to kane-cli.
+When the person says "kane preferences" (or asks to change how runs behave), show the current values in plain words, ask what to change, and write the file again. To change where results go, use the flow in `references/test-manager.md`: that setting is global and belongs to kane-cli (in a folder linked to a shared project, designed tests directly in its `.testmuai/tests/` run on that project's cases whatever it says: `shared-projects.md`).

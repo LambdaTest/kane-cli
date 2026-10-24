@@ -72,12 +72,31 @@ By default each run starts on the KaneAI playground site. The agent navigates fr
 
 When the session ends, kane-cli uploads the run to TestmuAI Test Manager and prints a share link. The run is also captured as a sealed [evidence pack](./evidence.md) — screenshots, logs, and results in one file you can open in the browser viewer when kane-cli offers it. For details on the upload, the share-link experience, and the run mode toggle, see [test-manager-integration](./test-manager-integration.md). To change settings like window size, Chrome profile, or the active project and folder, see [configuration](./configuration.md).
 
+## With your team
+
+If your team keeps its tests in a Test Manager project, work in it as a **shared project**: what you design there, your teammates see and run. From an empty folder:
+
+```bash
+kane-cli projects list --search "Checkout"                 # find the project's id
+kane-cli context ingest prd.md --project <id>              # link this folder, add the document, find its use-cases
+kane-cli design tests --use-case uc-1                      # design one use-case's tests, then save
+kane-cli testrun run                                       # run them
+kane-cli cover                                             # the project's coverage
+```
+
+<!-- release: needs context pull -->
+To join a project your teammate already started, run `kane-cli context pull --project <id>` in a new folder: it links the folder and brings the project's tests. See [Shared projects](./assurance/shared-projects.md).
+
+Keep quick `kane-cli run` experiments in a different folder: `kane-cli run` uploads to your profile's project, not to the shared one.
+
 ## Next steps
 
 - [Running tests](./running-tests.md)
 - [Evidence packs](./evidence.md)
 - [Configuration](./configuration.md)
 - [Authentication](./authentication.md)
+- [Shared projects](./assurance/shared-projects.md) — design and run tests with your team.
+- [Exploration](./exploration.md) — map your app and design tests from what it finds, without a requirements document.
 
 ## Reviews
 

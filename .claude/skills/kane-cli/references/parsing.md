@@ -1,4 +1,4 @@
-<!-- Read this when you need the full NDJSON event schema for kane-cli --agent output, or when SKILL.md §5's summary is not enough. Owns event types (progress / bifurcation / child_agent_start|end / ask_user / error), parsing strategy, run_end terminal-event schema, and ask_user/cancel responses. -->
+<!-- Read this when you need the full NDJSON event schema for kane-cli --agent output, or when SKILL.md §5's summary is not enough. Owns event types (progress / bifurcation / ask_user / error / coverage), parsing strategy, run_end terminal-event schema, and ask_user/cancel responses. -->
 
 # Parsing --agent Output
 
@@ -21,14 +21,14 @@ The first line on every surface is an opening event:
 {"type":"stream_start","cli_version":"0.8.17","surface":"run","pid":16664,"v":1,"ts":"2026-09-21T08:47:26.889Z"}
 ```
 
-`surface` is `run`, `testmd` or `testrun`. Use `cli_version` to tell whether a newer event or flag is available. `session_dir` may also be present when a session already exists.
+`surface` is `run`, `testmd`, `testrun` or `explore` (`references/explore.md`; it ends with `done`). Use `cli_version` to tell whether a newer event or flag is available. `session_dir` may also be present when a session already exists.
 
 Rules a parser must follow:
 
 - **Ignore unknown fields and unknown event types.** New ones can appear in any release without a `v` bump.
 - **Never assume the first line is a progress line**, and skip any line that is not JSON.
 - Step lines on `run` stay **typeless** (below). Do not look for `type: "step"`.
-- The documented completion event is always the last line: `run_end` for `run`, `test_md_done` for `testmd run`, `testrun_done` for `testrun run` (then `remote_done` on cloud grid runs).
+- The documented completion event is the last line of a run that went ahead: `run_end` for `run`, `test_md_done` for `testmd run`, `testrun_done` for `testrun run` (then `remote_done` on cloud grid runs). A run refused before it starts can end on an `error` with no completion event: read the exit code.
 
 **The same stream is also written to disk**, line by line as it happens: `<session_dir>/events.ndjson`, byte for byte what stdout printed. While a run is live, kane-cli keeps a small pointer file at `~/.testmuai/kaneai/sessions/active/<pid>.json` (`pid`, `cwd`, `surface`, `session_dir`, `started`, `cli_version`, `host_agent`) and removes it on exit. You normally need neither: one blocking call hands you the whole stdout. They exist for watchers such as the live strip (`references/live-strip.md`), and the log is where a suite keeps each test's own events (`references/testrun.md`). The log holds exactly what stdout held, so treat it with the same care.
 
@@ -48,6 +48,7 @@ Rules a parser must follow:
 | `step` | number | Step index. It can run one ahead of the step the person would count (a `bifurcation` takes the first slot), so count completed `done`/`failed` lines for "steps taken" rather than reading the last index |
 | `status` | string | `"running"` at start; `"done"` or `"failed"` at completion |
 | `remark` | string | What the agent did or why it failed |
+| `child_id` | string, optional | The step belongs to a child flow. Keep children apart when step indices repeat |
 
 These are **untyped** — they have no `type` field. Do **not** key on `event.type === 'step_start'` or `'step_end'`; those event types are not emitted.
 
@@ -57,13 +58,14 @@ These are **untyped** — they have no `type` field. Do **not** key on `event.ty
 |-------|-----------|---------|
 | `project_folder_auto_defaulted` | resolved project + folder (id, name) | Run-startup gate auto-resolved a project/folder when none was configured (or the cached one was stale/invalid). Fires before any progress event on `run` / `testmd run`. Translate to plain language (see `references/test-manager.md`). |
 | `bifurcation` | `flows[]`, `count` | Agent split objective into sub-flows |
-| `child_agent_start` | `child_id`, `objective`, `parent_step` | Child agent spawned |
-| `child_agent_end` | `child_id`, `success`, `steps_taken`, `summary` | Child agent finished |
 | `ask_user` | `question`, `step_index`, `options?` | Agent needs user input |
-| `error` | `message` | Error occurred |
+| `error` | `message` | Error occurred. On `testmd run` / `testrun run` in a folder linked to a shared project it also carries a `code`, and `remedy`, `next` or `support_id` when kane-cli has one (`agent-contract.md` §3.7) |
 | `warning` | `code`, `message`, … | *(0.8.15+)* Before any progress event: `code: "unresolved_variables"` — a `{{name}}` had no value; the run continues. Schema below. |
 | `test_md_evidence_ingest` | `status: "ok"\|"failed"`, `evidence_id`, `stage?` (failure only) | `testmd run` only: a replay's evidence pack published to the dashboard. Informational. |
 | `test_md_bundle_sync` | `status: "ok"\|"failed"`, `commit_id`, `bytes?` (success) / `stage?` (failure) | `testmd run` / `testmd sync`: test bundle pushed to the cloud after an authored commit. Informational. |
+| `coverage` | `status` (`written`, `none`, `skipped`, `failed`), `pct?`, `reason?`, `pack` | `run` / `testmd run`: one per sealed pack, just before the completion event, which repeats it as `coverage`. `skipped` (nothing to measure here, as in a folder with no assurance work): say nothing. In a linked folder: `agent-contract.md` §3.7 |
+| `update_available` | `current`, `latest`, `severity` | `run` (also `generate --agent`), at any point before `run_end`, or not at all: a newer kane-cli exists. Mention it once, after the result |
+| `skill_update_available` | `current`, `latest`, `install_cmd` | `run` only, like `update_available`: a newer skill exists. After the result, offer `kane-cli install skill` once (`references/ready-check.md` §4a) |
 | `testrun_*` family | see `references/testrun.md` | Emitted only by `kane-cli testrun run`; terminal event is `testrun_done`, not `run_end`. |
 
 **Note:** The `run` stream has no `run_start` event; startup metadata or errors can precede progress.
@@ -88,7 +90,7 @@ Emitted by `run`, `testmd run` and (after `testrun_plan`) `testrun run` when an 
 | `variables[].reason` | `value_missing` — the key exists in `variables[].file` with an empty value · `not_declared` — the key is in no variable file · `not_a_dataset_column` — a `${x}` that is no column of the Test Manager dataset the run was given (`variables[].dataset` names it) |
 | `variables[].file` | the pool file that holds the empty key (`value_missing` only); `--variables` when it came inline |
 | `variables[].used_by[]` | `{file, step}` — `file` is `objective` for `kane-cli run`, else the test file (flattened step index) |
-| `suggested_file` | where to add a `not_declared` key: `.testmuai/variables/assurance.json` inside an assurance store, `variables.json` otherwise |
+| `suggested_file` | where to add a `not_declared` key; use it as given: `.testmuai/variables/assurance.json` in a folder with its own assurance store (`.context/`), `.testmuai/variables/variables.json` otherwise (a linked folder too: `shared-projects.md` §5) |
 
 Report it with the run's outcome. If a later step failed on a literal placeholder, point at this.
 

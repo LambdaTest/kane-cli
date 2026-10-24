@@ -111,6 +111,8 @@ In a non-interactive shell (CI, pipes), pass an explicit `<project-id>`. To disc
 
 If you don't configure a project at all, kane-cli auto-resolves a sensible default when the first run starts — see "Auto-default on first run" in [test-manager-integration.md](./test-manager-integration.md).
 
+The project set here is your **profile's** project: `kane-cli run` uploads to it, in every folder. A folder linked to a [shared project](./assurance/shared-projects.md) keeps its own project in `.testmuai/assurance.json`, and `kane-cli config project` never changes it. See [Shared projects: a folder's own project](./test-manager-integration.md#shared-projects-a-folders-own-project).
+
 ### TMS folder
 
 ```bash

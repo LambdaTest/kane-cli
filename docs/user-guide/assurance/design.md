@@ -112,6 +112,55 @@ Ask it "why does this test exist?" six months later and the answer is the one re
 
 The design engine ships with an embedded catalog of test-design techniques and surface profiles. Drop replacement or additional YAML under `.context/design/` (same id overrides, new ids append) to extend it per store — no upgrade needed.
 
+## In a shared project
+
+In a folder linked to a [shared project](./shared-projects.md), `kane-cli design tests --use-case <id>` designs as it does locally, with three differences: it works in a session that you save, the test files appear only when you save it, and saving makes the test cases in Test Manager.
+
+```bash
+kane-cli context list                         # the project's use-cases and their ids
+kane-cli design tests --use-case uc-1
+```
+
+**The use-case must be approved.** A use-case is approved when its extract was finished at a terminal with `looks good — finish the session`. An extract in agent mode leaves its use-cases proposed, and a linked folder has no review command, so design stops with `"<use-case>" isn't approved yet` and names the way on:
+
+```bash
+kane-cli design tests --use-case uc-1 --allow-unreviewed
+```
+
+Use `--allow-unreviewed` once the person has checked the use-case.
+
+**Save the session.** At a terminal, the design ends with `save this session to "<project>"?`: choose `save now`. In agent mode, run the `next` from `session_complete`:
+
+```bash
+kane-cli context sessions save <sid> --yes --mode agent
+```
+
+Until you save, the design lives only in its session: your team can't see it, no test case exists for it, and there are no test files. See [Sessions](./shared-projects.md#sessions-nothing-reaches-the-project-until-you-save).
+
+### What the save makes
+
+| What | Where |
+|---|---|
+| The criteria, scenarios and tests | in the shared project, where your team sees them |
+| A test case per scenario | in Test Manager, in the project, titled with the scenario's title and tagged `assurance` and the use-case's id. The save prints `✔ 3 test cases created in Test Manager` |
+| A test file per test | `.testmuai/tests/<title>_test.md` in the folder where you saved. The save prints `⚒ wrote 3 test files, one for each saved test` |
+| Empty variable stubs | `.testmuai/variables/assurance.json`, for the values the tests need. They're written when the design ends, before the save |
+
+Each test file starts with an `assurance:` header naming the test. That header is how a run finds the test's case, so leave it as it is.
+
+- **A test file you edited by hand is kept.** A later save of the same test doesn't overwrite it, and says so. Running the edited file with `kane-cli testmd run <file>` sends your change to its case.
+<!-- release: needs context pull -->
+- **Only the saving folder gets files.** A teammate gets them with [`kane-cli context pull`](./shared-projects.md#bringing-the-projects-tests-into-your-folder).
+- **Run the tests** with `kane-cli testrun run`. Their first run writes their steps, so it takes longer and uses more credits. See [Designed tests in a shared project](../testrun.md#designed-tests-in-a-shared-project).
+
+In agent mode the save's last `session_save` event (`phase: "saved"`) has `test_manager` (with `created` and `updated` counts) and `test_files.written`, the paths of the files it wrote.
+
+### Also different in a linked folder
+
+- `--mode ci` isn't available. Use `--mode agent`.
+- One design of a use-case at a time: while someone is designing it, or an extract is running in the project, a second design can't start until it finishes. kane-cli says whether it's yours or someone else's.
+- `kane-cli design explain` isn't available. `kane-cli context list` shows what was designed.
+
 ## Exit codes
 
 | Code | Meaning |
@@ -126,3 +175,4 @@ The design engine ships with an embedded catalog of test-design techniques and s
 - [Coverage](./coverage.md) — measure what the designed tests prove.
 - [Maintaining the suite](./maintain.md) — reconcile the suite when requirements change.
 - [Automation](./automation.md) — headless design in CI or from an agent.
+- [Shared projects](./shared-projects.md) — design with your team, in Test Manager.

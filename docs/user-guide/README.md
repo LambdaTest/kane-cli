@@ -25,10 +25,13 @@ Every page below is standalone — start wherever your job starts.
 ## 1. Generate tests
 
 - **[The assurance lifecycle](./assurance/overview.md) — start here**: the journey, the vocabulary, and when to use it instead of `generate`.
+<!-- release: needs context pull -->
+- **[Shared projects](./assurance/shared-projects.md)** *(0.10.0)*: work in your team's Test Manager project. Link a folder, join a teammate's project, bring the project's tests into your folder, and see the project's coverage.
 - [Building the context graph](./assurance/context.md) — ingest sources, extract use-cases, review what's trusted.
 - [Designing tests](./assurance/design.md) — acceptance criteria, scenarios, and one runnable test per scenario.
 - [Generate test cases](./generate-test-cases/overview.md) — scenarios and cases from a plain-language description ([workflow](./generate-test-cases/workflow.md)).
-- [Sharing the context graph with your team](./assurance/sharing.md) — one shared location (GitHub, S3-compatible, or a folder); publishing, taking your teammates' records, cloning, and decisions when two people change the same thing.
+- **[Exploration](./exploration.md)**: no requirements to start from? An explorer walks your app on HyperExecute, maps its screens, flows and findings, and designs tests from what it found into your Test Manager project.
+- [Sharing a local store](./assurance/sharing.md): for a local store only. One shared location (GitHub, S3-compatible, or a folder); publishing, taking your teammates' records, cloning, and decisions when two people change the same thing. For a team in Test Manager, use [Shared projects](./assurance/shared-projects.md).
 - [Automation](./assurance/automation.md) — the headless contract: modes, NDJSON streams, exit codes, CI shapes.
 
 ## 2. Execute tests

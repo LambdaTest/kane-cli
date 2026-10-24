@@ -4,6 +4,7 @@
 
 ## Install and auth
 
+
 Before first use, verify installation and auth.
 
 > **Local mobile setup (macOS Apple Silicon)** is separate: install Xcode 16+ (iOS) or Android Studio with one `arm64-v8a` AVD (Android), then `kane-cli login` and `kane-cli doctor --target emulator|simulator --install` (installs kane-cli's managed test tooling); `kane-cli doctor --target <kind>` checks readiness. Not needed for `testrun run --remote`, which runs mobile suites on the cloud grid from any machine (see §Remote execution plugin), nor for **real devices** (`--target android|ios`), which need only `kane-cli login` and a KaneAI Max or KaneAI credits + Real Device Plus Automation Cloud plan. Read `references/mobile.md`.
@@ -22,7 +23,7 @@ The preflight script covers this along with credits and settings in one call (`r
 kane-cli whoami
 ```
 
-`whoami` prints a box, not JSON, even when piped. Its `Expires` line is a short-lived token that renews itself: never show it to the person.
+`whoami` prints a box, not JSON, even when piped. Show the person only its header and the `User` row; never the `Token` row.
 
 If this shows "not configured" or errors, run login:
 
@@ -35,7 +36,7 @@ kane-cli login --username <user> --access-key <key>
 This creates the default profile with basic auth, auto-selects the KaneAI project, and marks setup complete. Credentials come from the user's TestmuAI dashboard (Settings → Keys).
 
 Optional flag:
-- `--profile <name>` — profile name (default: last selected profile check using `config show`)
+- `--profile <name>` — profile name (default: `default`; pass a name to sign in to another profile)
 
 ### Login (OAuth)
 
@@ -79,6 +80,10 @@ Variables parameterize objectives with reusable values and secrets. Use `{{key}}
 2. `{cwd}/.testmuai/variables/*.json` (local project overrides)
 3. `--variables-file <path>`
 4. `--variables '{...}'` (inline JSON)
+5. a saved test's own `variables:` frontmatter (`testmd run`, `testrun run`)
+6. a step's own `variables:` (that step only)
+
+A Test Manager dataset row's `${col}` values also win over a pool entry of the same name. When a value you changed in a pool file doesn't reach the test, look for a higher layer that sets the same name.
 
 **Values (0.8.12+):** a string is a value when non-empty; a number is accepted and loaded as its string; a boolean, object or array is not a value. An empty `value` is a declared-but-unfilled key.
 
@@ -128,9 +133,8 @@ kane-cli feedback --test-id <id> --feedback-type <positive|negative> --details "
 ├── config.json                  # Shared auth configuration
 ├── global-memory.md             # Global agent context
 ├── chrome-profile/              # Default Chrome user profile
-├── profiles/                    # Stored credentials
-│   └── {profile}/{env}/
-│       └── credentials
+├── profiles/                    # Stored credentials, one folder per profile
+│   └── {profile}/
 ├── sessions/                    # Session history
 │   └── {session-id}/
 │       ├── session.json         # Metadata, run list, upload status

@@ -1,6 +1,6 @@
 ---
 name: kane-cli
-description: "End-to-end (E2E) test generation and execution with KaneCLI. Generate tests from a PRD, specification, or user-provided description via the assurance commands (use-cases, acceptance criteria, scenarios, runnable _test.md tests; never write test cases by hand). Execute them on desktop web (Chrome, the default), Android and iOS: emulator/simulator locally on macOS Apple Silicon or via testrun run --remote, and real cloud devices from any machine (--target android|ios). Prove coverage with evidence packs and kane-cli cover. Use for any task needing a real browser or mobile app: navigation, clicks, form filling, UI checks, screenshots, deploy verification. Parse NDJSON output, inspect logs, and save replayable _test.md files. Share the assurance store (.context/) with a team through a GitHub repository, S3-compatible bucket, or folder via kane-cli context sync, and resolve decisions requested during a sync rebase."
+description: "End-to-end (E2E) test generation and execution with KaneCLI. Generate tests from a PRD, specification, or user-provided description via the assurance commands (use-cases, acceptance criteria, scenarios, runnable _test.md tests; never write test cases by hand). Execute them on desktop web (Chrome, the default), Android and iOS: emulator/simulator locally on macOS Apple Silicon or via testrun run --remote, and real cloud devices from any machine (--target android|ios). Prove coverage with evidence packs and kane-cli cover. Work in a team's shared Test Manager project from a linked folder: link it with --project, save sessions, run the designed tests on their Test Manager cases, and read the project's coverage. Use for any task needing a real browser or mobile app: navigation, clicks, form filling, UI checks, screenshots, deploy verification. Parse NDJSON output, inspect logs, and save replayable _test.md files. Share a local assurance store (.context/) through a GitHub repository, S3-compatible bucket, or folder via kane-cli context sync, and resolve decisions requested during a sync rebase."
 ---
 
 # Kane CLI — End-to-End Test Generation and Execution Skill
@@ -10,6 +10,12 @@ KaneCLI is one E2E package with three pillars:
 1. **Generate**: requirements → use-cases → acceptance criteria → scenarios → runnable `_test.md` tests (the assurance commands).
 2. **Execute**: desktop web (Chrome, the default), Android emulator, iOS simulator, and real Android and iOS devices in the TestMu AI cloud.
 3. **Prove**: a sealed evidence pack per run, and coverage (`kane-cli cover`) measured against acceptance criteria.
+
+**Working with a team?** On kane-cli 0.10.0+ a team works in a **shared project**: one Test Manager project that its
+folders are linked to. What one person saves there (use-cases, tests, Test Manager cases, coverage) the whole team sees.
+Test files stay in the folder where they were saved until they're brought over (`references/shared-projects.md` §7). In
+agent mode, a folder that isn't set up yet goes local unless you link it with `--project <id>`. So decide where the work
+goes before the first assurance command, and read `references/shared-projects.md` first.
 
 Use `kane-cli` to validate complete user journeys and design requirement-linked, coverage-accounted suites from a PRD, specification, or user-provided description via assurance commands. Never write test cases by hand. Do NOT use Playwright, Puppeteer, or Selenium directly. Use `--agent` for `run` and `testmd run`. `testrun run` emits NDJSON when **stdin** is not a TTY (0.8.21+ also takes `--agent`, which selects the same stream), so every `testrun run` line you write ends in `< /dev/null` (bash and zsh: macOS, Linux, Git Bash; in cmd.exe write `< NUL`; from PowerShell run it through cmd: `cmd /c "kane-cli testrun run … < NUL"`). Check the first stdout line: on 0.8.17+ it is `{"type":"stream_start"…}`. A prose plan there instead means the CLI is in terminal mode: it shows the human view and, after a real run, opens an evidence table that waits until `q` or Esc, so the process never exits on its own; stop it and rerun with the redirect. An empty stdout with a message on stderr is a usage error: read it. Assurance conversational commands use `--mode agent`.
 
@@ -54,7 +60,7 @@ On Windows PowerShell: `$env:KANE_CLI_USER_AGENT='<your-runtime>'; kane-cli run 
 
 **Watch mode.** Use the person's saved preference (`references/agent-config.md`). With none saved, show the browser unless the preflight says there is no display, an SSH session, or CI: then add `--headless`.
 
-**Keeping runs.** When the person's saved purpose is `suite` or `ask`, add `--name <short-slug>` to every one-off `run`. A named run is recorded as a `_test.md` while it runs, so keeping it afterwards costs nothing, and a run launched without a name cannot be kept without running again. With `one-off`, leave the flag out. Details: `references/first-run.md` §4.
+**Keeping runs.** When the person's saved purpose is `suite` or `ask`, add `--name <short-slug>` to every one-off `run`. A named run is recorded as a `_test.md` while it runs, so keeping it afterwards costs nothing, and a run launched without a name cannot be kept without running again. With `one-off`, leave the flag out. Details: `references/first-run.md` §4. Run one-offs from a folder that isn't linked: a named run in a linked folder writes its test beside the project's and can mix two projects (`references/shared-projects.md` §9).
 
 Bash blocks until kane-cli exits, then hands you the complete stdout. Parse it, summarize what happened, and present the result card. Wait for process completion on `testmd run` too, but parse its own completion event, `test_md_done`. An intermediate `run_end` does not finish a saved test.
 
@@ -144,7 +150,7 @@ For exit code 1 (or `status: "failed"` in `run_end`), present the failure card. 
 
 The failing step's screenshot lives inside the run's evidence pack (the stderr hint names the pack path): extract it with `unzip <pack> "tests/*/steps/*/screenshot.png" -d <tmpdir>`, Read it, and show it **under** the card. For the pack layout and deeper diagnosis, see `references/debug.md`.
 
-Exit code 2 means nothing ran: that is a `🟡 Didn't start` card, not a failure (`references/cards.md` §4).
+Exit code 2 with no progress events means nothing ran: that is a `🟡 Didn't start` card, not a failure (`references/cards.md` §4). If progress events came before it, steps ran and the run stopped without a result: say so, and use the stopped-early card (`references/cards.md` §5).
 
 ### 1.7 After the first result: three choices, then save
 
@@ -163,19 +169,28 @@ When the user's request involves a browser — or writing test cases:
 - A problem that stops the run → offer the fix from the card; deeper setup lives in `references/setup-and-config.md`
 - Ready ↓
 
+**Where does the work go?** (before any assurance command)
+- The folder holds its own `.context/` and no link → it works locally, as before (with a link too, kane-cli refuses it `BOTH_STORES`): `references/assurance.md` (to share that store with a team, `references/context-sync.md`). The rows below are for a folder without one
+- The folder holds `.testmuai/assurance.json`, or the person works with a team or names a Test Manager project → a **shared project**: Read `references/shared-projects.md` first. In a linked folder never use `kane-cli run` for a first result; its tests go to another project (§9 there)
+- The person works alone, or asks to keep the work on this machine → the local store: `references/assurance.md`
+- Not clear → ask once: "Should this work go to your team's Test Manager project, or stay in this folder?"
+
 **What does the user want?**
+- Tests that exploration (HyperExecute) designed, or a teammate's tests, in this folder → Read `references/shared-projects.md` §7
+- Explore an app on HyperExecute, shape, stop or re-run an exploration, or check what it designed → Read `references/explore.md` first
+- A command was refused, or you need the shared-project event and code list → Read `references/agent-contract.md`
 - A single one-shot browser task → build a `kane-cli run --agent` command (§3 + §4)
 - A test they want to save / re-run / commit → Read `references/testmd.md` first, then use `kane-cli testmd`
 - Run a suite of saved tests (several `_test.md` at once) → Read `references/testrun.md` first, then use `kane-cli testrun run … < /dev/null`
 - Need test cases from a description the user gives in chat, with no document → **don't hand-write them**; write the description to a requirements file and design from it (§6)
 - Has requirement documents (PRD/spec) and wants a designed suite, coverage accounting, or suite upkeep → Read `references/assurance.md` first — the assurance commands (`context`/`design`/`cover`/`maintain reconcile`, kane-cli 0.6.1+; several features need newer releases, up to 0.8.14+ — the reference marks each)
 - A **designed** test (its `_test.md` carries an `assurance:` block) failed a run → Read `references/assurance.md` §6.1 **before touching the file** — an edit is adopted as the next design version on the next run; classify the failure first (app bug → report it; requirement changed → reconcile; wording → redesign through the CLI; capability missing → stop), and edit a step of an existing designed test by hand only after reading `references/objectives-cookbook.md`
-- Share the context store with a team, join a teammate's, keep two stores level, or resolve a sync conflict → Read `references/context-sync.md` first — `kane-cli context sync`, `kane-cli context push`, `kane-cli context pull` and `kane-cli context clone` (kane-cli 0.8.14+); the store is shared through a location, never by copying or git-merging `.context/`
+- Share a **local** context store through a repository, a bucket or a folder, join one, keep two stores level, or resolve a sync conflict → Read `references/context-sync.md` first (kane-cli 0.8.14+). A team in Test Manager uses a shared project instead (`references/shared-projects.md`); a linked folder refuses `kane-cli context sync`, `kane-cli context push` and `kane-cli context clone` (`REMOTE_UNSUPPORTED`), and a location pull (a location name, `--rebase`, `--yes` or `--answer`: `PULL_LOCATION_LINKED`); a plain `kane-cli context pull --mode agent` there brings the project's tests (`references/shared-projects.md` §7); the store is shared through a location, never by copying or git-merging `.context/`
 - Multiple independent browser tasks → Read `references/parallel.md` first
 - View, share, or validate run evidence (`.evidence` packs) → Read `references/evidence.md`
 - Debug a failed run → Read `references/debug.md`
 - Configure kane-cli or check directory layout → Read `references/setup-and-config.md`
-- Browse / create / pick a Test Manager project or folder, or interpret the auto-default event → Read `references/test-manager.md`
+- Browse / create / pick a Test Manager project or folder for `kane-cli run`, or interpret the auto-default event → Read `references/test-manager.md`. Linking an assurance folder to a project is different: `references/shared-projects.md` §2–3
 - The person wants results saved somewhere else ("change project") → Read `references/test-manager.md` §6. The change is global, and the question must say so
 - The person wants to change how runs behave ("kane preferences": watch or quiet, one-off or suite) → Read `references/agent-config.md`
 - The person asks what kane-cli can do, or for the tour again ("kane tour") → show the tour from `references/first-run.md` §2
@@ -204,7 +219,7 @@ kane-cli run "<objective>" --agent [options]
 | Flag | Purpose | Default |
 |------|---------|---------|
 | `--headless` | No visible browser window | Off |
-| `--max-steps <n>` | Cap agent reasoning steps | 30 |
+| `--max-steps <n>` | Cap agent reasoning steps | 50 |
 | `--timeout <s>` | Hard kill after N seconds | No limit |
 | `--url <url>` | Start URL for the run (overrides config `default_url`; bare domains get `https://`) | Config `default_url` |
 | `--variables <json>` | Inline variables JSON (for `{{key}}` in objective) | None |
@@ -226,7 +241,7 @@ Other flags (`--global-context`, `--local-context`, `--cdp-endpoint`, `--allow-m
 1. Collect the names with no value: the `warning`, a dry-run plan's `unresolved[]` rows, or a design run's `variables_declared` and `variables_summary` rows. Design rows list what design declared, not every missing value, and a dry run's `valid: true` says nothing about values: the dry run's `warning` is the check.
 2. A value you already have, because the user said it or the requirement document states it, you write into that key in the file the event names (for `run`, `--variables '{"name":{"value":"…"}}'` also works), and you tell the user what you filled and where.
 3. The rest you ask for once, in one message, using each variable's `description` when design gave one. Plain values (a URL, an email, a user name) the user gives you here or adds to the file, their choice. Secrets, which are any row with `secret: true`, any description that names a credential, and any name containing `password`, `secret`, `token` or `key`, the user fills in the file and tells you when done; you never ask for the value in chat, never echo it, and report names and file paths only.
-4. Then a fresh `--dry-run` of the exact selection: a valid plan with no `warning` is the check. A member whose rows are all filled may run while the others wait. Never fill a placeholder just to silence the check; a throwaway value is right only when the description asks for one, such as a deliberately wrong password. A frontmatter declaration with an empty value also silences the check, so look at the values a step relies on, not only at the warning. A name still empty is typed into the page as written; if a run then failed at that step, say so.
+4. Then the check: for saved tests, a fresh `kane-cli testrun run <files> --dry-run --agent < /dev/null` of the exact selection (`run` and `testmd run` have no dry run; for them the `warning` arrives before the first step): a valid plan with no `warning` is the check. A member whose rows are all filled may run while the others wait. Never fill a placeholder just to silence the check; a throwaway value is right only when the description asks for one, such as a deliberately wrong password. A frontmatter declaration with an empty value also silences the check, so look at the values a step relies on, not only at the warning. A name still empty is typed into the page as written; if a run then failed at that step, say so.
 
 ### Examples
 
@@ -330,6 +345,8 @@ For one-shot `run`, build post-run logic on `run_end` and process exit. Saved te
 
 For full event schemas (`bifurcation` flow fields, `child_agent_*`, `ask_user` semantics, `cancel`/`user_response` outbound events, complete `run_end` field list), Read `references/parsing.md`.
 
+**Which agent flag.** `--agent`: `run`, `testmd run`, `testrun run` (or stdin not a TTY), `projects`, `folders`, `explore`, `config show`, `generate`, `devices`, `apps`. `--mode agent`: `context …`, `design …`, `maintain …`, `cover`. `run` and `testmd run` also accept `--mode agent`; `testrun`, `projects`, `folders` and `explore` refuse it, and the assurance commands refuse `--agent`. With `--agent`, an update notice can still print on stderr; it is not part of the stream. In a linked folder the streams, events and refusal codes are in `references/agent-contract.md`.
+
 The assurance conversational commands (`context ingest`/`context extract`, `design tests`, `maintain reconcile`, `maintain evolve` on 0.8.21+, `cover`) do NOT take `--agent` — they take **`--mode agent`** and speak their own typed stream ending in `done` (open vocabulary — tolerate unknown event types; on 0.7.2+ the stream is strict — every stdout line parses, stderr silent — while on 0.7.1 a merged `context ingest` prints a few prose receipt lines BEFORE the stream — skip to the first `{` line, harmless on 0.7.2+ — and a landing-phase ingest failure ends with prose + exit 1/2 and no stream at all: a refusal, not a crash; on 0.7.2+ those failures ride the stream as `error` + `done`); **for those commands only, exit `3` means paused-and-resumable, not timeout** — schema in `references/assurance-parsing.md`, behavior in `references/assurance.md`. The context sync verbs (`kane-cli context sync`, `kane-cli context push`, `kane-cli context pull`, `kane-cli context clone`; kane-cli 0.8.14+) take `--mode agent` the same way and speak a `sync_*` family ending in `done`; there too exit `3` means a decision or a pull is needed, not a failure — `references/context-sync.md`. `kane-cli context sync setup` refuses without a terminal (`TTY_REQUIRED`): agents use `kane-cli context sync add` and `kane-cli context clone`.
 
 `kane-cli testrun run` also emits its own typed stream (`testrun_plan` … terminal `testrun_done`) — schema in `references/testrun.md`. `kane-cli testmd run` may additionally emit `test_md_evidence_ingest` (replay evidence published) and `test_md_bundle_sync` (test bundle synced) — informational; describe in plain language, never surface raw names. The post-run evidence hint (`` evidence: view locally with `kane-cli evidence serve <path>` ``) is a **stderr** text line, not a stdout event — don't try to parse it from the NDJSON stream; see `references/evidence.md` for how to act on it.
@@ -341,7 +358,7 @@ The assurance conversational commands (`context ingest`/`context extract`, `desi
 When the user describes what to test in chat and has no document, use the description as the requirement.
 
 1. Write the user's words to `requirements/<feature>.md` in the project, as given, one heading per feature, nothing invented. Tell the user the file exists and that the tests will cite it.
-2. `kane-cli context ingest requirements/<feature>.md --mode agent`, review the extracted use-cases at the checkpoint, then `kane-cli design tests …`, exactly as `references/assurance.md` describes.
+2. `kane-cli context ingest requirements/<feature>.md --mode agent`, review the extracted use-cases at the checkpoint, then `kane-cli design tests …`, exactly as `references/assurance.md` describes. In a shared project add `--project <id>` the first time, and follow the journey in `references/shared-projects.md` §4 (save each session; the one-question checkpoint).
 3. Present the designed tests, gaps, warnings and the variables that need values (§3 **Fill the variables before any run**). The designed tests get their own review checkpoint before any run (`references/assurance.md`). Then hand the set to `kane-cli testrun run … < /dev/null` (`references/assurance.md`, the authoring bridge).
 
 A draft in chat cannot be run, and a hand-written `_test.md` carries no requirement link and no coverage accounting; the deliverable is the designed test.
@@ -356,6 +373,10 @@ A draft in chat cannot be run, and a hand-written `_test.md` carries no requirem
 | Run a suite of saved `_test.md` tests as one batch | `references/testrun.md` |
 | Run a suite on the cloud grid (`--remote`), incl. mobile suites from any machine | `references/testrun.md` §Remote + `references/mobile.md` §Remote |
 | Run on a real Android/iOS device (`--target android\|ios`), its plan requirements, or a hub session error | `references/mobile.md` §Real devices |
+| A team, a Test Manager project, a linked folder (`.testmuai/assurance.json`), a teammate's or exploration's tests | `references/shared-projects.md` |
+| This folder's shared project and its id (for a teammate, or a dashboard) | `references/shared-projects.md` §2, "This folder's project id" |
+| A shared-project refusal code, event or exit code | `references/agent-contract.md` |
+| Explore an app on HyperExecute | `references/explore.md` |
 | User has requirement docs (PRD/spec) → designed suite, coverage, or suite upkeep | `references/assurance.md` |
 | Need the assurance NDJSON event schema (`--mode agent`) | `references/assurance-parsing.md` |
 | Share the context store with a team, join one, keep stores level, or resolve a sync conflict (kane-cli 0.8.14+) | `references/context-sync.md` |

@@ -121,6 +121,8 @@ The agent automatically picks the right method based on phrasing. To get the met
 | **Title** | Browser tab `document.title` | "page title contains …", "title is …" |
 | **DevTools** | Things not visible on screen — network, console, performance, cookies, localStorage | see §3.2 below |
 
+Under kane-cli's default assertion mode (`dom`), Visual and Textual reads both run DOM-first with a vision fallback; `--assertion-mode visual` keeps Visual reads on vision only (`references/execution-controls.md`).
+
 ### 3.2 DevTools analyze methods
 
 Five subdomains. Each one is the right choice when the data you care about lives in the browser's internals rather than on the page.
@@ -486,7 +488,7 @@ Positional assertions check where something is on the page:
 | "Test the checkout flow" | "Go to /cart, click Checkout, fill the address form with {{tester}}, click Pay, assert the order confirmation page loads" | "Test" has no end state — the agent doesn't know when to stop. |
 | "Add the item" | "Click the 'Add to Cart' button on the first product card" | Vague target — agent may click the wrong element. |
 | "Tell me the price" | "Store the cart total as 'total'" | Vague verbs don't extract — use "store" / "extract" / "get". |
-| Hardcode credentials in the objective | Use `{{username}}` / `{{password}}` from `--variables-file` | Credentials in plain text leak into logs and TMS. |
+| Hardcode credentials in the objective | Use `{{username}}` / `{{password}}` from `--variables-file` | Credentials in plain text leak into logs and Test Manager. |
 | Omit the URL | "Go to https://example.com/login first, then …" | Agent doesn't know where to start. |
 | Cram 25 operations into one objective | Split at logical boundaries (login, navigate, action, verify) | Long runs drift and stall. |
 | "Check the page is fast" | "Assert LCP is under 2500ms and CLS is below 0.1" | Use the explicit web-vital metric, not a vague "fast." |

@@ -23,6 +23,26 @@ Duplicates are removed and the final list runs in a stable order.
 kane-cli testrun run --match 'tests/e2e/.*' --tags smoke
 ```
 
+### When nothing is selected
+
+When no `_test.md` file is selected, nothing runs (exit `2`):
+
+```text
+error: no *_test.md files selected.
+```
+
+Check the paths, or widen a `--match` or `--tags` filter; `--dry-run` shows what a selection picks.
+
+<!-- release: needs the testrun fix -->
+<!-- release: needs context pull -->
+In a folder linked to a [shared project](./assurance/shared-projects.md) that holds no tests at all, kane-cli says where to get them instead:
+
+```text
+error: no tests here yet
+next: to bring the project's tests into this folder, run:
+  kane-cli context pull
+```
+
 ## Preflight
 
 Before anything runs, every member is checked:
@@ -35,7 +55,7 @@ A member can fail preflight for these reasons:
 | Reason | Meaning | Fix |
 |---|---|---|
 | `org_mismatch` | Belongs to a different organisation than the rest | Check with `kane-cli testmd status <path>` |
-| `project_mismatch` | Belongs to a different project than the rest | Check with `kane-cli testmd status <path>`; run project-by-project |
+| `project_mismatch` | Belongs to a different project than the rest | The refusal lists each project's tests and names the command that runs one project's: see [Tests from two projects](#tests-from-two-projects) |
 
 If any member fails preflight, the plan is invalid and **nothing runs** (exit `2`). The offenders print to stderr:
 
@@ -130,6 +150,58 @@ In a terminal, kane-cli offers to open the pack in the [evidence viewer](./evide
 | `1` | At least one member failed or broke. |
 | `2` | Usage error, invalid plan (preflight failures), or auth error. Nothing ran. |
 | `3` | Cancelled (Ctrl-C). |
+
+## Designed tests in a shared project
+
+In a folder linked to a [shared project](./assurance/shared-projects.md), each designed test runs on its scenario's **test case** in Test Manager, so every run is recorded on that case and counts toward the project's coverage.
+
+A test runs on its case when its file sits directly in `.testmuai/tests/` and starts with the `assurance:` header the save writes. A designed file moved into a subfolder (`.testmuai/tests/smoke/`) or anywhere else runs as an ordinary test, under your profile's project, and doesn't count.
+
+### First run, replay and heal
+
+| Run | When | What it does | Cost |
+|---|---|---|---|
+| **First run** | The test has no `output-<name>/` beside it in this folder: it was just saved, pulled or copied here | Adds a KaneAI test to the scenario's test case, then writes each step in a real browser | More credits, and a few minutes |
+| **Replay** | `output-<name>/` holds its recorded steps | Replays them | Far fewer credits |
+| **Heal** | A replayed step no longer matches the page | Writes that step and the ones after it again, then goes on | Like a first run, for the steps it writes |
+
+A test's recorded steps stay in the folder that ran it. So a teammate's copy of the same test makes its own first run in their folder, on the same test case.
+
+A designed test's first run is on desktop web: Test Manager adds runs to a test case from web runs only, so a first run on a device (the file's `target:`, or `--target` on `kane-cli testmd run`) stops with `Test Manager can't add this test's runs to its test case yet, so the run didn't start`.
+
+### How runs count
+
+At the end of a run, kane-cli shows what it proved against the project:
+
+```text
+coverage: 40% across "Checkout revamp"'s 5 use-cases, from this run's tests
+  this run reached 2 use-cases: 6 criteria passed, 1 failed
+```
+
+`kane-cli cover` then shows the project's figure from everyone's runs. A new run can take up to 5 minutes to count there.
+
+A test that stops before it starts (its session was never saved, or its test case was deleted) shows only as **failed** in the run's live view. Run it on its own with `kane-cli testmd run <file>` to see why, and see [Troubleshooting: shared projects](./troubleshooting.md#running-designed-tests).
+
+### Tests from two projects
+
+One `testrun run` is one execution in one Test Manager project. A linked folder can still end up holding tests from two projects. The usual way: `kane-cli run` uploads to your profile's project, not the folder's, and saves its test in `.testmuai/tests/` beside the designed ones. A whole-folder run then stops before anything runs:
+
+```text
+error: these tests are in different Test Manager projects, and a run counts for one project only
+  this folder's project, "Checkout revamp":
+    .testmuai/tests/add_one_item_to_the_cart_test.md
+    .testmuai/tests/remove_the_last_item_test.md
+  "KaneAI Generated":
+    .testmuai/tests/search_for_headphones_test.md
+next: to run the tests of "Checkout revamp", this folder's project, run:
+  kane-cli testrun run .testmuai/tests/add_one_item_to_the_cart_test.md .testmuai/tests/remove_the_last_item_test.md
+```
+
+Run the command it names. It lists the tests' paths. Past five, it gives a `--match` instead when one selects exactly those tests. To keep the folder clean, run `kane-cli run` experiments in a different folder.
+
+The same refusal comes in any folder whose tests are in two projects.
+
+In agent mode the refusal is an `error` event with `code: "PROJECT_MISMATCH"`, a `projects` list (each with `project_id`, `name`, `this_folder` and `tests`), and a `next` that runs the folder's project's tests.
 
 ## Remote runs
 

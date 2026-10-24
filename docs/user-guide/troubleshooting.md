@@ -17,6 +17,8 @@ This page lists common problems you may hit while using kane-cli, what causes th
 - [Debugging a failed run with its evidence pack](#debugging-a-failed-run-with-its-evidence-pack)
 - [A `--remote` run refused, failed, or came back empty](#a---remote-run-refused-failed-or-came-back-empty)
 - [testrun says "plan invalid" or skips members](#testrun-says-plan-invalid-or-skips-members)
+- [Shared projects: a command stopped](#shared-projects) — linking a folder, sessions, designs, runs on a test case, and the pull
+- [Exploration: a run refused or designed no tests](./exploration.md#troubleshooting) — the URL, a login, secrets, the tunnel, design jobs
 - [Context sync: Git not found or too old](#context-sync-git-not-found-or-too-old)
 - [Context sync: a location cannot be reached or refuses you](#context-sync-a-location-cannot-be-reached-or-refuses-you)
 - [Context sync: "a rebase is open" — every change refused](#context-sync-a-rebase-is-open--every-change-refused)
@@ -229,9 +231,106 @@ Full reference: [Remote runs on the cloud grid](./remote-execution.md).
 | `missing_meta` | The test has no recorded output directory next to it. | Run it once: `kane-cli testmd run <path>`. |
 | `not_authored` | The test ran but never committed (no test id). | Run it to completion so it commits. |
 | `org_mismatch` | The test belongs to a different organisation than the other members. | Check identities with `kane-cli testmd status <path>`. |
-| `project_mismatch` | The test belongs to a different project than the other members. | Same check; run project-by-project, or re-home the test. |
+| `project_mismatch` | The selected tests are in more than one Test Manager project. The refusal says so in words, lists each project's tests, and names the command that runs one project's: see [Batch runs](./testrun.md#tests-from-two-projects). | Run the command it names, which runs one project's tests by path. |
+
+<!-- release: needs the testrun fix -->
+<!-- release: needs context pull -->
+**No tests selected.** `error: no *_test.md files selected.` means no `_test.md` file matched: check the paths, or widen a `--match` or `--tags` filter. In a folder linked to a [shared project](./assurance/shared-projects.md) that holds no tests at all, kane-cli says `error: no tests here yet` instead, and its `next` is `kane-cli context pull`, which brings the project's tests into the folder.
 
 Use `kane-cli testrun run --dry-run …` to see the full plan and every offender without executing anything. See [Batch runs with testrun](./testrun.md#preflight).
+
+## Shared projects
+
+In a folder linked to a [shared project](./assurance/shared-projects.md), a command that can't go on prints an `error:` line and a `next:` line, and changes nothing. In agent mode the same stop is an `error` event with a `code`: run its `next` when it has one, and when it has none, read its `remedy`, which says the same as the terminal's `next:` line.
+
+### Linking a folder
+
+| You see | What it means | What to do |
+|---|---|---|
+| `you don't have a project with the id "<id>"` (`PROJECT_NO_ACCESS`) | No project of yours has that id, or you can't open it | Find the id with `kane-cli projects list --search <name>` |
+| `you don't have access to "<project>", the project this folder is linked to` (`PROJECT_NO_ACCESS`) | Your account can't open the folder's project | Ask a Test Manager admin to grant your account access, then run the command again |
+| `this folder works locally, so --project can't link it to a project` (`FOLDER_CHOSEN`) | The folder already has its own local store (`.context/`) | Run it without `--project`. To share instead, move `.context` out of the folder first |
+| `this folder is linked to "<project>", not to the project given` (`FOLDER_CHOSEN`) | The folder is already linked to another project | Run it without `--project`. To link it to another project, remove `.testmuai/assurance.json` first |
+| `this folder is linked to "<project>", so --local can't keep it local` (`FOLDER_CHOSEN`) | `--local` in a linked folder | Run it without `--local`. To work locally, remove `.testmuai/assurance.json` first |
+| `--project and --local can't be used together` (`FOLDER_USAGE`) | Both flags at once | Use one: `--project <id>` to share the folder's work, or `--local` to keep it here |
+| `--project can't be used with --resume; a session stays where it started` (`FOLDER_USAGE`) | A session always goes on in the project it started in | Run it again without `--project` |
+| `this folder has its own context store and is also linked to "<project>"` (`BOTH_STORES`) | The folder has both `.context/` and a link | To work locally, remove `.testmuai/assurance.json`. To work in the project, move `.context` out of the folder |
+| `this folder's link to its project could not be read` (`PROJECT_FILE_UNREADABLE`) | `.testmuai/assurance.json` was edited or damaged | Remove it, then choose the project again with `kane-cli context extract` |
+| `you can't start the first session in "<project>": it needs permission to create test cases` (`PERMISSION_REQUIRED`) | The project's first session makes test cases, and your account can't | Ask a Test Manager admin for that permission, or someone who has it to start the first session |
+| `assurance isn't available for "<project>"` (`ASSURANCE_OFF`) | Shared projects are switched off for this project | Run the command in a folder that isn't linked to a project |
+| `you're not logged in`, `couldn't confirm your login for shared projects` or `your credentials were rejected` (`CREDENTIALS_MISSING`, `CREDENTIALS_REJECTED`) | Shared projects need your sign-in | Run `kane-cli login` in a terminal. If the second one keeps happening, sign in with your username and access key: `kane-cli login --username <user> --access-key <key>` |
+| `couldn't connect, so nothing was started`, or `couldn't connect for 2 minutes, so nothing was started` (`CONNECTION_FAILED`, `PREFLIGHT`) | The shared project, or the service that runs the agent, couldn't be reached | Check your connection, then run the command again. Nothing was started, so it's safe |
+
+### Commands a linked folder refuses
+
+`kane-cli <command> isn't available yet in a folder linked to a shared project` (`REMOTE_UNSUPPORTED`): the command works on a local store only. [What a linked folder doesn't do](./assurance/shared-projects.md#what-a-linked-folder-doesnt-do) lists each one and what to use instead. The most common:
+
+| Refused | Use instead |
+|---|---|
+| `kane-cli context review`, `kane-cli context explain` | `kane-cli context list` |
+| `kane-cli cover gaps` | `kane-cli cover` |
+| `--mode ci` | `--mode agent` |
+| `kane-cli testrun run --from-context <ids>` | the `kane-cli testrun run <files>` command the refusal names |
+
+### Sessions
+
+| You see | What it means | What to do |
+|---|---|---|
+| `someone else is designing tests for "<use-case>" right now, so this design can't start` (`PROJECT_BUSY`) | One session at a time designs a use-case, and this one was refused, not queued | Wait for it to finish, then run the command again. `kane-cli context sessions` lists the project's sessions |
+| `someone else's extract is running in "<project>", so a design can't start until it finishes` (`PROJECT_BUSY`) | A design waits for an extract to end | Wait for it to finish, then run the command again |
+| `you're already designing tests for "<use-case>" in another session` (`PROJECT_BUSY`) | Your own session holds it | Go on with it here with the `kane-cli design tests --resume <sid>` it names; the other terminal then stops |
+| `no session <sid> of yours` (`SESSION_NOT_FOUND`) | The id is wrong, or the session is a teammate's | See your sessions with `kane-cli context sessions`. Only the person who started a session can save it |
+| `refusing to save this session without --yes (no terminal to confirm)` (`CONFIRM_REQUIRED`) | There's no terminal to confirm the save in | Add `--yes`: `kane-cli context sessions save <sid> --yes` |
+| `session <sid> is finished, so it can't be resumed` (`SESSION_FINISHED`) | It's done and waiting to be saved | Save it: `kane-cli context sessions save <sid>` |
+| `not saved — "<project>" changed after this session started` (`PROJECT_CHANGED`) | A teammate saved a change to the same work first | The `next` lines say how to start again: design again, or add the session's documents again |
+| `this session read 2 sources, so it can't be resumed or saved` | An extract that read two or more documents and then stopped can't go on | Run the commands it prints: discard the session, then start again with its documents. To keep extracts resumable, add one document at a time |
+| `nothing to save — this session added nothing` | Not an error: the session found nothing new, so it was discarded | Nothing to do |
+| `nothing new to extract: every source is already read` | Not an error: every document in the project is already read | To add more, run `kane-cli context ingest <files>` |
+
+### Designing
+
+| You see | What it means | What to do |
+|---|---|---|
+| `"<use-case>" isn't approved yet` (`UC_UNREVIEWED`) | The use-case is still proposed. An extract in agent mode leaves its use-cases proposed, and a linked folder has no review command | Check the use-case with the person (`kane-cli context list`), then run the `next`: `kane-cli design tests --use-case <id> --allow-unreviewed`. At a terminal, finishing the extract chat with `looks good — finish the session` approves them |
+| `"<use-case>" already has tests; --force designs them again, replacing the ones it has` | It's designed already (agent mode) | To design it again, add `--force` |
+| `error: agent ended without a proposal for <source>` (`NO_PROPOSAL`) | The agent stopped before it proposed use-cases for that document | Run the extract again once: it reads the document again and uses credits again. If it happens twice, [report it](#reporting-bugs) |
+
+### Running designed tests
+
+A designed test in a linked folder runs on its scenario's test case in Test Manager.
+
+`these tests are in different Test Manager projects, and a run counts for one project only` (`PROJECT_MISMATCH`) stops the whole `testrun run` before anything runs. The folder holds tests from two projects, usually a `kane-cli run` test (your profile's project) beside designed tests (the folder's project). Run the command it names, which runs one project's tests by path, and keep `kane-cli run` experiments in another folder. See [Tests from two projects](./testrun.md#tests-from-two-projects).
+
+The stops below are each test's own. In `kane-cli testrun run` at a terminal, a test that stops for one of them shows only as **failed**. To see why, run it on its own: `kane-cli testmd run <file>`.
+
+| You see | What it means | What to do |
+|---|---|---|
+| `this test isn't in Test Manager yet, so it can't run` (`TEST_CASE_MISSING`) | Its design session was never saved, so its scenario has no test case | Save the session that designed it: the `next` names `kane-cli context sessions save <sid>` |
+| `this test's test case was deleted or moved to another project in Test Manager, so it can't run` (`TEST_CASE_GONE`) | Someone deleted or moved the case | Save the session that designed it again; that makes a new test case |
+| `this test's test case is archived in Test Manager, so it can't run` (`TEST_CASE_ARCHIVED`) | The case is archived | Restore it in Test Manager, then run the test again |
+| `this test isn't in "<project>", and the session that designed it can't be saved anymore` (`TEST_NOT_IN_PROJECT`) | The file came from another project, or from a design that was never saved | Design the test again and save that session: `kane-cli design tests --use-case <id>` |
+| `this test isn't in "<project>", which has no use cases or tests yet` (`TEST_NOT_IN_PROJECT`) | The file was designed in another project | Run it in the folder linked to the project it was designed in |
+| `Test Manager couldn't save this run, so <case> doesn't have it yet; the test itself passed` (`TEST_RUN_NOT_SAVED`) | The run finished, but Test Manager didn't record it | The test's next run tries again. To try now: `kane-cli testmd run <file>` |
+
+### Coverage
+
+| You see | What it means | What to do |
+|---|---|---|
+| `a new run can take up to 5 minutes to count` | Coverage reads Test Manager's runs, and a new run takes a few minutes to show | Run `kane-cli cover` again in a few minutes |
+| `coverage: "<project>" is still working it out; run the command again in a moment` | The project is working out its figure | Run `kane-cli cover` again |
+| `couldn't load "<project>"'s coverage` (`COVERAGE_FAILED`) | The figure couldn't be read | Run the command again. Share the support id it prints if it keeps happening |
+
+<!-- release: needs context pull -->
+### Bringing the project's tests here
+
+| You see | What it means | What to do |
+|---|---|---|
+| ``error: no context store here (run `kane-cli context ingest <files>` first)``, from `kane-cli cover`, `context list` or `context pull` in a new folder | The folder isn't linked to a shared project and has no local store yet | To join your team's shared project and bring its tests here, run `kane-cli context pull --project <id>` (`kane-cli projects list` shows the ids). To start with your own documents, run `kane-cli context ingest <files>` |
+| `kept     <file> — you changed it here` | Not an error: your edits are kept | To replace them with the project's version, run `kane-cli context pull --overwrite` |
+| `"<project>" has no tests yet` | Nothing has been designed in the project yet | `kane-cli cover` shows which use-cases need tests designed |
+| `this folder takes its tests from "<project>", not from a location` | A location name was given in a linked folder | Run `kane-cli context pull` with no name |
+| `"<project>" has no use-case <id>` | The `--use-case` id isn't in the project | See its use-cases with `kane-cli context list` |
+| `the tests of "<project>" couldn't be read, so none was written` | The project couldn't be read; nothing changed here | Run `kane-cli context pull` again |
 
 ## Context sync: Git not found or too old
 

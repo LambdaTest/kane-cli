@@ -25,7 +25,12 @@ Add a flag only when the request needs it:
 | A local mobile run | `--mobile emulator` or `--mobile simulator` | `## mobile` (device tooling readiness) |
 | A cloud grid suite (`--remote`) | `--grid` | `## grid` (grid plugin readiness) |
 
-The script only reads status. It changes nothing, takes about two seconds, and always exits `0`. If the script is missing (an older skill install), run `kane-cli whoami`, `kane-cli balance` and `kane-cli config show` yourself and build the same card.
+The script only reads status (its sign-in check may renew a saved sign-in that is about to expire, as any kane-cli command does). It changes nothing else, takes about two seconds, and always exits `0`.
+
+If you can't run the script (it isn't there in an older skill install, or your host doesn't allow it), run the same
+checks one at a time and build the same card: `kane-cli --version`, `kane-cli whoami`, `kane-cli balance`,
+`kane-cli config show`, and look for `.testmuai/assurance.json` in the folder (only its `projectName` and `projectId`).
+The preferences file is then unknown: treat the session as a first session only if the person says it is.
 
 ## 2. What the script prints
 
@@ -34,9 +39,10 @@ Plain text in `## <section>` blocks, always in this order. Command blocks end wi
 | Section | Content | What you take from it |
 |---|---|---|
 | `## version` | kane-cli version, or `missing` | Installed or not. Compare with the minimum version this skill notes for a feature |
-| `## whoami` | The sign-in box | `Authenticated` plus `User`, `Environment`. **Ignore `Expires`**: it is a short-lived token that renews itself, never show it |
-| `## balance` | `Available credits` and `Total credits` | Credits left, rounded to a whole number |
+| `## whoami` | The sign-in box: a header (`✓ Authenticated`, `✗ Not authenticated`, `⚠ Couldn't verify` or `⚠ Not logged in`), then rows such as `Profile`, `Method`, `User`, `Token` | The header and `User`. Never show the `Token` row |
+| `## balance` | `Available credits` | Credits left, rounded to a whole number |
 | `## settings` | Settings as JSON | `project_name`, `folder_name`, `target`, `default_url` |
+| `## link` | `project=<name>` and `project_id=<id>` when this folder is linked to a shared project, or `none` | Linked or not; see §3's 🔗 row and `shared-projects.md` |
 | `## agent-config` | The preferences file, or `none` | See `references/agent-config.md`. `none` or no `onboarding.completed_at` means this is a first session |
 | `## env` | `ci`, `ssh`, `display`, `os`, `arch`, `node` | Watch-mode default and whether a human is present |
 | `## chrome` | `found=<path>` and `override=<path>` | Chrome present for local browser runs |
@@ -82,9 +88,14 @@ Row rules:
 
 - **🚀 Your app** appears only when the `app` section found a port. No row when nothing was found: never show a negative row for an optional finding. Ask for a URL only when the request lacks one.
 - **🌐 Chrome** appears only for local browser runs. Skip it for mobile and cloud grid requests.
+- **🔗 Shared project**: when the preflight's `## link` section names a project, this folder is linked to it
+  (`shared-projects.md`). Add a row `🔗 **Shared project** | <name> (<id>) · designed tests run and count here`, and
+  word **Results go to** as "Quick `kane-cli run` checks save to <project> / <folder>; runs of the designed tests here count in <the shared project>". Read `shared-projects.md` before any assurance command.
+  A `link` of `unreadable` means kane-cli can't read the folder's link file, and a linked folder that also holds
+  `.context/` is refused too: run `kane-cli context list --mode agent` and relay its fix (`PROJECT_FILE_UNREADABLE`, `BOTH_STORES`)
+  before any assurance work.
 - **🗂️ Results go to** comes from `project_name` / `folder_name`. When they are empty, say `kane-cli will pick a default project on this run, and I'll tell you where it landed`. The offer to change it never stops the run. The change flow is in `references/test-manager.md`.
 - **👀 This run** states the watch mode you are about to use: the saved `preferences.watch`, or the detected default (see `references/first-run.md`).
-- Name the environment (for example `stage`) only when it is not production.
 - For mobile or grid requests add a `📱 **Device tooling**` or `☁️ **Cloud grid**` row from the extra section.
 
 ## 4. Problems: which ones stop the run
@@ -92,7 +103,8 @@ Row rules:
 | Problem | How you see it | Stops the run? | The fix the card offers |
 |---|---|---|---|
 | kane-cli not installed | `## version` is `missing` | Yes | Offer to run `npm install -g @testmuai/kane-cli` (or Homebrew) |
-| Not signed in, or token not valid | `whoami` shows no `Authenticated`, or `exit` is not 0 | Yes | Sign-in flow below |
+| Not signed in, or token not valid | `whoami` header is `✗ Not authenticated` or `⚠ Not logged in` (exit 1) | Yes | Sign-in flow below |
+| Couldn't verify the sign-in | `whoami` header `⚠ Couldn't verify` (exit 3): TestMu AI didn't answer | Yes, for now | Signing in again won't help: check the connection and run the preflight again in a minute |
 | No credits left | Available credits is 0 | Yes | Point to https://www.testmuai.com/pricing/ to pick a plan |
 | Chrome missing | `found=` is empty, local browser run | Yes | Install hint for the platform, or `KANE_CLI_CHROME_PATH` for a custom location |
 | Low credits | Available credits under 100 | No | One warning line on the card |
@@ -101,6 +113,28 @@ Row rules:
 | Mobile tooling or grid plugin not ready | A failing row in `## mobile` / `## grid` | Yes, for that request | The fix line the doctor output names |
 
 When a problem stops the run, do not launch. Show the card, offer the fix, and wait.
+
+## 4a. Get or update the skill
+
+The skill ships as its own package, separate from kane-cli. Most kane-cli commands (not `context`, `explore`, or anything
+run with `--mode agent`) may print a
+`Skill update available: <installed|not installed> → <version> — run \`kane-cli install skill\`` line on stderr. A
+`kane-cli run --agent` stream also carries the notices as events on stdout: `skill_update_available` (`current`,
+`latest`, `install_cmd`), so offer `kane-cli install skill`; `update_available` (`current`, `latest`, `severity`) is
+kane-cli's own update (`cards.md` §1).
+
+```bash
+kane-cli install skill              # the newest skill this kane-cli supports
+kane-cli install skill <version>    # exactly that version, e.g. one your team's guide names
+```
+
+- It writes the skill for Claude Code, Codex CLI and Gemini CLI at once (`~/.claude/skills/kane-cli/`,
+  `~/.agents/skills/kane-cli/`, `~/.gemini/skills/kane-cli/`). Restart the agent to load it.
+- With no stdin terminal it prints one JSON line: `{"type":"skill_install_result","status":"installed|already-installed|failed","version":…,"installed_targets":<n>,"error":…}`; exit 1 on `failed`.
+- A pinned version installs even when it is older or newer than the default. A later bare `kane-cli install skill` never
+  downgrades, so it keeps a newer pinned version in place.
+- `kane-cli install skill` doesn't write the preferences file `agent-config.md` reads, so the first session still counts
+  as a first session.
 
 ## 5. Sign-in
 
