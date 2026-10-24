@@ -96,6 +96,7 @@ Keep quick `kane-cli run` experiments in a different folder: `kane-cli run` uplo
 - [Configuration](./configuration.md)
 - [Authentication](./authentication.md)
 - [Shared projects](./assurance/shared-projects.md) — design and run tests with your team.
+- [Exploration](./exploration.md) — map your app and design tests from what it finds, without a requirements document.
 
 ## Reviews
 

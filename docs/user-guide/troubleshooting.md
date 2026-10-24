@@ -18,6 +18,7 @@ This page lists common problems you may hit while using kane-cli, what causes th
 - [A `--remote` run refused, failed, or came back empty](#a---remote-run-refused-failed-or-came-back-empty)
 - [testrun says "plan invalid" or skips members](#testrun-says-plan-invalid-or-skips-members)
 - [Shared projects: a command stopped](#shared-projects) — linking a folder, sessions, designs, runs on a test case, and the pull
+- [Exploration: a run refused or designed no tests](./exploration.md#troubleshooting) — the URL, a login, secrets, the tunnel, design jobs
 - [Context sync: Git not found or too old](#context-sync-git-not-found-or-too-old)
 - [Context sync: a location cannot be reached or refuses you](#context-sync-a-location-cannot-be-reached-or-refuses-you)
 - [Context sync: "a rebase is open" — every change refused](#context-sync-a-rebase-is-open--every-change-refused)

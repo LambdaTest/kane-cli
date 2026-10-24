@@ -67,17 +67,17 @@ Add these to `explore run` only when the person's request needs them:
 
 | The person wants | Pass |
 |---|---|
-| An app behind a login | `--deps "Logged in as {{user}} / {{pass}}"`, with the values in a variables file (`.testmuai/variables/*.json`, or `--variables-file <path>`; a secret has `"secret": true`). `--deps` always needs `--allow-domain`: the app's own host, and every other host it signs in on (`--allow-domain app.example.com --allow-domain login.example.com`). Only the names the prompt and `--deps` use travel: secrets go to the person's HyperExecute Secrets, the rest to Test Manager's variables. Check those names have real values first: an empty one (a stub a save or pull left) is sent as it is |
+| An app behind a login | `--deps "Logged in as {{user}} / {{pass}}"`, with the values in a variables file (`.testmuai/variables/*.json`, or `--variables-file <path>`; a secret has `"secret": true`). `--deps` always needs `--allow-domain`: the app's own host, and every other host it signs in on (`--allow-domain app.example.com --allow-domain login.example.com`). Only the names the prompt and `--deps` use travel: secrets go to the person's HyperExecute Secrets, the rest to the organisation's Test Manager variables, where they replace a variable of the same name (tell the person). Names are letters, digits and `_`; `LT_USERNAME` and `LT_ACCESS_KEY` are taken. Check the values are real first: an empty secret stops the run `failed:secrets_missing`, and a sign-in that fails stops it `failed:setup_failed` |
 | Only some sites | `--allow-domain <host>`, repeatable (the URL's host is always in, subdomains included) |
 | A control it must never press | `--deny "<control name>"`, repeatable, under either policy |
-| A `read_only` run of an app that reads its data through POST | `--allow-post <host/path>`, repeatable, only for an endpoint the person confirms only reads |
+| A `read_only` run of an app that reads its data through POST | `--allow-post <host/path>`, repeatable, only for an endpoint the person confirms only reads; its host must be the URL's or one passed with `--allow-domain` |
 | Start from one screen of the map it already has | `--focus "<screen>"` (a later run; the screen's name or words from it). On this machine it also needs `--exploration-id <exploration-id>` |
-| A limit on the explorer's work | `--max-leases <n>`: it stops after n pieces of work (leases), and the run ends `budget`. It doesn't limit the design jobs' credits: for a map with no new tests, see the next rows |
-| More browsers at once | `--max-parallel <n>` (up to 20 cloud browsers; up to 4 with Chrome on this machine). Each may sign in once: use 1 for an app that allows one login |
+| A limit on the explorer's work | `--max-leases <n>`: it stops after n pieces of work (leases), and the run ends `budget`. Every run also stops at built-in limits (an hour, 400 actions or 800 model calls), also `budget`. Neither limits the design jobs' credits: for a map with no new tests, see the next rows |
+| More browsers at once | `--max-parallel <n>` (default 1; up to 20 cloud browsers, 4 with Chrome on this machine). Each may sign in once: keep 1 for an app that allows one login |
 | A map, no tests | `--no-context`, on the project's first exploration only; for an existing one, `explore context off` (§4) |
 | How deep it goes, what counts as slow, whether findings are checked again | `--depth-caps`, `--slow-budget`, `--no-recheck`: `kane-cli explore run --help` gives their values |
 | An app on `localhost` or a private network | `--tunnel-name <name>`, through a LambdaTest tunnel on the person's machine (below) |
-| To explore from this machine | `--local-orchestration` (Chrome here; `--headless` for no window). The command then waits for the run to end (§1) |
+| To explore from this machine | `--local-orchestration` (Chrome here, `--headless` for no window; or `--browser remote` for cloud browsers). The command then waits for the run to end (§1), and Ctrl+C stops it |
 
 ### An app on `localhost` or a private network
 
@@ -127,9 +127,10 @@ The person can watch a run live with `kane-cli explore view --exploration-id <ex
 (§4).
 
 A run is `queued` (waiting for its machine), `running` or `stopped`. A stopped run's `remark.code` says why:
-`completed` (it ran out of work), `budget` (`--max-leases` reached), `user_stop`, `stopped_before_start` (stopped while
+`completed` (it ran out of work), `budget` (`--max-leases` or a built-in limit reached), `user_stop`, `stopped_before_start` (stopped while
 queued), `heartbeat_lost` (it stopped reporting), `timeout`, or `failed:<reason>` (for example `failed:secrets_missing`,
-or `failed:vm_never_started`: HyperExecute never started it, so run it again). Say it to the person in plain words.
+`failed:setup_failed`: the sign-in in `--deps` didn't work, or `failed:vm_never_started`: HyperExecute never started it,
+so run it again). Say it to the person in plain words.
 
 - **Stop it:** `kane-cli explore stop <exploration-id> --agent` stops a queued run at once, and asks a running one to
   stop cleanly (its work in hand finishes and is kept). It waits for that, unless you pass `--no-wait`. It emits
@@ -137,7 +138,9 @@ or `failed:vm_never_started`: HyperExecute never started it, so run it again). S
   `explore sessions` until it is `stopped` before you run it again or delete it. With nothing running it refuses
   (`RUN_NOT_ACTIVE`, exit 1).
 - **Run it again:** `kane-cli explore run --project <id> … --agent` once more. It goes on the same exploration, on its
-  URL, and adds to its map; a different `--url` is refused (exit 2).
+  URL, and adds to its map; a different `--url` is refused (exit 2). A run keeps only the URL: pass every option again
+  (`--policy read_only` above all, since the default is `mutating`, and the prompt, `--deps`, domains, variables,
+  limits and tunnel).
 - **Explore another site:** use another project, so its tests don't mix with this site's. Or, only on the person's
   word, `kane-cli explore delete <exploration-id> --yes --agent` (refused with `RUN_ACTIVE`, exit 1, while a run is
   queued or running): no command shows that map again and the project can start a new exploration of any URL, but the
