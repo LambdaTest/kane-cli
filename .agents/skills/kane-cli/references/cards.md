@@ -183,7 +183,7 @@ run (`authored`):
 ```
 
 Only a `coverage` event with `status: "written"` has a `pct`. With any other status, the 📈 row says
-`The project's figure isn't ready yet · I can check it in a few minutes` (`kane-cli cover --mode agent`).
+`The project's coverage isn't ready yet · I can check again in a few minutes` (`kane-cli cover --mode agent`).
 
 A member that stopped on its Test Manager case shows `failed` with a reason such as "isn't in Test Manager yet": say what
 it needs (`testrun.md` §Designed tests in a shared project), not "the test failed".

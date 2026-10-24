@@ -87,7 +87,7 @@ From the second run on, the evidence viewer goes back to an offer.
 
 When the first result is an extract's use cases (above), nothing has run yet, so there is no evidence and no test case:
 show the use cases (in a linked folder, also whether the session is saved yet), with no 📁 or 🔗 row. Those rows come with the first test run.
-Choice 1 below then reads "Runs show the browser window by default. Keep it that way?"
+Choice 1 below then reads "Runs open a browser window by default. Keep that, or run without a window?"
 
 ## 4. Three choices, asked once, after the first result
 

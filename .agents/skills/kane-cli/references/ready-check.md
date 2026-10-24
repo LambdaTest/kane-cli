@@ -90,7 +90,7 @@ Row rules:
 - **🌐 Chrome** appears only for local browser runs. Skip it for mobile and cloud grid requests.
 - **🔗 Shared project**: when the preflight's `## link` section names a project, this folder is linked to it
   (`shared-projects.md`). Add a row `🔗 **Shared project** | <name> (<id>) · designed tests run and count here`, and
-  word **Results go to** as "quick `kane-cli run` checks save to <project> / <folder>; designed tests here count in <the shared project>". Read `shared-projects.md` before any assurance command.
+  word **Results go to** as "Quick `kane-cli run` checks save to <project> / <folder>; runs of the designed tests here count in <the shared project>". Read `shared-projects.md` before any assurance command.
   A `link` of `unreadable` means kane-cli can't read the folder's link file, and a linked folder that also holds
   `.context/` is refused too: run `kane-cli context list --mode agent` and relay its fix (`PROJECT_FILE_UNREADABLE`, `BOTH_STORES`)
   before any assurance work.
