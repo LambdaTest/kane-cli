@@ -194,7 +194,8 @@ kane-cli context pull --overwrite --mode agent           # replace test files ch
   `{"<name>": {"value": "<value>", "secret": true|false}}`.
 - A variable the pull can't classify is marked `secret: true` to be safe. Ask the person whether it really is a secret
   (a message to type usually isn't). A secret's value is never asked for or shown in chat: the person writes it into the
-  file. A plain value they give you, you may write there yourself (§4 step 6).
+  file. A value the person has already given you in their own words isn't a secret to them: write it there yourself,
+  without printing it, and go on (§4 step 6).
 - `done.next` names `kane-cli testrun run`. A project with no tests yet ends exit 0 with "has no tests yet" and `next` =
   `kane-cli cover --mode agent`. Exit 1 when any test wasn't written or the project couldn't be read (`PULL_FAILED`);
   2 for refusals.
