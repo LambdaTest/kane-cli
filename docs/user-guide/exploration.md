@@ -54,8 +54,8 @@ kane-cli explore run --project <project-id> \
 **On a terminal**, kane-cli shows a review of your settings (or a setup form, if something is missing). Launch it, and
 you see `● queued on HyperExecute · run … · <job link>`, then a live view: the run's state and policy, the time so far,
 and `leases · screens · flows · findings · credits` as they grow. **Ctrl+C detaches**: the run keeps going on
-HyperExecute. The lines printed when you detach, or when the run ends, give the full exploration id and the commands
-to watch or stop it.
+HyperExecute. The lines printed when you detach give the full exploration id and the commands to watch, map or
+stop it; when the run ends, they give the map command.
 
 **Your exploration id.** Most commands below take it. It's in those lines; or run plain `kane-cli explore`, pick the
 project, and use the exploration's **card** (its map, its last run, and run again, watch, stop, map, sessions,
@@ -105,7 +105,8 @@ kane-cli explore run --project <project-id> --url https://app.example.com \
 }
 ```
 
-- `--deps` needs `--allow-domain` for every other host it signs in on. The `--url`'s host is always included.
+- `--deps` always needs `--allow-domain`: name every host it signs in or writes on, the `--url`'s own host too if
+  that's where it signs in (`--allow-domain app.example.com`). Use a project of its own: one project explores one URL.
 - You can also keep the values in `.testmuai/variables/*.json` (see [Variables & context](./variables-and-context.md)).
   Only the names your `--prompt` and `--deps` use are sent. Names are letters, digits and `_` (`login_email`, not
   `login-email`); `LT_USERNAME` and `LT_ACCESS_KEY` are taken.
@@ -143,7 +144,7 @@ HyperExecute browsers ── LT tunnel ── your machine ── your app
    ```bash
    curl -fLo /tmp/LT_Mac.zip https://downloads.lambdatest.com/tunnel/v3/mac/arm64/LT_Mac.zip
    unzip -o /tmp/LT_Mac.zip -d /tmp/lt
-   sudo mv /tmp/lt/LT /usr/local/bin/LT && chmod +x /usr/local/bin/LT
+   sudo mkdir -p /usr/local/bin && sudo mv /tmp/lt/LT /usr/local/bin/LT && sudo chmod +x /usr/local/bin/LT
    LT --version
    ```
 
@@ -165,7 +166,7 @@ HyperExecute browsers ── LT tunnel ── your machine ── your app
    ```
 
    `--tunnel-name` must match `--tunnelName` from step 2, and it turns the tunnel on. With only one tunnel running,
-   `--tunnel` alone is enough.
+   `--tunnel` alone is enough. Use a project of its own: one project explores one URL.
 
 - Keep the tunnel **and your machine** up until the run ends; kane-cli reminds you when the run starts. If the tunnel
   drops, pages stop loading.
@@ -289,7 +290,8 @@ In a folder that's already linked to the project, `kane-cli context pull` is eno
   tests yet, the pull says so: wait for a design job.
 - Each test arrives with no recorded steps yet, so its **first run** writes them in a real browser. That takes
   minutes and uses more credits than a replay. Later runs replay the steps for far fewer.
-- These tests run in Google Chrome on your machine, so install it first ([Installation](./installation.md)).
+- These tests run in Google Chrome on your machine, so install it first (if kane-cli can't find it, see
+  [Chrome failed to launch](./troubleshooting.md#chrome-failed-to-launch)).
 - Open a test to see what it checks, then run the ones you want: `kane-cli testrun run .testmuai/tests/<name>_test.md`.
   `kane-cli cover` then shows the project's coverage, the exploration's use-cases included.
 
@@ -320,7 +322,7 @@ exploration, or no sign-in.
 | `a remote run needs a project …` | no `--project`, and none configured | pass `--project <project-id>` |
 | `RUN_ACTIVE: run … is queued/running` | the exploration already has a run going | wait for it, or `kane-cli explore stop <id>` |
 | `--url … is not exploration <id>'s URL` | a project explores one URL | use another project, or `explore delete` this one |
-| `--deps needs --allow-domain …` | a sign-in needs the hosts it signs in on | add `--allow-domain` for the sign-in host |
+| `--deps needs --allow-domain …` | a sign-in needs the hosts it signs in on | add `--allow-domain` for each host it signs in on, the `--url`'s own host included |
 | `host … is outside the run's domains` on `--allow-post` | the endpoint's host isn't one the run may visit | add it with `--allow-domain` first |
 | `--deps uses {{name}} but no variable "name" is defined` | a variable your `--prompt` or `--deps` uses isn't in any variables file | add it to `--variables-file` or `.testmuai/variables/` |
 | `HyperExecute Secrets does not list …`, or a run stopped `failed:secrets_missing` | a secret didn't reach HyperExecute, or it's empty | check its name and value in your variables file, mark it `"secret": true`, run again |
