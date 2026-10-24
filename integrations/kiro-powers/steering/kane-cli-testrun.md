@@ -159,7 +159,7 @@ Every Kane CLI run seals an **evidence pack**: one `.evidence` file (a zip) hold
     ├── logs/                         # meta.yaml, tui.log, and per run index n:
     │                                 #   <n>-run.log, <n>-actions.ndjson,
     │                                 #   <n>-console.ndjson, <n>-network.har
-    ├── steps/<ordinal>-<step-id>/    # screenshot.png, annotated.png, step.json
+    ├── steps/<ordinal>-<step-id>/    # screenshot.* (png or jpg), annotated.png, step.json
     │                                 #   (+ failure.yaml on failed steps)
     ├── auteur/execution.json         # full execution trajectory
     └── v16-trajectory/               # per-run planning summaries

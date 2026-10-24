@@ -519,7 +519,7 @@ For exit code `1` (or a failed status), present the failure card. Explain what w
 
 🔍 Likely cause is Kiro's own diagnosis: a missing element, a popup over the button, a slow page, an ambiguous objective, an auth wall. ➡️ Next pairs a retry Kiro can run now with an offer to walk through the failing step.
 
-Then extract the failing-step screenshot from the run's evidence pack (`unzip <pack> "tests/*/steps/*/screenshot.png" -d <tmpdir>`) and show it **under** the card.
+Then extract the failing-step screenshot from the run's evidence pack (`unzip <pack> "tests/*/steps/*/screenshot.*" -d <tmpdir>`) and show it **under** the card.
 
 ## Didn't start (exit `2`)
 
@@ -588,7 +588,7 @@ unzip -l <pack>                                            # list entries
 unzip -p <pack> "tests/*/result.yaml"                      # verdict + per-step outcomes
 unzip -p <pack> "tests/*/steps/*/failure.yaml"             # failure records (failed steps only)
 unzip -p <pack> "tests/*/logs/0-console.ndjson"            # browser console, run 0
-unzip <pack> "tests/*/steps/*/screenshot.png" -d /tmp/ev   # extract screenshots to view
+unzip <pack> "tests/*/steps/*/screenshot.*" -d /tmp/ev     # extract screenshots to view
 ```
 
 Pack layout (per test):
@@ -600,7 +600,7 @@ tests/<test-id>/
 ├── logs/                      # meta.yaml, tui.log, and per run index n:
 │                              #   <n>-run.log, <n>-actions.ndjson,
 │                              #   <n>-console.ndjson, <n>-network.har
-├── steps/<ordinal>-<step-id>/ # screenshot.png, annotated.png, step.json
+├── steps/<ordinal>-<step-id>/ # step.json, screenshot.* (png or jpg), annotated.png (some steps)
 │                              #   (+ failure.yaml on failed steps)
 ├── auteur/execution.json      # full execution trajectory
 └── v16-trajectory/            # per-run planning summaries
@@ -610,10 +610,32 @@ tests/<test-id>/
 
 1. Parse `run_end` from stdout — `status`, `reason`, `summary`, `session_dir`.
 2. Open the pack: the failed step's `failure.yaml` (error + page state), then that step's slice of `<n>-console.ndjson` / `<n>-network.har` — a 4xx/5xx or JS error usually explains the failure; cite it in plain language.
-3. Look at the failing step's `annotated.png` — it highlights the element the agent acted on. Render it inline.
+3. Look at the failing step's `screenshot.*` and `annotated.png`. They show the page **before** the step's action ran, with a marker on what the agent was about to act on. Whether an action took effect is in the **next** step's screenshot. Render the image inline.
 4. Check `tui.log` (in the pack's `logs/`, or `{session_dir}/tui.log`) for session-level issues (Chrome launch, auth, upload).
 
 Offer the visual route: `kane-cli evidence serve <pack>` starts a local-only server and prints a hosted-viewer link. After agent-mode runs, Kane CLI prints a stderr hint line (`` evidence: view locally with `kane-cli evidence serve <path>` ``) — it is plain text on stderr, never a stdout event. If a pack won't open, `kane-cli evidence validate <pack>` reports whether it's truncated/unsealed. Full evidence + testrun surface: load **`kane-cli-testrun`** steering.
+
+## Full triage from the pack
+
+Use this when the flow above did not explain a failure, when a run passed but looks wrong, or when the person asks whose fault a failure is or whether the triage inside a pack is right.
+
+One step has a different name in each file. Join on `action_id`, never on a step number: it is in `step.json`, the `result.yaml` row, the `<n>-actions.ndjson` line, and `auteur/execution.json` under `operations[].operation_id`. In a replay pack `auteur/execution.json` describes the run that authored the test.
+
+1. **Frame the run** from `run.yaml` and `result.yaml`: `run_kind` (`author` or `replay`), `origin`, the Kane CLI version, the environment. A replay repeats recorded actions, so a wrong choice of action belongs to the run that authored the test.
+2. **Read the error lines** in `logs/<n>-run.log`, `logs/runner-stderr.log` and `logs/tui.log`, with the lines around them. A sign-in, network or browser error outranks any step-level story.
+3. **Pick the window**: the step carrying `failure.yaml`, the step before it, and the step after it when one exists. Steps the run never reached are `skipped` rows in `result.yaml` with no folder. An action with a line in `<n>-actions.ndjson` and no step folder has no screenshot of its own, and can be what ended the run.
+4. **For each window step**, open `screenshot.*` (and `annotated.png` when present), take the intent from the authored step and the actions log line, and compare the two. Prove the effect from the **next** step's screenshot.
+5. **Check the `triage:` block** in the step's `failure.yaml` against the screenshots and the logs before repeating it.
+6. **Name one cause**, the earliest fault the pack proves, and report it with the screenshots and the log lines that show it.
+
+| Cause | Typical sign | What to do next |
+|---|---|---|
+| The app under test | The screenshot shows the product misbehaving | Tell the person it is a product bug and show the screenshot. Do not change the test to get around it |
+| The test or the objective | `test.md` asks for something ambiguous, impossible, or no longer true of the app | Fix the wording. For a designed test, classify the failure first (see the assurance steering) |
+| The environment | Sign-in, network, browser or device errors in the logs around the failing step | Fix the setup and run again |
+| Kane CLI | The screen was right and the step was clear, and the action was still wrong or did not take effect | Offer a bug report |
+
+Passed means the action returned, not that the screen changed. A `*.har` file can carry credentials: cite the request, never the secret.
 
 ## Common failure patterns
 

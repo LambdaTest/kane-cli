@@ -142,7 +142,7 @@ For exit code 1 (or `status: "failed"` in `run_end`), present the failure card. 
 | ➡️ **Next** | <a retry you can run now> · <walk through the failing step> |
 ```
 
-The failing step's screenshot lives inside the run's evidence pack (the stderr hint names the pack path): extract it with `unzip <pack> "tests/*/steps/*/screenshot.png" -d <tmpdir>`, Read it, and show it **under** the card. For the pack layout and deeper diagnosis, see `references/debug.md`.
+The failing step's screenshot lives inside the run's evidence pack (the stderr hint names the pack path): extract it with `unzip <pack> "tests/*/steps/*/screenshot.*" -d <tmpdir>`, Read it, and show it **under** the card. For the pack layout and deeper diagnosis, see `references/debug.md`.
 
 Exit code 2 means nothing ran: that is a `🟡 Didn't start` card, not a failure (`references/cards.md` §4).
 
@@ -174,6 +174,7 @@ When the user's request involves a browser — or writing test cases:
 - Multiple independent browser tasks → Read `references/parallel.md` first
 - View, share, or validate run evidence (`.evidence` packs) → Read `references/evidence.md`
 - Debug a failed run → Read `references/debug.md`
+- The quick debug did not explain a failure, a run passed but looks wrong, or the person asks whose fault a failure is or whether the triage in a pack is right → Read `references/triage.md`
 - Configure kane-cli or check directory layout → Read `references/setup-and-config.md`
 - Browse / create / pick a Test Manager project or folder, or interpret the auto-default event → Read `references/test-manager.md`
 - The person wants results saved somewhere else ("change project") → Read `references/test-manager.md` §6. The change is global, and the question must say so
@@ -360,6 +361,7 @@ A draft in chat cannot be run, and a hand-written `_test.md` carries no requirem
 | Need the assurance NDJSON event schema (`--mode agent`) | `references/assurance-parsing.md` |
 | Share the context store with a team, join one, keep stores level, or resolve a sync conflict (kane-cli 0.8.14+) | `references/context-sync.md` |
 | Run failed, need to diagnose | `references/debug.md` |
+| Full triage of a pack: the step sheet, screenshots set against intent, a report with one cause | `references/triage.md` |
 | View, share, validate, or merge evidence packs | `references/evidence.md` |
 | Multiple independent browser tasks | `references/parallel.md` |
 | Need full NDJSON event schema (`run`) | `references/parsing.md` |
