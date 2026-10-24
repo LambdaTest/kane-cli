@@ -98,7 +98,8 @@ into chat.
    LT --user "$LT_USERNAME" --key "$LT_ACCESS_KEY" --env ht-prod --tunnelName <name>
    ```
 
-   `--env ht-prod` is required. Wait until LT says the tunnel is connected.
+   (`$LT_USERNAME` and `$LT_ACCESS_KEY` are their LambdaTest username and access key.) `--env ht-prod` is required.
+   Wait until LT says the tunnel is connected.
 3. Run the exploration through it:
 
    ```bash
@@ -106,7 +107,7 @@ into chat.
    ```
 
    `--tunnel-name` must match `--tunnelName` from step 2, and it turns `--tunnel` on; with only one tunnel running,
-   `--tunnel` alone is enough. A re-run uses the exploration's URL, so pass the tunnel flag again:
+   `--tunnel` alone is enough. A re-run keeps the exploration's URL but not its tunnel, so pass the tunnel flag again:
    `kane-cli explore run --project <id> --tunnel-name <name> --agent`.
 
 - The tunnel **and that machine** must stay up until the run ends; the run warns about it when it starts. If the tunnel
