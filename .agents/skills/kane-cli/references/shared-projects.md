@@ -43,6 +43,10 @@ kane-cli projects create "<name>" --description "<one line>" --agent
 - `projects create` prints `{"id":…,"name":…}`. It does **not** link the folder and doesn't change where `kane-cli run`
   saves. Create a project only when the person asks for a new one; otherwise use the team's.
 - Errors from `projects` are plain text on stderr (exit 2 for usage or sign-in, 1 for a Test Manager refusal), not events.
+- **When the shared path isn't open to the person:** if `projects list` is refused (exit 1: Test Manager refused or
+  failed the request), or it lists no project the person can work in and they don't want a new one, work locally
+  (`assurance.md` §1). Tell the person why, in plain words, for example "I couldn't reach your Test Manager projects,
+  so this work stays in this folder for now". Try the shared path once only; never retry it in a loop.
 - A linked folder's own project id is in `.testmuai/assurance.json` (`projectId`).
 
 ### This folder's project id
