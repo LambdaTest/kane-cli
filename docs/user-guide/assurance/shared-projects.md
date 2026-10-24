@@ -220,7 +220,9 @@ In agent mode, `kane-cli context pull --mode agent` prints one `pull_test` event
 <!-- release: remove this subsection if the release doesn't include exploration -->
 ### What an exploration built
 
-An exploration of your app (`kane-cli explore run --project <id> --url <app>`) designs tests and saves them into the project as it goes. Their test cases are in Test Manager, and `kane-cli context list` shows their use-cases, scenarios and tests, but their files stay where the exploration ran. To get them, run `kane-cli context pull` in a folder linked to that project. They arrive as `new`, and none has run yet, so each one's first run writes its steps.
+An exploration of your app (`kane-cli explore run --project <id> --url <app>`) designs tests and saves them into the project as it goes. Their test cases are in Test Manager, and `kane-cli context list` shows their use-cases, scenarios and tests, but their files stay where the exploration ran. To get them, run `kane-cli context pull` in a folder linked to that project, or `kane-cli context pull --project <id>` in a new folder, which links it and gets them in one step. They arrive as `new`, and none has run yet, so each one's first run writes its steps.
+
+Pass the project with `--project` on every `kane-cli explore run`: explore doesn't read a folder's link. If nobody has shared the project yet, the exploration's first design job shares it, as you; if you can't create test cases in that project, it designs no tests until someone who can shares it.
 
 ## What a linked folder doesn't do
 

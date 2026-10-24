@@ -177,7 +177,7 @@ When the user's request involves a browser — or writing test cases:
 
 **What does the user want?**
 - Tests that exploration (HyperExecute) designed, or a teammate's tests, in this folder → Read `references/shared-projects.md` §7
-- Explore an app on HyperExecute → Read `references/explore.md` first
+- Explore an app on HyperExecute, shape, stop or re-run an exploration, or check what it designed → Read `references/explore.md` first
 - A command was refused, or you need the shared-project event and code list → Read `references/agent-contract.md`
 - A single one-shot browser task → build a `kane-cli run --agent` command (§3 + §4)
 - A test they want to save / re-run / commit → Read `references/testmd.md` first, then use `kane-cli testmd`
