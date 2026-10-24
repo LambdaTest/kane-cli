@@ -2,7 +2,21 @@
 
 kane-cli began as a way to author and replay browser tests. The **assurance** commands take on the step before and after: describe what your product must do, and kane-cli designs the tests that prove it — each one permanently linked to the requirement it verifies. Run them, and coverage stops being a guess: every run reports exactly what it proved and what it still owes. And as your product changes, the suite is reconciled instead of quietly rotting.
 
-> Requires kane-cli **0.6.1 or later** (`kane-cli --version`). On 0.6.0 these commands fail after a fresh install — upgrade. This guide describes **0.8.14**; version-specific behavior is marked with the release that introduced it — *(0.7.1)* through *(0.8.14)* — on its page.
+> Requires kane-cli **0.6.1 or later** (`kane-cli --version`). This guide describes **0.10.0**; version-specific behaviour is marked with the release that introduced it. Shared projects need **0.10.0**.
+
+## Where the work goes: a shared project or a local store
+
+Each folder you work in keeps its work in one of two places. You choose once, the first time you add documents to it.
+
+| | A [shared project](./shared-projects.md) *(0.10.0)* | A local store |
+|---|---|---|
+| Where the work lives | in a Test Manager project, where your team sees it | in `.context/` in this folder, on this machine |
+| Test cases | one per scenario in Test Manager, made when you save | none |
+| Coverage | the project's figure, from everyone's runs | from the runs recorded in your local store |
+| Sharing | teammates join the project from their own folders | [`context sync`](./sharing.md) through a location |
+| Reviewing use-cases | when you finish the extract chat | `context review` |
+
+If your team works in Test Manager, use a shared project, and start at [Shared projects](./shared-projects.md). The loop below is the same in both, except where the shared-projects page says otherwise. The biggest difference: in a shared project, each step's work reaches the project only when you save its session.
 
 ## The loop
 
@@ -61,6 +75,8 @@ kane-cli has two ways to author tests, for two different jobs:
 If you have a PRD and care about coverage accounting, start with assurance. If you want ten good test ideas in a minute, start with `generate`.
 
 ## The store: `.context/`
+
+In a folder linked to a [shared project](./shared-projects.md), there's no `.context/`: the work lives in the project. Everything below is about a local store.
 
 The assurance commands work over a local store in your project directory, created on first `ingest`:
 

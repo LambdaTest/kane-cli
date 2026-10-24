@@ -20,6 +20,8 @@ Then open your agent in a project and ask for something that needs a browser:
 check that the home page loads on my app
 ```
 
+Already have kane-cli? `kane-cli install skill` installs the newest skill that fits your kane-cli, for Claude Code, Codex CLI and Gemini CLI. Pass a version to pin one: `kane-cli install skill <version>`. When kane-cli tells you a skill update is available, this is the command to run. For a first install, use `npx @testmuai/kane-cli-skill`: it also creates the folder that holds your agent preferences.
+
 ## What happens on your first run
 
 1. **A ready check.** The agent runs one short script and shows a card: who is signed in, credits left, Chrome found, your app if it is already running locally, and where results will be saved. If something is missing, such as a sign-in, the card says so and offers the fix. The agent can open the sign-in page for you. It never asks you to paste an access key into the chat.
@@ -56,6 +58,21 @@ Deleting the file is safe. The agent falls back to sensible defaults and treats 
 Every run is saved as a test case in a Test Manager project and folder ([Test Manager integration](./test-manager-integration.md)). The ready check always shows which one. To move it, tell your agent "change project". The agent lists your projects, lets you pick or create one, and saves it.
 
 This setting belongs to kane-cli, not to the agent, so a change applies to **every later kane-cli session for your sign-in**: every project folder, every agent, and the terminal. Tests you already ran stay in their original project.
+
+## Working in your team's shared project
+
+If your team keeps its tests in a Test Manager project, tell your agent which one the first time you work in a folder:
+
+```text
+use our "Checkout revamp" project in Test Manager, and design tests from prd.md
+```
+
+The agent finds the project's id and links the folder to it (`--project <id>`), so what it designs and saves goes to the project, where your team sees it. Name the project the first time: in a folder that isn't set up yet, kane-cli asks "shared or local?" only at a terminal, so an agent that isn't told works **locally**, in the folder alone. Once a folder is linked, every later request in it uses the same project. See [Shared projects](./assurance/shared-projects.md).
+
+Two things your agent will check with you in a shared project:
+
+- **The use-cases it found.** When an agent extracts use-cases, they stay proposed until a person checks them. The agent shows you the list and asks before it designs tests from them.
+- **Before a first run.** The first run of each designed test writes its steps in a real browser, which takes a few minutes and uses more credits than later runs.
 
 ## Watch runs live (Claude Code)
 
@@ -95,6 +112,17 @@ Driving kane-cli through an agent changes nothing about what kane-cli uploads. B
 ## Running with no person present
 
 In CI, or with a cloud agent that cannot ask you anything, the agent skips the tour and the questions, runs headless with default settings, and does not write the preferences file. It still stops and reports clearly if kane-cli is not installed, not signed in, or out of credits. For pipelines, calling kane-cli directly is usually simpler: see [CI/CD recipes](./cicd.md).
+
+## For agent authors: the two agent flags
+
+| Commands | Agent flag |
+|---|---|
+| `run`, `testmd`, `testrun`, `projects`, `folders`, `explore`, `config show`, `generate`, `devices`, `apps` | `--agent` |
+| `context`, `design`, `maintain`, `cover` | `--mode agent` |
+
+Both print JSON lines on stdout. `run` and `testmd` also take `--mode agent`. Every other command refuses the spelling it doesn't take, as an unknown option.
+
+The assurance commands' events and codes are in [Automation](./assurance/automation.md). The codes a shared project adds, and what to do about each, are in [Troubleshooting: shared projects](./troubleshooting.md#shared-projects).
 
 ## Next steps
 

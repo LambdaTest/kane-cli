@@ -2,6 +2,10 @@
 
 # Assurance NDJSON — Wire Contract
 
+> In a folder linked to a shared project (kane-cli 0.10.0+) the same commands add their own events (`folder_linked`,
+> `nothing_new`, `remote_*` progress, `session_complete`, `session_save`, `session_discard`, `session_ended`) and refusal
+> codes. They are in `agent-contract.md`; this page covers the local store.
+
 `kane-cli context extract --mode agent`, `kane-cli context ingest … --mode agent`, and `kane-cli design tests --mode agent` speak a versioned NDJSON vocabulary on stdout — one JSON object per line, envelope `{"type": "<name>", "v": 1, "verb": "extract"|"design", ...}`. On 0.7.2+ the stream is **strict**: stdout carries only NDJSON and stderr stays silent (crash traces excepted); on 0.7.1, prose diagnostics could ride stderr. `maintain reconcile --mode agent` (verb `reconcile`) and `cover`/`cover gaps --mode agent` (verbs `cover`/`gaps`) share the envelope with their own event sets (below).
 
 **The vocabulary is open**: new event types and fields may appear in any release — tolerate unknowns, never fail on them.

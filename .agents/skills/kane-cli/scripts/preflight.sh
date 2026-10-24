@@ -126,6 +126,17 @@ emit_cmd balance kane-cli balance
 echo "## settings"
 emit_cmd settings kane-cli config show
 
+echo "## link"
+# A folder linked to a shared project holds .testmuai/assurance.json; print only its project's name and id.
+link_file=".testmuai/assurance.json"
+if [ -f "$link_file" ] && [ -r "$link_file" ]; then
+  link_name=$(sed -n 's/.*"projectName"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$link_file" | head -n 1)
+  link_id=$(sed -n 's/.*"projectId"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$link_file" | head -n 1)
+  printf 'project=%s\nproject_id=%s\n' "$link_name" "$link_id"
+else
+  echo "none"
+fi
+
 echo "## agent-config"
 agent_config="$HOME/.testmuai/kaneai/agent-config/config.json"
 if [ -f "$agent_config" ] && [ -r "$agent_config" ]; then

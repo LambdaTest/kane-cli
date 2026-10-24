@@ -17,7 +17,7 @@ const posix = process.platform === 'win32' ? test.skip : test;
 const SCRIPT = path.resolve(here, '..', 'skills', 'scripts', 'preflight.sh');
 const SYSTEM_PATH = '/usr/bin:/bin:/usr/sbin:/sbin';
 const BASE_SECTIONS = [
-  'version', 'whoami', 'balance', 'settings', 'agent-config',
+  'version', 'whoami', 'balance', 'settings', 'link', 'agent-config',
   'env', 'chrome', 'app', 'tests',
 ];
 const DEV_PORTS = [3000, 3001, 4200, 4321, 5173, 5174, 8000, 8080, 8888];
@@ -96,7 +96,7 @@ function listen(port) {
   });
 }
 
-posix('prints the nine base sections in order, with raw output and exit codes', (t) => {
+posix('prints the ten base sections in order, with raw output and exit codes', (t) => {
   const sb = sandbox(t);
   const res = run(sb);
   assert.equal(res.status, 0, res.stderr);
@@ -180,6 +180,19 @@ posix('agent-config prints none when absent and the file content when present', 
   const { order, body } = parse(run(sb).stdout);
   assert.deepEqual(order, BASE_SECTIONS);
   assert.deepEqual(JSON.parse(body['agent-config'].join('\n')), config);
+});
+
+posix('link prints none in a plain folder, and the project name and id in a linked one', (t) => {
+  const sb = sandbox(t);
+  assert.deepEqual(parse(run(sb).stdout).body.link, ['none']);
+
+  const dir = path.join(sb.cwd, '.testmuai');
+  fs.mkdirSync(dir, { recursive: true });
+  const link = { projectId: '01DUMMYPROJECTID', projectName: 'Checkout revamp', writtenBy: 'kane-cli' };
+  fs.writeFileSync(path.join(dir, 'assurance.json'), `${JSON.stringify(link, null, 2)}\n`);
+  const { order, body } = parse(run(sb).stdout);
+  assert.deepEqual(order, BASE_SECTIONS);
+  assert.deepEqual(body.link, ['project=Checkout revamp', 'project_id=01DUMMYPROJECTID']);
 });
 
 posix('whoami, balance and settings run in parallel', (t) => {

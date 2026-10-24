@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const SCRIPT = path.resolve(here, '..', 'skills', 'scripts', 'preflight.ps1');
 const win = process.platform === 'win32' ? test : test.skip;
-const BASE_SECTIONS = ['version', 'whoami', 'balance', 'settings', 'agent-config', 'env', 'chrome', 'app', 'tests'];
+const BASE_SECTIONS = ['version', 'whoami', 'balance', 'settings', 'link', 'agent-config', 'env', 'chrome', 'app', 'tests'];
 
 // A stand-in kane-cli for Windows: a .cmd that answers the calls preflight makes.
 const FAKE_CLI = [

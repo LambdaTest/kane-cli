@@ -2,6 +2,17 @@
 
 # The first run
 
+**In a folder linked to a shared project** (it holds `.testmuai/assurance.json`), or when the person's first request is
+for a team's project, the first result is the shared-project journey, never a `kane-cli run`: `kane-cli run` saves to
+the profile's project and its test then clashes with the team's tests (`shared-projects.md` §9). The first result is
+the list of use cases the first extract proposes; show it as the first result, then offer the same three choices. A
+teammate joining a project whose documents are all read gets no proposal (`nothing_new`): show the project's
+`context list` as the first result instead. In a linked folder, the "where results go" choice only changes where
+`kane-cli run` saves; say so. Quick `kane-cli run` experiments go in a separate folder that isn't linked.
+
+**When the first request starts from requirements** (a PRD, a spec, a description) in a local folder, the first result
+is likewise the use cases the extract proposes.
+
 A person's first request should reach its first result with nothing standing in the way. The order is fixed:
 
 1. Ready card (`references/ready-check.md`)

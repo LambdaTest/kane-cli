@@ -44,9 +44,49 @@ All members must share one org + project. *(0.8.4+)* Members need **not** be aut
 | Reason | Plain-language meaning | What to tell the user |
 |---|---|---|
 | `org_mismatch` | Different organisation than the other tests | "Check `kane-cli testmd status <path>` — it belongs to another org" |
-| `project_mismatch` | Different project than the other tests | "Run it separately or per-project" |
+| `project_mismatch` | Different project than the other tests | *(0.10.0+)* the run also emits `error` `PROJECT_MISMATCH` with `projects[]` (`project_id`, `name`, `this_folder`, `tests`) and a `next` that runs this folder's project's tests by path: run it, and tell the person which tests belong to the other project |
 
-If **any** member fails preflight, the plan is invalid: nothing runs, exit `2`. Suggest `--dry-run` to preview the plan cheaply before a big run. *(0.8.15+)* Preflight also checks variables. A `{{name}}` with no value is a warning: the member stays in the plan (`valid` does not look at variables), and the run types the name as written unless a step sets it first. The check covers every step of the member, replayed ones included. `testrun run` has no `--variables` flag, so fill the pool file (`.testmuai/variables/*.json`) or the member's own `variables:` frontmatter first.
+If **any** member fails preflight, the plan is invalid: nothing runs, exit `2`. *(In a folder linked to a shared project, from the release that carries it)* the run then emits `error` `PLAN_INVALID`
+with `offenders[{path, failure}]`, and `testrun_done{overall_status:"refused"}`; `PROJECT_MISMATCH` is followed by the
+same `testrun_done`; and a folder with no tests gives `error` `NO_TESTS` ("no tests here yet") with `next`
+`kane-cli context pull --mode agent`. Everywhere else, and on 0.10.0, these cases end after `testrun_plan` with no
+`error` and no `testrun_done`: read the exit code and each member's `failure`. Suggest `--dry-run` to preview the plan cheaply before a big run. *(0.8.15+)* Preflight also checks variables. A `{{name}}` with no value is a warning: the member stays in the plan (`valid` does not look at variables), and the run types the name as written unless a step sets it first. The check covers every step of the member, replayed ones included. `testrun run` has no `--variables` flag, so fill the pool file (`.testmuai/variables/*.json`) or the member's own `variables:` frontmatter first.
+
+## Designed tests in a shared project (kane-cli 0.10.0+)
+
+In a folder linked to a shared project (`shared-projects.md`), a designed test (its file sits directly in `.testmuai/tests/`
+and carries an `assurance:` block) runs **on its scenario's Test Manager case**. Before the browser opens, kane-cli finds
+that case from the test's `id` and `base`.
+
+| The test here | What its run does | Cost |
+|---|---|---|
+| no `output-<test>/` beside it (never run in this folder: just saved, or pulled) | a **first run**: it attaches a new KaneAI test to the case and writes every step in a real browser, then commits it | minutes, and about 30–85 credits per test (each input it checks is its own browser run); tell the person before running it |
+| has `output-<test>/` from a first run here that finished | a **replay** of the recorded steps | a few credits |
+| a replayed step fails | **heal**: it rewrites from that step, up to 3 times, then the whole test | about a first run's cost |
+
+- Before a first run, tell the person how many tests will write their steps and the likely cost
+  (`shared-projects.md` §4), and let them choose. Don't add `--no-adaptive-heal`, `--author` or other behaviour flags on
+  your own; heal is on by default.
+- Run the files a save or a pull named: `kane-cli testrun run <files> --agent < /dev/null`. A bare `testrun run` takes
+  every `*_test.md` here, and a folder that also holds a `kane-cli run` test refuses `PROJECT_MISMATCH` (above).
+- A designed test moved into a subfolder of `.testmuai/tests/` runs as an ordinary test, off its case, and doesn't count.
+- **Counting.** A finished run counts toward the project's coverage once Test Manager has its evidence; `cover` can take
+  up to 5 minutes to show it. The run's own `coverage` event (`computed_by: "project"`) shows what this run reached.
+- **A test that can't run on its case** stops before the browser, and its member ends `failed`; in agent mode its
+  `failure.message` says why, and `--stream-members` carries the refusal's code. The codes and what to do:
+
+| Code | Means | Do |
+|---|---|---|
+| `TEST_CASE_MISSING` | the design that made this test was never saved, so it has no case | save that session: `kane-cli context sessions save <sid> --yes --mode agent` (the person's own session) |
+| `TEST_CASE_GONE` | its case was deleted or moved to another project in Test Manager | save the session that designed it again: `kane-cli context sessions save <sid> --yes --mode agent` (free; it makes a new case) |
+| `TEST_CASE_ARCHIVED` | its case is archived in Test Manager | ask the person to restore the case in Test Manager, then run the test again |
+| `TEST_NOT_IN_PROJECT` | the test isn't in this folder's project, the project has no work yet, or the design it came from can't be saved any more | do what the refusal's message says: run it in the folder linked to its own project, or design the use case again on the person's word (`kane-cli design tests --use-case <uc> --force --mode agent`; add `--allow-unreviewed` when the use-case is still proposed) |
+| `TEST_MANAGER_OUTDATED` | Test Manager can't attach this run (for example a device target: it attaches web runs only) | run it on desktop web, or tell the person |
+| `TEST_CASE_ATTACH_FAILED`, `TEST_RUN_NOT_SAVED` | the run couldn't be recorded on the case (the verdict stands for the second) | try once more; then give the person the support id |
+| `PROJECT_NO_ACCESS`, `CREDENTIALS_MISSING`, `CREDENTIALS_REJECTED`, `CONNECTION_FAILED` | the case lookup on a first run failed | `agent-contract.md` |
+
+- In a terminal the person sees only "failed" for such a member; the reason is in that member's own log
+  (`testrun_member_end.log_path`). Read it before you report the failure.
 
 ## Remote: the suite as one HyperExecute job (`--remote`)
 
@@ -170,8 +210,8 @@ Healing is enabled by default (three shrinking replay windows, then re-authoring
 
 NDJSON selection uses stdin, not stdout (on 0.8.21+ `--agent` selects the same stream): every `kane-cli testrun run` line ends in `< /dev/null` (bash and zsh on macOS, Linux and Git Bash; `< NUL` in cmd.exe; from PowerShell run it through cmd: `cmd /c "kane-cli testrun run … < NUL"`). Check the first stdout line: on 0.8.17+ it is `{"type":"stream_start"…}`. A prose plan there instead means the CLI is in terminal mode: it prints the human view and, after a real run, opens an evidence table that waits until `q` or Esc, so the process never exits on its own. Stop it and rerun with the redirect. An empty stdout with a message on stderr is a usage error: read it. Dry-run validates a plan, not runtime authentication or browser/device readiness. Always observe process exit, including paths without a normal completion event.
 
-### Remote behavior still requiring verification
+### Remote flags that don't reach the tests
 
-The audited dispatch does not forward `--bug-detection` to member commands and does not map `--on-failure` into the job template. Do not rely on these flags for remote bug-detection or fail-fast behavior until implementation owners confirm or fix the mapping. `--name` is suite metadata, not a forwarded member flag.
-
-For dispatched runs, read through `remote_done` and process exit after `testrun_done`; retain the remote status and session-log path. Preflight refusal and dry-run may terminate without `remote_done`.
+On `--remote`, `--bug-detection` and `--on-failure` don't reach the tests on the grid: don't rely on them there. For
+dispatched runs, read through `remote_done` and the process exit after `testrun_done`, and keep the remote status and
+the session-log path. A preflight refusal or a dry run can end without `remote_done`.

@@ -161,6 +161,30 @@ kane-cli maintain evolve t-4 --mode agent --answer evolve:uc-3=1     # 1 = proce
 
 The resume command keeps `--because`. With `--from-stale` there is one question per use-case and nothing runs until every one is answered; a partial set pauses again on the rest and keeps the answers given. A design session that pauses arrives as its own `session_paused`, and `done` carries its resume command: resume it, then run evolve again for the diff. After a partial answer the suggested commands carry the answers already given, so declining the rest still re-designs what you answered proceed. `--mode` accepts `interactive` and `agent` only (`MODE_USAGE` otherwise); an answer to a question the run does not ask refuses `ANSWER_USAGE`. The event table is in [Automation](./automation.md#evolves-stream).
 
+## In a shared project
+
+In a folder linked to a [shared project](./shared-projects.md), both commands work in a session, like a design, and nothing reaches the project until you save it with `kane-cli context sessions save <sid>`. The save writes the updated test files into this folder's `.testmuai/tests/` and updates the scenarios' test cases in Test Manager.
+
+**`maintain reconcile`** takes the changed document as a file, and the id of the document it replaces:
+
+```bash
+kane-cli maintain reconcile --from prd-v2.md --source-id prd
+```
+
+- `--plan`, `--apply` and `--mode ci` aren't available. Use the chat at a terminal, or `--mode agent`.
+- `--from` takes a file, not a web address. To review a web page's new version, add it with `kane-cli context ingest <address>`: a new version of a document the project already has opens the same review.
+- Run on the same file again, and with nothing to review it says the file is `already in "<project>", unchanged`.
+
+**`maintain evolve`** updates the tests of a use-case whose document changed after its tests were designed:
+
+```bash
+kane-cli maintain evolve uc-3
+kane-cli maintain evolve --from-stale --mode agent
+```
+
+- A use-case that hasn't changed stops with `hasn't changed since its tests were designed`, and a use-case with no tests yet with `has no tests yet`. Each names the `kane-cli design tests --use-case <id>` to run instead.
+- While someone else is designing a use-case, `--from-stale` skips it and goes on with the rest.
+
 ## Exit codes
 
 | Code | Meaning |

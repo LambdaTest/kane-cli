@@ -83,6 +83,30 @@ The same auto-default kicks in if a previously-configured project or folder has 
 
 After a successful upload, kane-cli prints two links to the terminal (see [Share links at session exit](#share-links-at-session-exit)). Both lead into the TestmuAI Test Manager UI for the test case that was just created. From there you can browse the project and folder you configured (or that were auto-defaulted), view the run summary, and dig into individual steps and screenshots.
 
+## Shared projects: a folder's own project
+
+A folder linked to a [shared project](./assurance/shared-projects.md) has its own Test Manager project, separate from your profile's.
+
+| | Your profile's project | A folder's shared project |
+|---|---|---|
+| Set with | `kane-cli config project <id>`, or the first-run default | `--project <id>` on the folder's first `kane-cli context ingest` or `kane-cli context extract`, or the question those ask at a terminal |
+| Kept in | your profile, under `~/.testmuai/` | `.testmuai/assurance.json` in the folder |
+| Used by | `kane-cli run`, and tests that aren't designed in a shared project | the assurance commands, and designed tests' runs, in that folder |
+| Shown by | `kane-cli config show` | `using project "<name>", shared with your team` at the start of each chat session in the folder, and of `kane-cli cover` |
+
+`kane-cli projects create` and `kane-cli config project` never link a folder. A `kane-cli run` in a linked folder still uploads to your profile's project.
+
+### Test cases from a design
+
+Saving a design session makes one test case per scenario in the folder's project, or updates the one it made before:
+
+- its title is the scenario's title, and its description is the scenario's intent and the criteria it verifies;
+- it's tagged `assurance` and with its use-case's id;
+- its steps are the test's steps;
+- it's made at the project's top level, in no folder.
+
+A designed test's first run adds its KaneAI test to that case, and every later run is recorded on it. Coverage counts those runs. If you edit a case's steps in Test Manager, the next save doesn't overwrite them: it lists the case as one it couldn't update.
+
 ## Code export
 
 Code export converts a completed test case into runnable Playwright code that you can check into your repository or extend by hand.

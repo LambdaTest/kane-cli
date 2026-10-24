@@ -117,6 +117,20 @@ try {
     Write-Output '## settings'
     Write-CommandBlock -CliArgs @('config', 'show')
 
+    Write-Output '## link'
+    # A folder linked to a shared project holds .testmuai/assurance.json; print only its project's name and id.
+    $linkFile = [IO.Path]::Combine((Get-Location).Path, '.testmuai', 'assurance.json')
+    $link = $null
+    if (Test-Path -LiteralPath $linkFile -PathType Leaf) {
+        try { $link = Get-Content -LiteralPath $linkFile -Raw -Encoding UTF8 -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop } catch { }
+    }
+    if ($null -ne $link) {
+        Write-Output ("project=" + $link.projectName)
+        Write-Output ("project_id=" + $link.projectId)
+    } else {
+        Write-Output 'none'
+    }
+
     Write-Output '## agent-config'
     $agentConfig = [IO.Path]::Combine($HOME, '.testmuai', 'kaneai', 'agent-config', 'config.json')
     $agentConfigText = $null

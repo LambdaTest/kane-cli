@@ -2,6 +2,11 @@
 
 # Test Manager Reference — Agent Surface
 
+> **Two different "projects".** This page is about the **profile's** project: where `kane-cli run`, `testmd` and
+> `generate` save. An assurance folder **linked** to a team's shared project uses the link's project instead, and
+> `projects create` or `config project` never change a folder's link (`shared-projects.md` §2–3). In a linked folder,
+> `kane-cli run` still saves to the profile's project (`shared-projects.md` §9).
+
 Every kane-cli session uploads to a TestmuAI **Test Manager (TMS)** test case. The session lands inside a **project** (required) and optionally a **folder** inside that project. This page is the agent-facing surface for everything that touches TMS: where the run ends up, how to browse and create projects/folders programmatically, and the event the run-startup gate emits when nothing is configured.
 
 Field names below are for parsing only — translate to plain language for the user, per the §5 rule in `SKILL.md`.
@@ -165,6 +170,5 @@ The results project and folder belong to kane-cli, not to the agent config. A ch
 | Code | Meaning |
 |---|---|
 | 0 | OK |
-| 2 | Auth/setup error (missing or invalid credentials) or unknown subcommand |
-
-Other codes are run-specific (`run` / `testmd run`) and don't apply to `projects` / `folders`.
+| 1 | Test Manager refused or failed the request (the message is on stderr) |
+| 2 | Auth/setup error (missing or invalid credentials), a bad flag value, or unknown subcommand |

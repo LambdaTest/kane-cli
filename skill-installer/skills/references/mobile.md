@@ -143,7 +143,7 @@ Rules that differ from a local run (each violation is a `remote_error` before di
 | **Payload** | Members must live under the cwd being dispatched, and recordings must not be gitignored (un-ignore with `!output-*/`). Builds are not payload. | `member_outside_payload`, `gitignored_inputs` |
 | **Auth** | HyperExecute needs a LambdaTest username + access key; an OAuth profile is exchanged automatically, or pass `--username`/`--access-key`. Any `APP…` id must belong to the same organisation. | `no_basic_auth` |
 
-What to present after `testrun_done`/`remote_done`: the suite rollup (per `references/testrun.md`), the device line (name + OS from `remote_device`; for simulators the pool, and each member's own pair), each build the laptop uploaded (`remote_app` path → `app_id`), and the job link (`remote_dispatched.job_url`) for the dashboard's stage logs. If a member comes back `broken` with zero steps, the grid-side run refused before launching — check the app id belongs to this account (`apps list` for the active profile) and the job's scenario log at the job link.
+What to present after `testrun_done`/`remote_done`: the suite rollup (per `references/testrun.md`), the device line (name + OS from `remote_device`; for simulators the pool, and each member's own pair), each build the laptop uploaded (`remote_app` path → `app_id`), and the job link (`remote_dispatched.job_url`) for the job's step logs. If a member comes back `broken` with zero steps, the grid-side run refused before launching — check the app id belongs to this account (`apps list` for the active profile) and the job's scenario log at the job link.
 
 ## Real devices (`--target android|ios`)
 

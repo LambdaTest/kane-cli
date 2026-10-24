@@ -11,6 +11,9 @@ kane-cli context sync origin    # every day after that: take the team's new reco
 
 Two rules stand behind every command here: **never merge `.context/` with git**, and never edit it by hand. Sharing goes through a location, and only through the commands on this page.
 
+<!-- release: needs context pull -->
+> **Is your team in Test Manager?** Use a [shared project](./shared-projects.md) instead *(0.10.0)*: everyone works in one Test Manager project, and nothing needs a location. This page is about sharing a **local store** (`.context/`) through a location. A folder linked to a shared project refuses `context sync`, `context push` and `context clone`. There, `context pull` brings the project's tests, and takes no location name: see [Bringing the project's tests into your folder](./shared-projects.md#bringing-the-projects-tests-into-your-folder).
+
 <a name="locations"></a>
 ## Three kinds of location
 

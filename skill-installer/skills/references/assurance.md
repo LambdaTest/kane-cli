@@ -6,7 +6,7 @@ When the user has **requirements** — a PRD, a spec, acceptance notes — and w
 
 - **Assurance** = tests derived from the actual documents, every claim cited, every test permanently tagged with the acceptance criteria it verifies, coverage measured against requirements. Use it whenever the user cares about "what exactly is covered, and how do we know?"
 
-Everything here works over a local store (`.context/` in the project directory) that the commands create and manage themselves.
+Everything here works over a local store (`.context/` in the project directory) that the commands create and manage themselves. **A folder linked to a team's shared project** (it holds `.testmuai/assurance.json`; kane-cli 0.10.0+) works in the project instead, and its journey differs: no `context review` checkpoint, every session is saved explicitly, and `cover gaps` is refused. Follow `shared-projects.md` §4 there; the sections below still describe what each command produces. In agent mode a folder that isn't set up yet goes local unless you pass `--project <id>`, so settle where the work goes first (`shared-projects.md` §1).
 
 **Version gate — check before improvising.** The assurance commands exist on kane-cli **0.6.1 and later**; flags and events marked with a release (**0.7.1+** … **0.8.14+**) below need at least that release. On an older CLI, `kane-cli context …` fails as an *unknown command* (exit 2 with a "did you mean" suggestion) — that error means the CLI is too old, not that you typed it wrong. Confirm with `kane-cli --version`, tell the user to update (`npm install -g @testmuai/kane-cli`, or `brew upgrade kane-cli`), and stop — do not try to reproduce the workflow with other commands.
 
@@ -49,7 +49,7 @@ Three ways to resume:
 kane-cli context extract --resume <sid> --mode agent --message "Account required — the update section supersedes the older text"
 
 # by id (0.7.1+) — for precise scripted answers; each echoes a panel_resolved event:
-kane-cli context extract --resume <sid> --mode agent --answer q1=1 --answer q2="https://staging.example.com"
+kane-cli context extract --resume <sid> --mode agent --answer q1=1 --answer q2="https://app.example.com"
 
 # land a new source instead of answering (0.7.1+) — the batch defers (ask_deferred), the agent
 # reads the source and re-asks only what's still open:
@@ -86,11 +86,11 @@ Remote ids share ONE space (0.8.6+): a URL whose id is already backed by a diffe
 
 Re-ingesting changed bytes under the same id **versions** the source and marks everything derived from the old snapshot stale — but for a changed document, prefer `maintain reconcile` (§11), which does the version move AND triages the fallout.
 
-Extract behavior to expect (0.7.1+): the sweep **continues past a per-source failure** (one line each; exit 1 at the end if anything failed — the failed source simply retries next run, no `--force` needed). `--trust hold` holds everything new for the user's review instead of committing (headless-only; `--mode ci` refuses the flag entirely; use it one source at a time — resuming held work from a multi-source run is not yet supported). The agent cites every claim (fabrication is rejected before write), asks when the source contradicts itself, and commits proposals as `derived`. Watch the `commit` event and say it in plain language ("5 use-cases extracted from the PRD").
+Extract behavior to expect (0.7.1+): the sweep **continues past a per-source failure** (one line each; exit 1 at the end if anything failed — the failed source is read again on the next extract, which costs credits again; no `--force` needed). `--trust hold` holds everything new for the user's review instead of committing (headless-only; `--mode ci` refuses the flag entirely; use it one source at a time — resuming held work from a multi-source run is not yet supported). The agent cites every claim (fabrication is rejected before write), asks when the source contradicts itself, and commits proposals as `derived`. Watch the `commit` event and say it in plain language ("5 use-cases extracted from the PRD").
 
 ## 4. Review — trust is the user's decision
 
-Promotion from `derived` to `trusted` **always requires explicit user confirmation** — even when the user asked for an "end-to-end" run. End-to-end authorizes completing the workflow, not making product-requirement judgements.
+Promotion from `derived` to `trusted` **always requires explicit user confirmation** — even when the user asked for an "end-to-end" run. *(In a shared project there is no review command: `context review` and `context explain` are refused in a linked folder, and use cases an agent run saves stay proposed. Run the checkpoint as `shared-projects.md` §4 says: show them, ask once for the batch, then design with `--allow-unreviewed` on a yes.)* End-to-end authorizes completing the workflow, not making product-requirement judgements.
 
 **Present the material, not the counts.** The `commit` event carries counts and ids only — to run a checkpoint, enumerate what's waiting with `kane-cli context list --json --inferred` (one JSON row per unreviewed node) and pull any item's full content, citations, and history with `kane-cli context explain <ref> --json`. Present titles, descriptions, and the cited evidence; collect the user's decisions; build the verdicts from those same refs. The same recipe runs the design checkpoint. Then land the decisions atomically:
 
@@ -157,6 +157,8 @@ kane-cli cover gaps --json        # the nested document (designed axis, proven a
 kane-cli cover gaps --mode agent  # 0.7.1+: same data as ONE `gaps` event + done.next[] ready-commands
 ```
 
+**In a shared project** (a linked folder): `cover gaps` is refused. `kane-cli cover --mode agent` gives the project's own figure, one `coverage` event then `done`. A run less than 5 minutes old may not count yet (`recent_run.may_not_count_yet: true`); say so and offer to check again. Its `done.next` commands carry their agent flag (`--mode agent`, or `--agent` for `testrun run`): run them as given, ending a `testrun run` line in `< /dev/null`. If a `next` command has no agent flag, add the one that command takes before running it.
+
 On 0.8.2+ the default `cover gaps` output is the **coverage ribbon** — a high-level band-table: one severity-ordered row per use-case with designed/proven bars and per-class debt counts, deliberately carrying NO commands. To act, drill in: `cover gaps <uc-id>` (the dossier) renders every AC of that use-case plus a `next` actions block — evidence first; surface its warning that re-running an authored test on a broken app may heal the test around the failure — or read `--json`, whose per-UC pending rows keep `ready_command`. `--rollup lenient|strict` selects the proven-axis formula. BREAKING at 0.8.2: `--flat` and gaps' `--from` are REMOVED and refuse (pre-0.8.2 CLIs still have the flat worklist). With a `<uc-id>`, `--json` and agent mode close the document over that use-case.
 
 ## 8. Store rules — don't corrupt the user's graph
@@ -197,6 +199,8 @@ On 0.8.2+ the default `cover gaps` output is the **coverage ribbon** — a high-
 | `sync_error` code `SYNC_BEHIND` / `SYNC_DIVERGED` (exit 3, 0.8.14+) | the location has records this store has not pulled / both sides added work — a pull or a rebase is needed, not a failure | relay the `remedy` verbatim (`kane-cli context pull <name>`, or `--rebase` on the user's go-ahead) — `references/context-sync.md` §6 |
 | `sync_behind` event on an extract/design/reconcile stream (0.8.14+) | advisory: the location has moved past this store | one line ("origin has records you have not pulled"); the run continues |
 | `sync_error` code `SYNC_STORE_BUSY` (exit 2, 0.8.14+) | a sync verb met a live session or lock on this store | wait; `kane-cli context sync doctor` when it names an interrupted rebase |
+| `error` code `NO_PROPOSAL` | the agent stopped before proposing use-cases for that source | re-run `kane-cli context extract --mode agent` once; it reads that source again and costs credits again. If it happens twice, stop, and give the person the command and the message |
+| a shared-project code (`PROJECT_NO_ACCESS`, `FOLDER_CHOSEN`, `PROJECT_BUSY`, `REMOTE_UNSUPPORTED`, `CONFIRM_REQUIRED`, `PROJECT_MISMATCH`, `TEST_CASE_MISSING` …) | a linked folder's refusal | `agent-contract.md`: each code with the command that recovers it |
 | `error` + `done` with exit `1` | runtime failure (incl. a sweep where some sources failed) | report the message; **do not blindly re-run a paid command** |
 | auth/credit failure mid-run | token or balance problem | keep the `sid`, have the user fix auth/balance (`kane-cli whoami`, `kane-cli balance`), then resume |
 | stream ends with no `done` event | the process crashed — outcome unknown (the one designed exception: `kane-cli context review --mode agent` keeps its `--json` shape and ends its listings without `done`; read its exit code) | check `context sessions --json` and `context list` before any retry, to avoid duplicate paid work |
