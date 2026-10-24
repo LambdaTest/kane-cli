@@ -36,14 +36,14 @@ kane-cli explore run --project <id> --url <app url> --prompt "<what to explore>"
   mode kane-cli asks nobody. Before `explore run`, tell the person and ask whether it may change data in their app; if
   not, pass `--policy read_only` (it keeps the explorer from changing data). A `mutating` run starts with a `warning`
   (`code: "policy_mutating"`): relay it.
-- Under `read_only` the setup the person asks for in `--deps` (a sign-in, for example) still runs as asked, so keep
-  `--deps` to what they allow.
+- Under `read_only`, the setup steps in `--deps` (a sign-in, for example) still run as written, so put in `--deps` only
+  what the person allows.
 - An exploration spends credits while it runs, and so does each design job it starts (§4). Without `--max-leases` it
   runs until it runs out of work. Tell the person before `explore run`, and offer a limit when credits matter (§2).
 - A project that isn't shared yet is shared by the exploration's first design job, as the person who started the run.
   If they may not create test cases in it, no tests are designed: `explore context status` shows `context.enabled: true`
-  with `context.off_reason: "mark_refused"`. Ask the person to get permission to create test cases from a Test Manager
-  admin, or to have someone who has it share the project; once they have permission, turn context off and on (§4), only
+  with `context.off_reason: "mark_refused"`. Tell the person: "Ask a Test Manager admin for permission to create test
+  cases, or ask someone who has it to share the project." Once they have permission, turn context off and on (§4), only
   on their word.
 
 **The stream:** `stream_start` (`surface: "explore"`), maybe `warning`, `explore_remote_started {exploration_id, run_id,
@@ -76,8 +76,43 @@ Add these to `explore run` only when the person's request needs them:
 | More browsers at once | `--max-parallel <n>` (up to 20 cloud browsers; up to 4 with Chrome on this machine). Each may sign in once: use 1 for an app that allows one login |
 | A map, no tests | `--no-context`, on the project's first exploration only; for an existing one, `explore context off` (§4) |
 | How deep it goes, what counts as slow, whether findings are checked again | `--depth-caps`, `--slow-budget`, `--no-recheck`: `kane-cli explore run --help` gives their values |
-| An app on `localhost` or a private network | the cloud's browsers can't reach it on their own: the person starts a LambdaTest tunnel on their machine first and keeps it, and that machine, up until the run ends; then pass `--tunnel-name <name>` |
+| An app on `localhost` or a private network | `--tunnel-name <name>`, through a LambdaTest tunnel on the person's machine (below) |
 | To explore from this machine | `--local-orchestration` (Chrome here; `--headless` for no window). The command then waits for the run to end (§1) |
+
+### An app on `localhost` or a private network
+
+The cloud's browsers can't reach it on their own: they reach it through a LambdaTest tunnel (LT) running on the person's
+machine. kane-cli never starts or stops the tunnel; the person does, in their own terminal, so their key never comes
+into chat.
+
+1. If `LT --version` doesn't run there, they download LT for their machine and put it on their PATH:
+   - Apple silicon Mac: `https://downloads.lambdatest.com/tunnel/v3/mac/arm64/LT_Mac.zip`
+   - Intel Mac: `https://downloads.lambdatest.com/tunnel/v3/mac/64bit/LT_Mac.zip`
+   - Linux: `https://downloads.lambdatest.com/tunnel/v3/linux/64bit/LT_Linux.zip` (`linux/arm64/LT_Linux.zip` on ARM)
+   - Windows: `https://downloads.lambdatest.com/tunnel/v3/windows/64bit/LT_Windows.zip`, then run `LT.exe`
+
+   If a Mac blocks it from opening: `xattr -d com.apple.quarantine <path to LT>`.
+2. They start it as the same LambdaTest user kane-cli is signed in as, and leave it running:
+
+   ```bash
+   LT --user "$LT_USERNAME" --key "$LT_ACCESS_KEY" --env ht-prod --tunnelName <name>
+   ```
+
+   `--env ht-prod` is required. Wait until LT says the tunnel is connected.
+3. Run the exploration through it:
+
+   ```bash
+   kane-cli explore run --project <id> --url http://localhost:3000 --prompt "<what to explore>" --tunnel-name <name> --agent
+   ```
+
+   `--tunnel-name` must match `--tunnelName` from step 2, and it turns `--tunnel` on; with only one tunnel running,
+   `--tunnel` alone is enough. A re-run uses the exploration's URL, so pass the tunnel flag again:
+   `kane-cli explore run --project <id> --tunnel-name <name> --agent`.
+
+- The tunnel **and that machine** must stay up until the run ends; the run warns about it when it starts. If the tunnel
+  drops mid-run, pages stop loading.
+- A tunnel needs cloud browsers: with `--local-orchestration` and local Chrome, `--tunnel` is refused (local Chrome
+  already reaches the machine).
 
 ## 3. Watch it, stop it, run it again
 
@@ -105,7 +140,7 @@ or `failed:vm_never_started`: HyperExecute never started it, so run it again). S
 - **Explore another site:** use another project, so its tests don't mix with this site's. Or, only on the person's
   word, `kane-cli explore delete <exploration-id> --yes --agent` (refused with `RUN_ACTIVE`, exit 1, while a run is
   queued or running): no command shows that map again and the project can start a new exploration of any URL, but the
-  use cases and tests it designed stay in the project, and a pull brings them with the new site's.
+  use cases and tests designed for the first site stay in the project; a pull brings them along with the new site's.
 - `list`, `sessions`, `stop` and `delete` exit 0 when done, 1 when refused (`RUN_ACTIVE`, `RUN_NOT_ACTIVE`) or when the
   service failed (read the message), and 2 for bad input, a missing `--yes`, an unknown exploration, or no sign-in.
 
