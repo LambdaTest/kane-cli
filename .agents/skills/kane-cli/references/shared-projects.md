@@ -21,6 +21,7 @@ before the first `context ingest`:
 
 | The person… | Do |
 |---|---|
+| works in a folder that already has its own `.context/` | keep working locally, as before (`assurance.md`); to share that store, see below |
 | works with a team, or names a Test Manager project | link this folder to that project (§2–3) |
 | works alone, or asks to keep it on this machine | work locally: the journey in `assurance.md` §1 |
 | isn't clear | ask once: "Should this work go to your team's Test Manager project, or stay in this folder?" |
@@ -69,8 +70,9 @@ kane-cli context ingest <files> --project <id> --mode agent    # link, then add 
 kane-cli context extract --project <id> --mode agent           # link and read what the project hasn't read yet
 ```
 
-- Only `context ingest` and `context extract` take `--project`. The link is made once; later commands in the folder need
-  no flag. `--project` with the folder's own project is harmless; a different id refuses `FOLDER_CHOSEN`.
+- `context ingest`, `context extract` and, where its help lists it, `context pull` (§7a) take `--project`. The link is
+  made once; later commands in the folder need no flag. `--project` with the folder's own project is harmless; a
+  different id refuses `FOLDER_CHOSEN`.
 - `{"type":"folder_linked","project_id":…,"project":…}` confirms the link. It can come before a check that still refuses
   the run, so read the events after it. Tell the person: "This folder is now linked to <project> (<project id>); what you
   save goes to the project."
@@ -78,6 +80,8 @@ kane-cli context extract --project <id> --mode agent           # link and read w
   is removed again; ask the person to get someone allowed to create test cases in that project to start the first
   session, or to pick another project. After `PROJECT_NO_ACCESS` the folder **stays linked**, and every
   assurance command refuses the same way until the person gets access or removes `.testmuai/assurance.json` (their call).
+  A `context pull --project` that is refused at the start, or can't read the project, removes the link it made: check
+  the folder again after one.
 - A person at a terminal is asked instead: "where should this folder's work go?", then a project picker (Tab makes a new
   project). Agents never see these questions.
 - There is no unlink command. Linking a folder to another project means removing `.testmuai/assurance.json` first; that
@@ -105,7 +109,10 @@ approved them yet, so tell me any to leave out or change first." Pass `--allow-u
 session there.
 
 **What things cost.** These are approximate figures from real runs of small documents; the person's billing page is
-the authority. The stream's `usage.total_credits` and the run's summary give the real figure for each step:
+the authority. On the assurance commands (`context ingest`, `context extract`, `design tests` …) the stream's
+`usage.total_credits` gives the real figure. A `testrun run` stream carries no credits figure (not on `testrun_done`,
+a member's end event, `testrun_summary` or `coverage`), so run `kane-cli balance` before and after the run and give the
+difference:
 
 | Step | Credits (approximate) |
 |---|---|
@@ -114,7 +121,7 @@ the authority. The stream's `usage.total_credits` and the run's summary give the
 | reading one document (`context ingest`, or `context extract` with something unread) | about 5 |
 | designing one use-case's tests (`design tests`) | about 10–15 |
 | a designed test's first run in a folder (it writes its steps; each input it checks is its own browser run) | about 30–85 per test |
-| a replay | a few |
+| a replay | a few; a replay that has to heal, or whose steps changed since the recording, writes those steps again and can cost up to a first run |
 
 Tell the person the likely cost before a step that costs credits, let them choose, and give the total after. Never add
 a flag that changes cost or behaviour (for example `--no-adaptive-heal`, `--max`, `--force`) on your own: offer it, and
@@ -147,21 +154,29 @@ Two rules follow:
 
 ## 6. A teammate joins
 
-From the teammate's own empty folder:
+From the teammate's own empty folder. Where `kane-cli context pull --help` lists `--project` (§7), join with the pull:
+it links the folder, reads no documents, costs nothing and brings the project's tests (§7a):
+
+```bash
+kane-cli context pull --project <id> --mode agent
+```
+
+Otherwise join with the extract:
 
 ```bash
 kane-cli context extract --project <id> --mode agent
 ```
 
 It links the folder, then:
-- every document already read: `nothing_new` (`reason: "every_source_read"`), exit 0, no credits;
+- every document already read: `nothing_new` (`reason: "every_source_read"`), exit 0, no credits. That needs the project
+  to answer within a few seconds; when it doesn't, the extract goes on and opens a session: save or discard it, as below;
 - a document nobody has read yet: it reads it (credits, see §4) and ends `session_complete`. Save that session (§4 step 2),
   or discard it on the person's word; while it is open it holds that document, and teammates get `PROJECT_BUSY`;
 - another person's session already holds the unread document: `nothing_new` (`reason: "sources_in_a_session"`) with
   `open_sessions[]`; nothing to do here.
 
-After it, `context list` and `cover` show the project. **No test files arrive with the link**, so `testrun run` has
-nothing to run yet: see §7.
+After the extract, `context list` and `cover` show the project. **No test files arrive with the extract's link**, so
+`testrun run` has nothing to run yet: see §7.
 
 ## 7. Get the team's tests into this folder
 
@@ -188,7 +203,7 @@ kane-cli context pull --use-case <uc> --mode agent       # only that use-case's 
 kane-cli context pull --overwrite --mode agent           # replace test files changed here with the project's
 ```
 
-- The pull's own events and refusals carry `verb: "sync"`; a refusal at the folder's entry (sign-in, access, the link) carries `verb: "pull"`. Dispatch on `type`, as always.
+- The pull's own events and refusals carry `verb: "sync"`; a refusal of the pull's flags (`PULL_LOCATION_LINKED`, `PULL_FLAGS_MIXED`, `PULL_FLAGS_LINKED_ONLY`) or at the folder's entry (sign-in, access, the link) carries `verb: "pull"`. Dispatch on `type`, as always.
 - One `pull_test` event per test: `{test, title, file, outcome, first_run?, imported?, reason?}`, where `outcome` is
   `new`, `updated`, `unchanged`, `kept` (changed here, left alone), `replaced` (with `--overwrite`) or `not_written`.
 - `first_run: true` means the test hasn't run in this folder: its first run writes its steps in a real browser, which
@@ -200,8 +215,9 @@ kane-cli context pull --overwrite --mode agent           # replace test files ch
   (a message to type usually isn't). A secret's value is never asked for or shown in chat: the person writes it into the
   file. A value the person has already given you in their own words isn't a secret to them: write it there yourself,
   without printing it, and go on (§4 step 6).
-- `done.next` names `kane-cli testrun run`. A project with no tests yet ends exit 0 with "has no tests yet" and `next` =
-  `kane-cli cover --mode agent`. Exit 1 when any test wasn't written or the project couldn't be read (`PULL_FAILED`);
+- `done.next` names `kane-cli testrun run`. A project with no tests yet (or a `--use-case` with none) sends no
+  `pull_test` events and ends `done` exit 0 with `next` = `kane-cli cover --mode agent`. Exit 1 when any test wasn't
+  written or the project couldn't be read (`PULL_FAILED`);
   2 for refusals.
 
 | Code | When | Do |
@@ -211,7 +227,7 @@ kane-cli context pull --overwrite --mode agent           # replace test files ch
 | `PULL_FLAGS_MIXED` | project flags mixed with location flags | use one set |
 | `PULL_FLAGS_LINKED_ONLY` | `--use-case` or `--overwrite` without `--project` in a folder that isn't linked (a new one, or one with its own local store) | link it first with `--project <id>`, or drop those flags |
 | `USE_CASE_UNKNOWN` | the project has no such use-case | `kane-cli context list --mode agent` for the ids |
-| `PULL_FAILED` (exit 1) | the project's tests couldn't be read; nothing was written | try once more; then give the person the support id |
+| `PULL_FAILED` (exit 1) | the project's tests couldn't be read; nothing was written | try once more; then give the person the command, the code and the message (agent mode shows no support id here) |
 
 ### 7b. Until then: copy only what the tests need
 
@@ -236,7 +252,7 @@ commands are refused with `REMOTE_UNSUPPORTED` (exit 2):
 | `context review`, `context explain` | `kane-cli context list --mode agent`; the checkpoint in §4 |
 | `cover gaps` | `kane-cli cover --mode agent` |
 | `context sessions show`, `context sessions clean` | `kane-cli context sessions --mode agent`; `… sessions discard <sid> --yes --mode agent` |
-| `context sync`, `push`, `pull` (until §7 ships), `clone` | the shared project is the team's copy |
+| `context sync`, `push`, `clone` (and `context pull` where its help has no `--project`: §7b) | the shared project is the team's copy; `kane-cli context pull --mode agent` brings its tests (§7a). A location pull is refused `PULL_LOCATION_LINKED` |
 | `context view`, `fsck`, `rebuild`, `retire`, `revert`, `name`, `design explain` | none in a linked folder |
 | `--mode ci` on `extract`, `design tests` and `maintain reconcile` | `--mode agent` |
 | `context ingest --plan`, `--mode override` | `kane-cli context ingest <file> --mode agent` |

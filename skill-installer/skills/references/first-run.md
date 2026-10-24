@@ -4,7 +4,8 @@
 
 **In a folder linked to a shared project** (it holds `.testmuai/assurance.json`), or when the person's first request is
 for a team's project, the first result is the shared-project journey, never a `kane-cli run`: `kane-cli run` saves to
-the profile's project and its test then clashes with the team's tests (`shared-projects.md` §9). The first result is
+the profile's project, and when that isn't the team's, its test then clashes with the team's tests
+(`shared-projects.md` §9). The first result is
 the list of use cases the first extract proposes; show it as the first result, then offer the same three choices. A
 teammate joining a project whose documents are all read gets no proposal (`nothing_new`): show the project's
 `context list` as the first result instead. In a linked folder, the "where results go" choice only changes where
@@ -83,6 +84,10 @@ Use the normal card from `references/cards.md`, and on this first run make two o
 - **🔗 Test case:** the Test Manager link from the run, plus `· saved to <project> / <folder>`.
 
 From the second run on, the evidence viewer goes back to an offer.
+
+When the first result is an extract's use cases (above), nothing has run yet, so there is no evidence and no test case:
+show the use cases (in a linked folder, also whether the session is saved yet), with no 📁 or 🔗 row. Those rows come with the first test run.
+Choice 1 below then reads "Runs show the browser window by default. Keep it that way?"
 
 ## 4. Three choices, asked once, after the first result
 

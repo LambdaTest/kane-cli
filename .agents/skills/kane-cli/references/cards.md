@@ -73,7 +73,7 @@ Exit code `1`, or `status: "failed"`. Show the failing step's screenshot under t
 
 ## 4. Didn't start
 
-Exit code `2`: nothing ran and no credits were used. Causes include no start URL, sign-in or setup errors, a test file that does not parse, an invalid suite plan, a cloud grid refusal.
+Exit code `2`: nothing ran and no credits were used. Causes include no start URL, sign-in or setup errors, a test file that does not parse, an invalid suite plan, a cloud grid refusal. A designed test in a shared project that stopped on its Test Manager case before any step (an `error` with a `TEST_*` code) is this card too, even when it exits `1`.
 
 ```markdown
 | | |
@@ -182,20 +182,25 @@ run (`authored`):
 | ✍️ **First runs** | <n> tests wrote their steps on this run; later runs replay them |
 ```
 
+Only a `coverage` event with `status: "written"` has a `pct`. With any other status, the 📈 row says
+`The project's figure isn't ready yet · I can check it in a few minutes` (`kane-cli cover --mode agent`).
+
 A member that stopped on its Test Manager case shows `failed` with a reason such as "isn't in Test Manager yet": say what
 it needs (`testrun.md` §Designed tests in a shared project), not "the test failed".
 
 ## 9. Coverage (`kane-cli cover`)
 
-Fields: the `coverage` event's `pct`, `usecases` (`total`, `proven`, `partial`, `failing`, `not_run`, `not_designed`),
-`note`, and `recent_run` when a run is under 5 minutes old; then `done.next`.
+Fields: the `coverage` event's `pct`, `usecases` (`total`, `proven`, `partial`, `failing`, `not_run`, `not_designed`,
+`no_criteria`), `note`, and `recent_run` when a run is under 5 minutes old; then `done.next`. A `coverage` event with
+`state: "computing"` has none of these: say the project is still working its figure out, draw no card, and run
+`done.next` again in a minute.
 
 ```markdown
 | | |
 |---|---|
 | 📈 **Coverage** | <pct>% across "<project>"'s <total> use cases |
 | ✅ **Proven** | <proven> · ⚠️ partial <partial> · ❌ failing <failing> |
-| ⏳ **Not yet** | <not_run> not run · <not_designed> without tests |
+| ⏳ **Not yet** | <not_run> not run · <not_designed> without tests · <no_criteria> with no criteria yet |
 | 🕒 **Recent run** | still counting: check again in a few minutes *(only with `recent_run.may_not_count_yet`)* |
 | ➡️ **Next** | <the first `done.next` command in plain words, e.g. run every test · design tests for "<use case>"> |
 ```

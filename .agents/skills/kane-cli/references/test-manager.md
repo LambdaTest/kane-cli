@@ -15,13 +15,13 @@ Field names below are for parsing only — translate to plain language for the u
 
 ## 1. Where a run lands
 
-After a successful upload, the terminal `run_end` event (`testmd_done` for `testmd run`) carries the dashboard link:
+After a successful upload, the terminal `run_end` event of `kane-cli run` carries the dashboard link:
 
 ```json
 {"type":"run_end","status":"passed", "test_url":"https://test-manager.lambdatest.com/projects/<id>/test-cases/<id>", ...}
 ```
 
-For `testmd run`, the `test_md_summary` / `test_md_done` events also carry a `share_url` — a 7-day, no-login link suitable for CI artifacts.
+For `testmd run`, the `test_md_summary` / `test_md_done` events carry no `test_url`; they carry a `share_url` when the upload made one — a 7-day, no-login link suitable for CI artifacts.
 
 Surface `test_url` (and `share_url` when present) as a "View in Test Manager" line per the §1.4 results table in `SKILL.md`. Never paste raw URLs into the middle of a summary — they belong in the results table.
 
@@ -50,7 +50,7 @@ kane-cli folders  list --project <id> [--search <q>] [--limit <n>] [--offset <n>
 | Flag | Purpose |
 |---|---|
 | `--search <q>` | Filter by name (substring match). |
-| `--limit <n>` | Page size. Default is small (~10). Very large values are capped. |
+| `--limit <n>` | Page size: a whole number from 1 to 200 (default 10). A value outside that is refused (exit 2). |
 | `--offset <n>` | Skip the first N rows. |
 | `--agent` | Force NDJSON. Auto-on when stdout is piped/redirected, but pass it explicitly anyway. |
 

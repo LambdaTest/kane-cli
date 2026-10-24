@@ -2,14 +2,14 @@
 
 # Shared projects: Agent Contract
 
-A folder is **linked** when `.testmuai/assurance.json` names a TestMu AI Test Manager project and the folder has no `.context/`. In a linked folder the commands below work in the **shared project**, so the team sees what each person saves. Link a folder with `kane-cli context ingest <files> --project <id> --mode agent` (or `kane-cli context extract --project <id> --mode agent`); find the id with `kane-cli projects list --search <name> --agent`. In a folder with neither a link nor `.context/`, `--mode agent` without `--project` makes a local store without asking.
+A folder is **linked** when `.testmuai/assurance.json` names a TestMu AI Test Manager project and the folder has no `.context/`. In a linked folder the commands below work in the **shared project**, so the team sees what each person saves. Link a folder with `kane-cli context ingest <files> --project <id> --mode agent` (or `kane-cli context extract --project <id> --mode agent`, or, where `kane-cli context pull --help` lists `--project`, `kane-cli context pull --project <id> --mode agent`); find the id with `kane-cli projects list --search <name> --agent`. In a folder with neither a link nor `.context/`, `--mode agent` without `--project` goes on locally without asking, as before: `context ingest` makes a local store, and `context extract` refuses `NO_STORE` until one exists.
 
 | Area | Commands |
 |---|---|
 | Projects | `kane-cli projects list`, `kane-cli projects create` |
 | Sources and use-cases | `kane-cli context ingest`, `kane-cli context extract`, `kane-cli context list` |
 | Sessions | `kane-cli context sessions`, `kane-cli context sessions save <sid>`, `kane-cli context sessions discard <sid>` |
-| Tests | `kane-cli design tests`, `kane-cli maintain evolve`, `kane-cli maintain reconcile` |
+| Tests | `kane-cli design tests`, `kane-cli maintain evolve`, `kane-cli maintain reconcile`, `kane-cli context pull` (`shared-projects.md` §7) |
 | Runs and coverage | `kane-cli testmd run <designed>_test.md`, `kane-cli testrun run`, `kane-cli cover` |
 
 Nothing reaches the project until `kane-cli context sessions save`. Other assurance commands are refused in a linked folder (`REMOTE_UNSUPPORTED`, §6). Local-store parsing stays in `references/assurance-parsing.md`.
@@ -31,7 +31,7 @@ Nothing reaches the project until `kane-cli context sessions save`. Other assura
 
 ## 2. Stream shape
 
-**Assurance stream** (`context …`, `design tests`, `maintain …`, `cover`): one JSON object per line, envelope `{"type": "<name>", "v": 1, "verb": "<verb>", …}`. No `stream_start`, and don't rely on a `ts` field here. Verbs: `sync` (`context pull` in a linked folder; its entry refusals carry `pull`), `extract` (ingest and extract; `reconcile` from the upload on when the ingest is a new version of a source the project holds), `design`, `evolve`, `reconcile`, `save`, `discard`, `cover`. Refusals of `context sessions` (list, show, clean) are stamped `save`.
+**Assurance stream** (`context …`, `design tests`, `maintain …`, `cover`): one JSON object per line, envelope `{"type": "<name>", "v": 1, "verb": "<verb>", …}`. No `stream_start`, and don't rely on a `ts` field here. Verbs: `sync` (`context pull` in a linked folder; refusals of its flags and at its entry carry `pull`), `extract` (ingest and extract; `reconcile` from the upload on when the ingest is a new version of a source the project holds), `design`, `evolve`, `reconcile`, `save`, `discard`, `cover`. Refusals of `context sessions` (list, show, clean) are stamped `save`, and those of `context list` are stamped `list`.
 
 **Run stream** (`testmd run`, `testrun run`): opens with `stream_start {cli_version, surface, pid}`; every line carries `v` and `ts`. Shapes: `references/testmd.md`, `references/testrun.md`; linked-folder additions in §3.7.
 
@@ -42,11 +42,12 @@ Nothing reaches the project until `kane-cli context sessions save`. Other assura
 | `design tests` | `remote_connect` (or `warning`, `error`) | `done` |
 | `maintain evolve` | `remote_connect` | `done` (may carry `not_updated`) |
 | `maintain reconcile` | `remote_upload` or `remote_fetch`, else `remote_connect` | `done` |
-| `context sessions save <sid>` | `session_save{phase:"check"}` (or `error`) | `done` |
+| `context sessions save <sid>` | `session_save{phase:"check"}`; `phase:"saving"` for a session saved before; `phase:"saved"` with `saved: 0` when it added nothing (or `error`) | `done` |
 | `context sessions discard <sid>` | `session_discard{phase:"check"}` (or `error`) | `done` |
+| `context pull` (linked, or `--project`) | `folder_linked` (with `--project`), else `pull_test` or `error`; a project with no tests sends `done` alone | `done` (`shared-projects.md` §7a) |
 | `cover` | `coverage` | `done` |
 | `testmd run <designed test>`, stopped on its Test Manager case | `stream_start` | `error` (no `test_md_done`) |
-| `testrun run`, refused | `stream_start`; then `error` before any plan for `--from-context` in a linked folder; else `testrun_plan` | `PROJECT_MISMATCH`: `error` (no `testrun_done`). Another invalid plan, or no tests: no `error`, the stream ends at `testrun_plan` (read the exit code). **In a linked folder only**, from the release that carries the fix, each ends `error` then `testrun_done{overall_status:"refused"}`; everywhere else these shapes don't change |
+| `testrun run`, refused | `stream_start`; then `error` before any plan for `--from-context` in a linked folder; else `testrun_plan` | `PROJECT_MISMATCH`: `error`, the last line outside a linked folder. Another invalid plan, or no tests: no `error`, the stream ends at `testrun_plan` (read the exit code). **In a linked folder only**, from the release that carries the fix, every one of these (`PROJECT_MISMATCH` too) ends `error` then `testrun_done{overall_status:"refused"}`; handle both shapes. Everywhere else these shapes don't change |
 
 Outputs that are **not** the envelope and have **no `done`** (read the exit code):
 
@@ -70,7 +71,7 @@ Dispatch on `type`, never on position. **The vocabulary is open:** tolerate unkn
 
 | Event | When | Fields that matter | Tell the person |
 |---|---|---|---|
-| `folder_linked` | `--project <id>` linked the folder in this run; the first line | `project_id`, `project` | "This folder is now linked to <project>; what you save goes there." If the run then ends `PERMISSION_REQUIRED` or `ASSURANCE_OFF`, the link was removed again |
+| `folder_linked` | `--project <id>` linked the folder in this run; the first line | `project_id`, `project` | "This folder is now linked to <project>; what you save goes there." If the run then ends `PERMISSION_REQUIRED` or `ASSURANCE_OFF`, or a `context pull --project` is refused at the start or can't read the project, the link was removed again |
 | `folder_local` | `--local` gave the folder its own store; `extract` then ends `done` exit 0 (ingest goes on locally) | `gitignore`: `added`, `failed`, null | "This folder keeps its own local store." On `failed`: `.context/` wasn't added to `.gitignore` |
 | `nothing_new` | a plain `extract` found every source already read; no session opened; exit 0 | `reason`: `every_source_read`, or `sources_in_a_session` with `open_sessions[{sid, owner, state, added}]`; `next` | "Nothing new to extract" / "every source is already in an open session"; offer `next` |
 | `remote_connect` | `step:"connect"`, then `step:"open_session"` once the session exists | `sid`, `project` (on `open_session`) | "Connecting to <project>." Keep `sid` |
@@ -91,7 +92,7 @@ Dispatch on `type`, never on position. **The vocabulary is open:** tolerate unkn
 | `held` | items held back | `reason`: `duplicate_check_reduced`, `review` | "N items are held for review" |
 | `usage` | each agent turn | `credits`, `total_credits` | report the final total |
 | `review_cards` | a new version's review holds its cards, before a `review_pending` pause | `source`, `cards[{key, kind, use_case?, title, change, diff?, tests?}]` | show each change; ask approve, reject or defer |
-| `card_verdict` / `card_refused` | an `--answer <key>=<verdict>` landed / didn't | `key`, `verdict`, `line`, `offer?` / `code`, `refusal` | relay `line` or `refusal` |
+| `card_verdict` / `card_refused` | an `--answer <key>=<verdict>` landed / didn't | `key`, `verdict`, `line`, `offer?{kind, key, title}` / `code`, `refusal` | relay `line` or `refusal`. `offer.kind: "evolve"` runs at once (`child_start` … `child_end`); `offer.kind: "design"` does **not** run: after the save, offer to design that use-case's tests (`kane-cli design tests --use-case <uc> --mode agent`, its id from `kane-cli context list --mode agent`) |
 | `evolve_paused` | evolve asks once per use-case; exit 3 | `pending_questions[]` (id `evolve:<uc>`), `next` (update all, leave all out) | present the blast radius and ask (`references/assurance.md` §11) |
 | `child_start` / `child_end` | a design run inside a review or an evolve | `child`, `subject` / `ok`, `exit_code`, `next?` | "Designing tests for <uc>… done" / "didn't finish" |
 | `evolve_skipped` | a use-case evolve leaves alone | `use_case`, `reason` (`no-design`, `source_changed`, `up_to_date`, `archived`, `unreviewed`, `held`, `declined`), `held_by?`, `next?`, `remedy?` | the reason in words; offer `next` |
@@ -149,7 +150,7 @@ Every pause has `sid`, `expires_at: null` and `pending_questions[]` (empty unles
 |---|---|---|---|
 | `coverage` | `cover --mode agent` | `source: "project"`, `pct`, `usecases`, `criteria`, `perUc`, `perAc`, `flags`, `recent_run?{may_not_count_yet: true, up_to_minutes: 5}` | "Coverage is N% across <project>'s K use-cases." With `recent_run`: "a run from the last 5 minutes may not count yet" |
 | `coverage` (computing) | the project is still working it out; exit 0 | `{source: "project", state: "computing"}` | run `next` (`kane-cli cover --mode agent`) in a moment |
-| `done` | last | `next?`: designs to make, `testrun run` while nothing has run | offer them, adding the agent flag (§4) |
+| `done` | last | `next?`: designs to make, `testrun run` while nothing has run; `kane-cli context pull --mode agent` first (and no run) when this folder has none of the project's tests yet | offer them, adding the agent flag (§4) |
 
 ### 3.7 `testmd run` and `testrun run` in a linked folder
 
@@ -163,7 +164,7 @@ A file directly in `.testmuai/tests/` with an `assurance:` header runs on its sc
 | `error` `NO_TESTS` | *(linked folder only, from the release that carries it)* no `*_test.md` selected | `message` "no tests here yet", `next` | `next` is `kane-cli context pull --mode agent`. A filter that matches nothing: the old message and no `next`. Outside a linked folder there is no such event: the stream ends at `testrun_plan` with `members: []` and exit 2 |
 | `error` `PLAN_INVALID` | *(linked folder only, from the release that carries it)* an invalid plan other than `PROJECT_MISMATCH` | `offenders[{path, failure}]`, no `next` | fix those tests or leave them out. Outside a linked folder: read `testrun_plan.members[].failure` |
 | `error` `PROJECT_MISMATCH` | after `testrun_plan` | `projects[{project_id, name, this_folder, tests}]`, `remedy`, `next` | §6 |
-| `testrun_member_end` | each member | `status`, `failure?{message}` | a member stopped on its case shows only `failure.message`; add `--stream-members` to get its `error` (with `code`) inside `testrun_member_event` |
+| `testrun_member_end` (`testrun_authored_member_end` for a test's first run) | each member | `status`, `failure?{message}`, `log_path` | a member stopped on its case shows only `failure.message`; its `error` (with `code` and `remedy`) is in the member's log at `log_path`, or inside `testrun_member_event` with `--stream-members` |
 | `coverage` | after the evidence ingest | `status` (`written`, `none`, `skipped`, `failed`); `written`: `computed_by: "project"`, `pct`; `none`: `reason` (`on_grid`, `project_no_answer`) | "This run reached N use-cases." `none`: the project didn't answer in time; the run is fine |
 | `testrun_done` | last (local run) | `overall_status` (`passed`, `failed`, `cancelled`; `refused` after a refusal, in a linked folder only, from the release that carries it), `coverage?` | the verdict |
 | `remote_error` (`--remote`) | one per member that stops before dispatch | `code`, `detail` (`<path>: <message>`), `remedy?`, `support_id?`; no `next` | nothing was sent to HyperExecute; `testrun_done{overall_status:"failed"}` and `remote_done{status:"failed", exit:2}` follow |
@@ -223,16 +224,17 @@ On the assurance verbs, `3` is a **pause** (resumable), not a failure: run the p
 | `REMOTE_UNSUPPORTED` | 2 | `--mode ci` on extract or design (a stderr line) | `<the command>` with `--mode agent` |
 | `REMOTE_UNSUPPORTED` | 2 | `context ingest --plan` or `--mode override`; `context list --all`, or a `--type` other than `source`, `usecase`, `scenario`, `test` | `<the command>` without that flag, with `--mode agent` |
 | `REMOTE_UNSUPPORTED` | 2 | `maintain reconcile --plan`, `--apply`, `--mode ci`, or no `--source-id`; `--from <address>` | `kane-cli maintain reconcile --from <file> --source-id <id> --mode agent`; for an address, `kane-cli context ingest <address> --mode agent` |
-| `REMOTE_UNSUPPORTED` | 2 | `context sync`, `push`, `pull`, `clone`, `fsck`, `view`, `retire`, `revert`, `rebuild`, `name`, `design explain` | no command in a linked folder; tell the person these work on a folder's own store |
+| `REMOTE_UNSUPPORTED` | 2 | `context sync`, `push`, `clone`, `fsck`, `view`, `retire`, `revert`, `rebuild`, `name`, `design explain` (and `context pull` where its help has no `--project`: `shared-projects.md` §7b) | no command in a linked folder; tell the person these work on a folder's own store. The project's tests come with `kane-cli context pull --mode agent` (`shared-projects.md` §7) |
+| `PULL_LOCATION_LINKED` | 2 | `context pull` with a location name, `--rebase`, `--yes` or `--answer` in a linked folder | `kane-cli context pull --mode agent` |
 | `REMOTE_UNSUPPORTED` | 2 | `testrun run --from-context` | run `next`, or `kane-cli testrun run <test files> --agent` |
 | **Sign-in and access** | | | |
 | `CREDENTIALS_MISSING` | 2 | nobody signed in | start sign-in (`kane-cli login --oauth`, `references/ready-check.md`), then `<the command>` |
-| `CREDENTIALS_MISSING` | 2 | "couldn't confirm your login for shared projects" (a browser sign-in with no access key) | ask the person: run `kane-cli login --username <user> --access-key <key>` in their own terminal |
+| `CREDENTIALS_MISSING` | 2 | "couldn't confirm your login for shared projects" (a browser sign-in with no access key) | `<the command>` once more; if it refuses again, ask the person: run `kane-cli login --username <user> --access-key <key>` in their own terminal |
 | `CREDENTIALS_REJECTED` | 2 | the shared project rejected the credentials | sign in again (`kane-cli login --oauth`), then `<the command>` |
 | `CONNECTION_FAILED` | 2 | couldn't connect (or for 2 minutes); nothing was started | check the network; `<the command>` once more |
-| `PREFLIGHT` | 2 | the agent service check failed: unreachable, sign-in unchecked or rejected, or "assurance sessions aren't available here yet" | unreachable: `<the command>` once more later. Sign-in: `kane-cli login --oauth`. Not available: stop and pass on the support id in `remedy` |
+| `PREFLIGHT` | 2 | kane-cli's check before a session opens failed: unreachable, sign-in unchecked or rejected, or "assurance sessions aren't available here yet" | unreachable: `<the command>` once more later. Sign-in: `kane-cli login --oauth`. Not available: stop and pass on the support id in `remedy` |
 | `VERSION_MISMATCH` | 2 | this kane-cli is too old, or the shared project doesn't support it yet | too old: ask the person to update (`npm install -g @testmuai/kane-cli@latest`). Not supported yet: stop and pass on the support id in `remedy` |
-| `PROJECT_BUSY` | 2 | a live session holds the project, use-case or source: `held_by{sid, verb, use_case, mine, status}` | `mine: true`: run `next` (`kane-cli context extract --resume <sid> --mode agent`, or `kane-cli design tests --resume <sid> --mode agent`), or save it first. Someone else's: tell the person a teammate's session holds it; wait; `<the command>` later |
+| `PROJECT_BUSY` | 2 | a live session holds the project, use-case or source: `held_by{sid, verb, use_case, mine, status}` | no `next`. `mine: true`: `remedy` names the resume (`kane-cli context extract --resume <sid> --mode agent`, or `kane-cli design tests --resume <sid> --mode agent`); running it takes the session over and stops it in the other terminal, so ask the person first; otherwise wait for that run to finish. A resume refused this way has no such command: wait. Someone else's: tell the person a teammate's session holds it; wait; `<the command>` later |
 | **Sessions** | | | |
 | `SESSION_NOT_FOUND` | 2 | no session with that id is theirs (a colleague's can't be resumed or saved) | `kane-cli context sessions --mode agent`; use a `sid` whose `owner` is `you` |
 | `SESSION_FINISHED` | 2 | resume of a finished session | on the person's word: `kane-cli context sessions save <sid> --yes --mode agent` |
@@ -279,7 +281,7 @@ On the assurance verbs, `3` is a **pause** (resumable), not a failure: run the p
 | `AGENT_FAILED`, `AGENT_CRASHED`, `REPAIR_FAILED`, `PROPOSAL_INVALID`, `COMMIT_FAILED` | 1 | the agent's run failed | report it; credits were spent; check `kane-cli context sessions --mode agent` before any retry |
 | `TRUST_USAGE` | 2 | `--trust hold` in a terminal run | `<the command>` without `--trust`, with `--mode agent` |
 | **Design** | | | |
-| `UC_UNREVIEWED` | 2 | the use-case is still proposed; nobody approved it | show it (`kane-cli context list --type usecase --mode agent`); on the person's word, `kane-cli design tests --use-case <uc> --allow-unreviewed --mode agent`. A person approves at the end of a terminal session |
+| `UC_UNREVIEWED` | 2 | the use-case is still proposed; nobody approved it | show it (`kane-cli context list --type usecase --mode agent`); on the person's word, `kane-cli design tests --use-case <uc> --allow-unreviewed --mode agent` (one that already has tests also needs `--force`: the `gate_refused` row below). A person approves at the end of a terminal session |
 | `UC_ARCHIVED` | 2 | the use-case is archived | tell the person; pick another use-case |
 | `gate_refused` (no code) | 2 | unknown, removed or not-a-use-case ref | pick from the ids the message lists (`kane-cli context list --type usecase --mode agent`) |
 | `gate_refused` (no code) | 2 | the use-case already has tests, or changed since they were designed | ask the person: redesign (`kane-cli design tests --use-case <uc> --force --mode agent`, replaces its tests) or update (`kane-cli maintain evolve <uc> --mode agent`, only what changed). A use-case that is also still **proposed** needs both flags on a redesign: `kane-cli design tests --use-case <uc> --force --allow-unreviewed --mode agent` (each alone refuses with the other wall); evolve refuses it (`UC_UNREVIEWED`), so use the redesign |
@@ -293,12 +295,12 @@ On the assurance verbs, `3` is a **pause** (resumable), not a failure: run the p
 | `TEST_MANAGER_TIMED_OUT`, `TEST_MANAGER_UNREACHABLE`, `TEST_MANAGER_FAILED` (`test_manager.error`) | 0 | the save landed; Test Manager wasn't fully updated | run `test_manager.next`, or `kane-cli context sessions save <sid> --mode agent` (saving again finishes it) |
 | `PROJECT_NO_ACCESS`, `ASSURANCE_OFF` (`test_manager.error`) | 0 | the save landed; Test Manager refused the cases | ask the person: their Test Manager access, or assurance for the project |
 | `TEST_FILES_NOT_WRITTEN` (`test_files.error`) | 0 | the save landed; no test files were written here | run `test_files.next`, or `kane-cli context sessions save <sid> --mode agent` |
-| `test_files.refused[]` | 0 | a test file wasn't written; `reason` says why: edited by hand and kept, a duplicate, an unreadable or unresolved record, an unwritable folder, a missing import (some have no `file`) | tell the person the reason; follow `test_files.next` when it is there. Only for a file edited by hand: `kane-cli testmd run <file> --agent` sends their edit to its case, or they move the file out and save again |
+| `test_files.refused[]` | 0 | a test file wasn't written; `reason` says why: edited by hand and kept, a duplicate, an unreadable or unresolved record, an unwritable folder, a missing import (some have no `file`) | tell the person the reason; follow `test_files.next` when it is there. Only for a file edited by hand: when `test_files.next` offers `kane-cli testmd run <file> --agent`, it sends their edit to its case; otherwise (or instead) they move the file out and save again |
 | **Runs of designed tests** | | | |
 | `TEST_CASE_MISSING` | 2 | the session that designed the test isn't saved | on the person's word: `kane-cli context sessions save <sid> --yes --mode agent` (`kane-cli context sessions --mode agent` lists the sids) |
-| `TEST_CASE_GONE` | 2 | its Test Manager case was deleted or moved | relay `remedy`; run the command it names with `--mode agent` (a save of the session that designed the test makes a new case) |
+| `TEST_CASE_GONE` | 2 | its Test Manager case was deleted or moved | show the person; on their word, `kane-cli context sessions save <sid> --yes --mode agent` with the sid `remedy` names (it makes a new case). A `remedy` with no sid: `kane-cli context sessions --mode agent` to find it |
 | `TEST_CASE_ARCHIVED` | 2 | its case is archived in Test Manager | ask the person: restore the case, or leave the test out of the run |
-| `TEST_NOT_IN_PROJECT` | 2 | the test isn't in the folder's project, its file is out of date, or the project has no work yet | run it in the folder linked to its project; or `kane-cli design tests --use-case <uc> --mode agent`; a project with no work: `kane-cli context ingest <files> --mode agent` |
+| `TEST_NOT_IN_PROJECT` | 2 | the test isn't in the folder's project, its file is out of date, or the project has no work yet | run it in the folder linked to its project; or, on the person's word, design it again: `kane-cli design tests --use-case <uc> --mode agent` (a proposed use-case also needs `--allow-unreviewed`, one with tests `--force`: the Design rows), then save; a project with no work: `kane-cli context ingest <files> --mode agent` |
 | `TEST_MANAGER_OUTDATED` | 1 (2 on `--remote`) | Test Manager can't add this run to the test's case: on a device target (it attaches desktop-browser runs only), or because Test Manager itself needs an update (or made a case of its own) | stop and tell the person. On a device target, offer the desktop browser; otherwise the run can only go again once Test Manager is updated. Pass on the support id |
 | `TEST_CASE_ATTACH_FAILED` | 1 | attaching to the case failed | `<the command>` once more later; then pass on the support id |
 | `TEST_RUN_NOT_SAVED` | 1 | the run ran but its version wasn't saved on the case | report the verdict as it stands; tell the person Test Manager has no record of this run; pass on the support id |

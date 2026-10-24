@@ -2,7 +2,7 @@
 
 # Mobile testing (real devices from any machine; emulator/simulator locally on macOS Apple Silicon or on the cloud grid)
 
-Desktop (the browser) is the **default** target and the primary use of kane-cli. Mobile is a **scoped addition**: kane-cli can also drive a native app on a **real Android or iOS device** in the TestMu AI cloud, or on a virtual Android or iOS device — on this machine, or on a LambdaTest HyperExecute macOS host via `testrun run --remote`. Nothing about web runs changes. A run with no mobile flags still drives Chrome exactly as before.
+Desktop (the browser) is the **default** target and the primary use of kane-cli. Mobile is a **scoped addition**: kane-cli can also drive a native app on a **real Android or iOS device** in the TestMu AI cloud, or on a virtual Android or iOS device — on this machine, or on a LambdaTest HyperExecute macOS host via `testrun run --remote`. Nothing about web runs changes. A run with no mobile flags still drives Chrome exactly as before, unless a mobile target was saved (`kane-cli config set-target`).
 
 ## Availability (read first)
 
@@ -12,7 +12,7 @@ Desktop (the browser) is the **default** target and the primary use of kane-cli.
 | **Local** (a simulator/emulator on this machine) | **macOS on Apple Silicon (arm64) only** — not Intel Macs, Linux, or Windows | `run --target …`, `testmd run`, `testrun run` |
 | **Cloud grid** (a virtual device on a HyperExecute macOS host) | **Any machine** — no Xcode / Android Studio needed. The account needs a HyperExecute plan with macOS runners | `testrun run <paths> --remote … < /dev/null` — see §Remote below |
 
-- **Desktop stays the default.** The `--target` axis is what selects mobile. Leave it off and you get the browser.
+- **Desktop stays the default.** The `--target` axis is what selects mobile. Leave it off and you get the saved target (`config show`), else the browser; pass `--target desktop` when you mean the browser.
 - If the user is not on mac-arm64, local emulator/simulator is not an option — **offer a real device** (`--target android|ios`, works from any machine, plan permitting) or **the grid**: save the objective as a `_test.md` (`target: emulator|simulator` + `app:`) and run it with `kane-cli testrun run <path> --remote --device-name "<grid device>" --os-version <v> < /dev/null`. Do not tell them mobile is unavailable.
 
 ## The five targets
@@ -60,7 +60,7 @@ Every mobile run needs an app. Provide it one of two ways:
 
 kane-cli installs that app on the device and runs the objective against it. `kane-cli apps list --target emulator|simulator|android|ios --agent` lists the account's uploads (NDJSON; the `app_id` field is what `--app`/`app:` take). There is no upload subcommand: any run with a local build — local or `--remote` — uploads it to the account (once per build; a per-machine cache skips a build the account already has) and prints the `APP…` id. Uploads belong to an organisation — `apps list` for the active profile is the authority.
 
-**Not accepted:** a package/bundle id (e.g. `com.example.app`), a `.ipa` on a simulator (it is a device build — use `--target ios`), or a `.app` bundle. There is no default app: a mobile run without a valid build or `APP…` id cannot start.
+**Not accepted:** a package/bundle id (e.g. `com.example.app`), a `.ipa` on a simulator (it is a device build — use `--target ios`), or a `.app` bundle. A mobile run without a valid build or `APP…` id (from `--app`, the file's `app:`, or one saved with `config set-app`) cannot start.
 
 ## Setup path
 

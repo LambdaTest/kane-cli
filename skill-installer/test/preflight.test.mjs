@@ -195,6 +195,33 @@ posix('link prints none in a plain folder, and the project name and id in a link
   assert.deepEqual(body.link, ['project=Checkout revamp', 'project_id=01DUMMYPROJECTID']);
 });
 
+posix('link reads the file as JSON with node, and says unreadable where kane-cli could not read it', (t) => {
+  const sb = sandbox(t);
+  // node on PATH (kane-cli needs it), through a folder that holds node alone
+  const nodeBin = path.join(sb.root, 'nodebin');
+  fs.mkdirSync(nodeBin);
+  fs.symlinkSync(process.execPath, path.join(nodeBin, 'node'));
+  const withNode = { env: { PATH: `${sb.bin}:${nodeBin}:${SYSTEM_PATH}` } };
+  const dir = path.join(sb.cwd, '.testmuai');
+  fs.mkdirSync(dir, { recursive: true });
+  const file = path.join(dir, 'assurance.json');
+  const linkOf = (text) => {
+    fs.writeFileSync(file, text);
+    return parse(run(sb, [], withNode).stdout).body.link;
+  };
+
+  assert.deepEqual(linkOf(JSON.stringify({ projectId: '01ID', projectName: 'The "big" one' })),
+    ['project=The "big" one', 'project_id=01ID']);
+  assert.deepEqual(linkOf('{"projectId": "01ID", "projectName": "Half'), ['unreadable']);
+  assert.deepEqual(linkOf(JSON.stringify({ projectName: 'No id' })), ['unreadable']);
+  assert.deepEqual(linkOf(JSON.stringify({ projectId: '', projectName: 'Empty id' })), ['unreadable']);
+  assert.deepEqual(linkOf(JSON.stringify([{ projectId: '01ID', projectName: 'A list' }])), ['unreadable']);
+
+  // without node, the best-effort read still tells a link it can't read
+  fs.writeFileSync(file, 'not json');
+  assert.deepEqual(parse(run(sb).stdout).body.link, ['unreadable']);
+});
+
 posix('whoami, balance and settings run in parallel', (t) => {
   const sb = sandbox(t);
   const res = run(sb);

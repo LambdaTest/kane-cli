@@ -76,6 +76,20 @@ win('preflight.ps1 prints the nine base sections in order and exits 0', (t) => {
   assert.match(body(res.stdout, 'tests'), /count=0/);
 });
 
+win('preflight.ps1 prints the link as none, the project, or unreadable', (t) => {
+  const sb = sandbox(t);
+  assert.equal(body(run(sb).stdout, 'link'), 'none');
+  const dir = path.join(sb.cwd, '.testmuai');
+  fs.mkdirSync(dir, { recursive: true });
+  const file = path.join(dir, 'assurance.json');
+  fs.writeFileSync(file, JSON.stringify({ projectId: '01ID', projectName: 'The "big" one', writtenBy: 'kane-cli' }, null, 2));
+  assert.equal(body(run(sb).stdout, 'link'), 'project=The "big" one\nproject_id=01ID');
+  fs.writeFileSync(file, '{"projectId": "01ID", "projectName": "Half');
+  assert.equal(body(run(sb).stdout, 'link'), 'unreadable');
+  fs.writeFileSync(file, JSON.stringify({ projectName: 'No id' }));
+  assert.equal(body(run(sb).stdout, 'link'), 'unreadable');
+});
+
 win('preflight.ps1 reports a missing kane-cli and still prints every section', (t) => {
   const res = run(sandbox(t, { withCli: false }));
   assert.equal(res.status, 0, res.stderr);

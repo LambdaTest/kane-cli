@@ -12,7 +12,7 @@ Explore takes `--agent`, not `--mode agent`.
 ## 1. Start an exploration
 
 ```bash
-kane-cli explore run --project <id> --url <app url> --prompt "<what to explore>" --agent
+kane-cli explore run --project <id> --url <app url> --prompt "<what to explore>" --agent    # add --policy read_only if the person said no changes
 ```
 
 - `--project <id>` is the Test Manager project the exploration saves into: the team's shared project
@@ -22,8 +22,12 @@ kane-cli explore run --project <id> --url <app url> --prompt "<what to explore>"
   ask the person to run `kane-cli login --username <user> --access-key <key>` in their own terminal. It stores the
   sign-in and any secret variables in the person's HyperExecute Secrets, and the non-secret variables in Test Manager.
   Never put values in chat.
-- `--policy read_only` (the default) keeps the explorer from changing data; `mutating` lets it submit forms and must be
-  the person's choice.
+- The default policy is `mutating`: the explorer may submit forms and change data on the sites it reaches, and in agent
+  mode kane-cli asks nobody. Before `explore run`, tell the person and ask whether it may change data in their app; if
+  not, pass `--policy read_only` (it keeps the explorer from changing data). A `mutating` run starts with a `warning`
+  (`code: "policy_mutating"`): relay it.
+- An exploration spends credits while it runs, and so does each assurance job it starts (its `credits` in
+  `explore context status`). Tell the person before `explore run`, and report what the jobs used afterwards.
 
 **The stream:** `stream_start` (`surface: "explore"`), maybe `warning`, `explore_remote_started {exploration_id, run_id,
 state, hx_job_id, job_link}`, then `done {state: "queued", exit_code: 0, exploration_id, run_id}`. Three plain lines on
@@ -40,12 +44,12 @@ Explore's `error` events carry a `message` only: no `code`, no `next`. Read the 
 ## 2. Watch it and check what it designed
 
 ```bash
-kane-cli explore list --agent
+kane-cli explore list --agent                 # the running explorations; --all lists every one
 kane-cli explore sessions <exploration-id> --agent
 kane-cli explore context status <exploration-id> --agent
 ```
 
-`explore context status` emits `explore_context {exploration_id, context}`. Its `context.last_job` is the newest assurance
+`explore context status` emits `explore_context {exploration_id, action, context}`. Its `context.last_job` is the newest assurance
 job: `status` (`ok`, `noop`, `partial`, `failed`), `use_cases.added[]` and `modified[]`, `tests.designed`, `tests.saved`,
 `tests.failed[]`, `tests.saved_cases[]` (each test's Test Manager case), `held[]`, `credits`, `error`. A job runs after the
 exploration's run ends, and during a long run every few minutes when enough changed.
@@ -54,14 +58,22 @@ exploration's run ends, and during a long run every few minutes when enough chan
 kane-cli explore context sync <exploration-id> --agent    # ask for a job now
 ```
 
-| Refusal | Means | Do |
-|---|---|---|
-| `TOO_SOON` | the last cut was a few minutes ago | try again when it says |
-| `NO_ENDED_RUN` | no run of this exploration has ended | wait for the run, then sync |
-| `CONTEXT_OFF` | assurance context is off for this exploration | `kane-cli explore context on <exploration-id> --agent`, only with the person's word |
-| a `failed` state | the job couldn't launch | try once more; then tell the person |
+It emits `explore_context_sync {exploration_id, state, …}`: `launched`, `launching`, `pending` (behind a running job),
+`running` and `up_to_date` all end exit 0. A refusal's `error` message starts with its code:
 
-`kane-cli explore view <exploration-id>` opens the map in a local page for the person.
+| Refusal | Exit | Means | Do |
+|---|---|---|---|
+| `TOO_SOON` | 1 | the last cut was a few minutes ago | try again when it says |
+| `NO_ENDED_RUN` | 1 | no run of this exploration has ended | wait for the run, then sync |
+| `CONTEXT_OFF` | 1 | assurance context is off for this exploration | `kane-cli explore context on <exploration-id> --agent`, only with the person's word. If the message names a reason in brackets other than `user_off`, tell the person instead: turning it on won't help |
+| `NOT_CONFIGURED` | 1 | assurance jobs aren't set up here yet; context stays on and runs once they are | tell the person; don't retry |
+| a `failed` state | 1 | the job couldn't launch | try once more; then tell the person |
+| sign-in or access | 2 | the sign-in was refused, or basic credentials are needed | as in §1: sign-in first, then once more |
+| not found | 2 | no such exploration, or assurance context isn't available here yet | check the id (`kane-cli explore list --all --agent`); then stop |
+
+To show the map, ask the person to run `kane-cli explore view --exploration-id <exploration-id>` (or `--project <id>`)
+in their own terminal: it opens the map in their browser and keeps serving it until they press Ctrl+C. Don't run it
+yourself: it doesn't exit on its own.
 
 ## 3. Get exploration's tests into a folder, and run them
 
@@ -78,4 +90,5 @@ The use cases and tests are in the project, and their cases are in Test Manager,
 - Exploration's use cases are designed without review, so they show as proposed in `context list`. Present them to the
   person as exploration's proposals.
 - To tell exploration's work from a document's: in `context list` its source is named `explore-<exploration id>`.
-  `explore list` shows the explorations you can see.
+  `kane-cli explore list --all --agent` lists every exploration (without `--all`, only the running ones); a page's
+  `next_cursor` goes to `--cursor` for the next.

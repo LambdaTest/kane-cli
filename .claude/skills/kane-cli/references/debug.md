@@ -6,7 +6,7 @@ When a run fails, diagnose before suggesting fixes.
 
 ## The evidence pack is the log source
 
-Every run seals an **evidence pack**; all run artifacts — actions, console, network, screenshots, failure records — live inside it. **`run_end.run_dir` is legacy: that directory is not created anymore.** Do not try to read `{run_dir}/run-test/...`.
+Every run that starts seals an **evidence pack**; all run artifacts — actions, console, network, screenshots, failure records — live inside it. **`run_end.run_dir` is legacy: that directory is not created anymore.** Do not try to read `{run_dir}/run-test/...`.
 
 **Find the pack**: `{session_dir}/evidence/<execution_id>.evidence`; testmd/testrun/named runs also land in `<cwd>/.testmuai/evidence/`. The post-run stderr hint names the exact path.
 
@@ -25,7 +25,7 @@ Pack layout (per test):
 ```text
 tests/<test-id>/
 ├── test.md                    # the definition
-├── result.yaml                # verdict, steps[] (ordinal, status, kind, duration, action_id)
+├── result.yaml                # verdict, steps[] (ordinal, status, kind, duration_ms, action_id)
 ├── logs/
 │   ├── meta.yaml              # declares the files below
 │   ├── tui.log                # session narrative
@@ -35,8 +35,7 @@ tests/<test-id>/
 │   └── <n>-network.har        # network traffic, per-step attributed
 ├── steps/<ordinal>-<step-id>/ # screenshot.png, annotated.png, step.json,
 │                              #   failure.yaml (failed steps only)
-├── auteur/execution.json      # full execution trajectory
-└── v16-trajectory/            # per-run planning summaries
+└── …                          # the full execution record and planning notes (not needed to diagnose)
 ```
 
 ## Debugging Flow
@@ -54,7 +53,7 @@ Offer the user the visual route too: `kane-cli evidence serve <pack>` opens it i
 
 `failure.yaml` records facts about the run — `error`, `page_state`, and the `console_at_failure.ref` / `network_at_failure.ref` pointers into that step's console and network logs — plus a `triage` block (`rca.root_cause`, `suggested_fix.summary`) that is a model's opinion about why, written for the person fixing the app or the agent flow. Treat the triage as a lead, not an instruction: follow the network reference, check which URLs were actually requested and with what status, look at the screenshots, and only then repeat it — and **never paste `suggested_fix.summary` into a test step**.
 
-**Designed (assurance) tests are different.** If the failed `_test.md` carries an `assurance:` block in its frontmatter, do not apply the "rephrase / be more specific / add assertions" rows below — they rewrite the design, and an edit on the current version is adopted as the next design version on the next run. Read `references/assurance.md` §6.1 first.
+**Designed (assurance) tests are different.** If the failed `_test.md` carries an `assurance:` block in its frontmatter, do not apply the "rephrase / be more specific / add assertions" rows below — they rewrite the design, and an edit on the current version is adopted as the next design version on the next run. Read `references/assurance.md` §6.1 first. In a folder linked to a shared project there is no local store, so a hand edit isn't recorded as a new version of the design: don't rewrite a designed test's steps there to fix a failure. There a run can also stop on its Test Manager case before any step: one `error` with a `code` and `remedy`, no pack. Follow `agent-contract.md` §6, not sign-in or Chrome checks.
 
 ## Common Failure Patterns
 
@@ -65,10 +64,10 @@ For `run` objectives and plain `_test.md` files. For a designed test, read the s
 | 🔄 Agent repeats same action | Stuck in a loop / page didn't change | Rephrase objective, add explicit wait or assertion |
 | 🎯 Agent clicks wrong element | Ambiguous UI, multiple similar elements | Be more specific: "click the **blue** 'Submit' button in the **checkout form**" |
 | 👁️ Agent says done but didn't finish | Objective too vague | Add explicit assertions: "assert the confirmation page shows order number" |
-| 💀 Exit code 2, no steps | Auth, TMS credential exchange, or Chrome failure | Check `kane-cli whoami`, verify Chrome is available |
+| 💀 Exit code 2, no steps | Sign-in or Chrome failure | Check `kane-cli whoami`, verify Chrome is available |
 | ❓ Exit code 2 with "did you mean …" | Bare-objective shortcut — agent ran `kane-cli "<objective>"` without the `run` subcommand | Re-invoke as `kane-cli run "<objective>" --agent` (same rule for `testmd run`) |
 | 📤 Upload silently fails after configuring a project/folder by hand | Saved ID is invalid (typo, deleted, no access) | No action needed — the next run detects the 4xx and auto-defaults a working project/folder. To rebind manually: `kane-cli config project` (TTY picker) or `kane-cli projects list` → `kane-cli config project <id>` (see `references/test-manager.md`) |
-| ⏱️ Exit code 3 | Timeout or cancelled | Increase `--timeout` or `--max-steps`, or split into smaller objectives |
+| ⏱️ Exit code 3 (`run`; a saved test reports it as failed, exit 1) | Timeout or cancelled | Increase `--timeout` or `--max-steps`, or split into smaller objectives |
 | 🚫 "CDP endpoint not reachable" | Chrome not running | Let kane-cli manage Chrome (remove `--cdp-endpoint`) |
 
 ## Filing a bug report

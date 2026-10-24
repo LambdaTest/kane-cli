@@ -25,12 +25,12 @@ Add a flag only when the request needs it:
 | A local mobile run | `--mobile emulator` or `--mobile simulator` | `## mobile` (device tooling readiness) |
 | A cloud grid suite (`--remote`) | `--grid` | `## grid` (grid plugin readiness) |
 
-The script only reads status. It changes nothing, takes about two seconds, and always exits `0`. If the script is missing (an older skill install), run `kane-cli whoami`, `kane-cli balance` and `kane-cli config show` yourself and build the same card.
+The script only reads status (its sign-in check may renew a saved sign-in that is about to expire, as any kane-cli command does). It changes nothing else, takes about two seconds, and always exits `0`.
 
-If you can't run the script (it isn't there, or your host doesn't allow it), run the same checks one at a time instead:
-`kane-cli --version`, `kane-cli whoami`, `kane-cli balance`, `kane-cli config show`, and look for
-`.testmuai/assurance.json` in the folder (only its `projectName` and `projectId`). The preferences file is then
-unknown: treat the session as a first session only if the person says it is.
+If you can't run the script (it isn't there in an older skill install, or your host doesn't allow it), run the same
+checks one at a time and build the same card: `kane-cli --version`, `kane-cli whoami`, `kane-cli balance`,
+`kane-cli config show`, and look for `.testmuai/assurance.json` in the folder (only its `projectName` and `projectId`).
+The preferences file is then unknown: treat the session as a first session only if the person says it is.
 
 ## 2. What the script prints
 
@@ -90,7 +90,10 @@ Row rules:
 - **🌐 Chrome** appears only for local browser runs. Skip it for mobile and cloud grid requests.
 - **🔗 Shared project**: when the preflight's `## link` section names a project, this folder is linked to it
   (`shared-projects.md`). Add a row `🔗 **Shared project** | <name> (<id>) · designed tests run and count here`, and
-  word **Results go to** as "`kane-cli run` saves to <the profile's project>; designed tests here count in <the shared project>". Read `shared-projects.md` before any assurance command.
+  word **Results go to** as "quick `kane-cli run` checks save to <project> / <folder>; designed tests here count in <the shared project>". Read `shared-projects.md` before any assurance command.
+  A `link` of `unreadable` means kane-cli can't read the folder's link file, and a linked folder that also holds
+  `.context/` is refused too: run `kane-cli context list --mode agent` and relay its fix (`PROJECT_FILE_UNREADABLE`, `BOTH_STORES`)
+  before any assurance work.
 - **🗂️ Results go to** comes from `project_name` / `folder_name`. When they are empty, say `kane-cli will pick a default project on this run, and I'll tell you where it landed`. The offer to change it never stops the run. The change flow is in `references/test-manager.md`.
 - **👀 This run** states the watch mode you are about to use: the saved `preferences.watch`, or the detected default (see `references/first-run.md`).
 - For mobile or grid requests add a `📱 **Device tooling**` or `☁️ **Cloud grid**` row from the extra section.
@@ -115,7 +118,10 @@ When a problem stops the run, do not launch. Show the card, offer the fix, and w
 
 The skill ships as its own package, separate from kane-cli. Most kane-cli commands (not `context`, `explore`, or anything
 run with `--mode agent`) may print a
-`Skill update available: <installed|not installed> → <version> — run \`kane-cli install skill\`` line on stderr.
+`Skill update available: <installed|not installed> → <version> — run \`kane-cli install skill\`` line on stderr. A
+`kane-cli run --agent` stream also carries the notices as events on stdout: `skill_update_available` (`current`,
+`latest`, `install_cmd`), so offer `kane-cli install skill`; `update_available` (`current`, `latest`, `severity`) is
+kane-cli's own update (`cards.md` §1).
 
 ```bash
 kane-cli install skill              # the newest skill this kane-cli supports
