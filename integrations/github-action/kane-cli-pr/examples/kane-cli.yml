@@ -1,0 +1,39 @@
+# Copy to .github/kane-cli.yml on the default branch. kane reads it from the default branch for
+# every comment, so a pull request can't change who may run tests or which policy applies.
+version: 1
+
+# Who may ask kane questions, and who may make it run tests (GitHub author associations).
+# A commenter with write access or above also counts as MEMBER.
+access:
+  ask: [OWNER, MEMBER, COLLABORATOR]
+  run: [OWNER, MEMBER, COLLABORATOR]
+
+# Named policies a request can pick ("@kane-cli run them with the checkout policy").
+policies:
+  checkout: .github/kane/checkout-policy.yaml
+
+# The policy every run is judged against. Applied only when the installed kane-cli has
+# `testrun run --policy`; otherwise the comment says the policy is not available yet.
+policy: .github/kane/checkout-policy.yaml
+
+# true: an impact check runs the impacted tests straight away. false: kane lists them and asks.
+auto_continue: true
+
+# false passes --no-adaptive-heal, so a PR gate reports what it saw instead of re-authoring a step.
+heal: false
+
+# How many tests run at once on the runner (one Chrome each), 1 to 8.
+parallel: 2
+
+impact:
+  # true lets a model judge which tests the diff affects, with a reason each (spends credits).
+  judge: true
+
+# The PR's own build, started from the PR checkout while its tests run. Every test is pointed at
+# app.url with --override-start-url.
+app:
+  start: npm ci --no-audit --no-fund && npm run build && npm start
+  url: http://127.0.0.1:3000
+  ready_path: /
+  # How long kane waits for app.url to answer (1 to 900, default 60). Allow for the build.
+  timeout_seconds: 300

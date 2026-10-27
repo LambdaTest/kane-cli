@@ -1,0 +1,11 @@
+{"type":"stream_start","cli_version":"0.10.0","surface":"testrun"}
+{"type":"testrun_plan","members":[{"path":"${CWD}/.testmuai/tests/open-cart-from-home-banner_test.md","test_id":"T1","tags":[]},{"path":"${CWD}/.testmuai/tests/apply-gift-wrap_test.md","tags":[]}],"valid":true,"parallel":2}
+{"type":"testrun_start","execution_id":"exec-123","members":[".testmuai/tests/open-cart-from-home-banner_test.md",".testmuai/tests/apply-gift-wrap_test.md"],"parallel":2}
+{"type":"testrun_member_start","path":"${CWD}/.testmuai/tests/open-cart-from-home-banner_test.md","test_id":"T1","session_id":"s1","log_path":"/tmp/s1/events.ndjson"}
+{"type":"testrun_member_end","path":"${CWD}/.testmuai/tests/open-cart-from-home-banner_test.md","test_id":"T1","status":"passed","duration_s":41,"session_id":"s1","log_path":"/tmp/s1/events.ndjson"}
+{"type":"testrun_authored_member_start","path":".testmuai/tests/apply-gift-wrap_test.md","session_id":"s2","log_path":"/tmp/s2/events.ndjson"}
+{"type":"testrun_authored_member_end","path":".testmuai/tests/apply-gift-wrap_test.md","test_id":"T2","status":"failed","duration_s":97,"session_id":"s2","log_path":"/tmp/s2/events.ndjson","failure":{"message":"discount −$10.00, expected −$9.00","step_index":6}}
+{"type":"verdict","evidence_id":"exec-123","result":"fail","exit_code":1,"policies":[{"id":"checkout-pr","sha256":"abc","result":"fail","exit_code":1,"counts":{"total":2,"failed":1,"warned":0,"errored":0},"failed_gate_ids":["all-pass"],"errored_gate_ids":[],"file":"${CWD}/.testmuai/evidence/exec-123.evidence.verdicts/checkout-pr.verdict.json"}]}
+{"type":"coverage","status":"written","pct":40,"pack":"${CWD}/.testmuai/evidence/exec-123.evidence"}
+{"type":"testrun_summary","execution":{"id":"exec-123","status":"failed","evidence_id":"exec-123"},"authored":[{"path":".testmuai/tests/apply-gift-wrap_test.md","test_id":"T2","status":"failed","published":"yes"}],"totals":{"tests":2,"passed":1,"failed":1,"broken":0,"skipped":0,"authored":1},"duration_s":140,"upload":"ok","cancelled":false}
+{"type":"testrun_done","execution_id":"exec-123","overall_status":"failed","coverage":{"status":"written","pct":40}}

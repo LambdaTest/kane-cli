@@ -1,0 +1,6 @@
+{"result":"fail","evaluator":"evidence-cli 0.2.0","policy":{"id":"checkout-pr","sha256":"abc"},"gates":[
+ {"id":"all-pass","metric":"totals.failed","where":null,"op":"equals","expected":0,"actual":1,"severity":"blocking","status":"fail","trust":"recomputed","message":"All tests pass","error":null},
+ {"id":"checkout-green","metric":"pass_rate","where":"'checkout' in test.tags","op":"min","expected":1,"actual":0.5,"severity":"blocking","status":"fail","trust":"recomputed","message":"Checkout tests green","error":null},
+ {"id":"checks-present","metric":"metrics.tests_without_checks","op":"equals","expected":0,"actual":0,"severity":"blocking","status":"pass","message":null,"error":null},
+ {"id":"no-heals","metric":"metrics.heal.healed_tests","op":"max","expected":0,"actual":0,"severity":"warning","status":"pass","message":"No healed tests","error":null}
+],"failed_gates":["all-pass","checkout-green"],"warnings":[],"errored_gates":[],"exit_code":1}

@@ -5,6 +5,7 @@ Composite actions for running Kane CLI inside GitHub Actions. Each action lives 
 | Action | Reference | What it does |
 |---|---|---|
 | [kane-cli-browser-run](kane-cli-browser-run/) | `LambdaTest/kane-cli/integrations/github-action/kane-cli-browser-run@main` | Runs a plain-English objective or a committed `_test.md` suite in a real headless browser, uploads the evidence pack, and posts the verdict on the PR |
+| [kane-cli-pr](kane-cli-pr/) | `LambdaTest/kane-cli/integrations/github-action/kane-cli-pr@main` | Answers `@kane-cli` comments on a pull request: finds the tests the change affects, runs them against the PR's own build, and reports with evidence, a policy verdict and the checks `kane-cli / tests` and `kane-cli / policy` |
 
 ## Layout
 
