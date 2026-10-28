@@ -46,7 +46,7 @@ test("the example config parses, and its policy path is one of the named policie
   const config = parseConfig(readFileSync(join(dir, "examples/kane-cli.yml"), "utf8"));
   assert.equal(config.policy, config.policyPaths.checkout);
   assert.equal(config.app.url, "http://127.0.0.1:3000");
-  assert.equal(config.heal, false);
+  assert.equal(config.heal, true);
 });
 
 test("an empty converse-url defaults to the kane controller for kane-env", () => {

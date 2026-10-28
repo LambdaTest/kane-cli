@@ -6,8 +6,8 @@ import { errorOf } from "./kane.mjs";
 
 export const PARALLEL = 2;
 
-/** argv after the kane-cli prefix. Heal off (the default) adds --no-adaptive-heal: a PR gate reports what it saw. */
-export function testrunArgs({ paths, heal = false, url = null, policy = null, parallel = PARALLEL }) {
+/** argv after the kane-cli prefix. Heal is on by default; heal: false adds --no-adaptive-heal. */
+export function testrunArgs({ paths, heal = true, url = null, policy = null, parallel = PARALLEL }) {
   return [
     "testrun",
     "run",

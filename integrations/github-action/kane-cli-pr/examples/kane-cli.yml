@@ -19,8 +19,9 @@ policy: .github/kane/checkout-policy.yaml
 # true: an impact check runs the impacted tests straight away. false: kane lists them and asks.
 auto_continue: true
 
-# false passes --no-adaptive-heal, so a PR gate reports what it saw instead of re-authoring a step.
-heal: false
+# true (the default) lets adaptive heal re-record a step that no longer matches the page; the comment marks a healed test.
+# false passes --no-adaptive-heal, so the gate reports what it saw.
+heal: true
 
 # How many tests run at once on the runner (one Chrome each), 1 to 8.
 parallel: 2

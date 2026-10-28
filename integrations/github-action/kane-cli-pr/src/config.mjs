@@ -61,7 +61,7 @@ export function parseConfig(yamlText) {
 
   const parallel = doc.parallel ?? 1;
   if (!Number.isInteger(parallel) || parallel < 1 || parallel > 8) throw new ConfigError("parallel must be a whole number from 1 to 8.");
-  const heal = doc.heal ?? false;
+  const heal = doc.heal ?? true;
   if (typeof heal !== "boolean") throw new ConfigError("heal must be true or false.");
 
   const impact = doc.impact ?? {};

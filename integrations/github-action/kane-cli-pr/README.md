@@ -127,7 +127,7 @@ kane reads this file from the default branch on every comment, so a pull request
 | `policies` | `{}` | Named policies a request can pick: `name: path` |
 | `policy` | none | The policy file every run is judged against. Applied only when the installed kane-cli has `testrun run --policy` |
 | `auto_continue` | `true` | `true`: an impact check runs the impacted tests straight away. `false`: kane lists them and waits for `go ahead` |
-| `heal` | `false` | `false` passes `--no-adaptive-heal`, so the gate reports what it saw instead of re-authoring a step |
+| `heal` | `true` | `true` lets adaptive heal re-record a step that no longer matches the page; a healed test is marked 🩹 in the comment. `false` passes `--no-adaptive-heal`, so the gate reports what it saw |
 | `parallel` | `1` | Tests run at once on the runner (1 to 8), one Chrome each |
 | `impact.judge` | `true` | `true` lets a model judge which tests the diff affects, with a reason each (spends credits). `false` passes `--no-judge` |
 | `app.start` | none | Command that builds and serves the PR's app from the PR checkout. Without `app`, tests run against their own `url:` |

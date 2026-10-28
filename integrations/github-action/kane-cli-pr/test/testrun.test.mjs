@@ -12,7 +12,8 @@ import { splitCommand } from "../src/argv.mjs";
 
 const PATHS = [".testmuai/tests/open-cart-from-home-banner_test.md", ".testmuai/tests/apply-gift-wrap_test.md"];
 
-test("heal default (false) adds --no-adaptive-heal; heal true omits it", () => {
+test("heal default (true) omits --no-adaptive-heal; heal false adds it", () => {
+  assert.ok(!testrunArgs({ paths: PATHS }).includes("--no-adaptive-heal"));
   const off = testrunArgs({ paths: PATHS, heal: false });
   assert.deepEqual(off, ["testrun", "run", ...PATHS, "--headless", "--parallel", "2", "--no-adaptive-heal", "--agent"]);
   assert.ok(!testrunArgs({ paths: PATHS, heal: true }).includes("--no-adaptive-heal"));
