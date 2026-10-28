@@ -7,6 +7,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-10-28
+
+### Exploration, end to end
+- **`explore run` is remote by default** — runs are pushed, checked and launched on HyperExecute; local-only flags say so in `explore run --help`. `--claim-run` is what the VM uses.
+- **Up to 20 cloud browsers at once** — `explore --browser remote` drives LambdaTest Chrome over CDP, opening browsers only as the explorer asks for them, and never leaves a VM running after release.
+- **One clean stop** — `explore stop <id>` aborts a queued run and stops a running one cleanly. At the terminal, the first **Ctrl+C** stops, the second acknowledges, the third kills immediately.
+- **Scope the run** — `--focus <screen>` starts from one screen of an existing map, `--depth-caps` sets per-depth lease caps, and `--max-parallel N` bounds concurrency.
+- **Run policy is explicit** — `explore run --policy read_only|mutating`. Mutating is now the default for `explore run`; read-only blocks writes at the route and browser level and refuses secret controls.
+- **`--allow-post`** — name the read-only POST endpoints the gate should let through, or pass `*` for every POST to the run's own domains.
+
+### Seeing what an exploration found
+- **`explore view` is a live map** — a React Flow graph of the exploration, paged for maps of thousands of screens, with zoom levels, search, a legend, a findings drawer with filters, and map badges.
+- **Watch a run as it happens** — the live view streams each browser's picture through the controller at up to 15 fps, from any replica. The run card's **Watch** opens it.
+- **Finding evidence packs** — every finding carries a clip player, Network and Console tabs, before/after screenshots with the acted control boxed, the cause chain, and a verdict. Clips stream as they draw and can be re-requested if one fails.
+- **Finding status lifecycle** — open, bug, resolving, resolved, discarded, with a full History that names who changed what and when, including undos.
+- **Detectors** — console, network, broken link, slow-request and accessibility (axe-core) findings, plus performance categories and re-check leases that mark results reproduced or not_reproduced.
+
+### Explore from the terminal
+- **Bare `explore` opens a project picker and the exploration card** — from there you can run again, open the setup form, view the map, inspect assurance context, or delete with a confirm that **Esc** backs out of.
+- **A compact live bar** — polled progress for a running exploration; **Ctrl+C** detaches or stops.
+- **Help that reads like help** — `explore --help` explains what explore is instead of calling it "(agent mode)", groups flags with their values and defaults, and moves depth caps, slow budget and recheck into an Advanced group.
+- **`explore sessions --run <prefix>`** — a run prefix is matched across every page of results.
+
+### Secrets never leave the worker
+- **The content fence** — anything a page displays as a secret is masked before it leaves the worker: bare passwords and card numbers in step text, PINs, CVVs, placeholders, RFC emails, "set password to x" phrasings, and base64 or Basic `user:password` forms.
+- **Secret values never hit disk or stdout** — not in `events.ndjson`, not in `tui.log`, not in evidence packs. `explore view` redacts every shape the fence masks, and short bearer tokens in free text read as REDACTED.
+- **Login is protected** — the sign-in screen belongs to the setup flow alone, a pop-up never receives a secret, and managed Chrome launches with password leak detection and the password manager off.
+
+### Policies and evidence gates
+- **`kane-cli policy`** — list, create and inspect Test Manager policies, plus `kane-cli policy metrics-list` for the metric catalog.
+- **Judge a pack against a policy** — `--policy-id` works on `evidence merge` (judges the sealed merged pack), `testrun run` (the published pack, local or remote) and `testmd run` (seals, judges, and ingests the verdicts).
+- **`evidence verdict` and `evidence lint-policy`** — read and lint policies over the evidence-cli verdict API. A lint finding's location prints once, and a policy file's path is reported as given.
+- **Summaries carry gate totals by severity**, and the metric catalog is snapshotted into every sealed pack so a verdict stays reproducible.
+- **A refused or unwritable verdict no longer costs the run its upload** — and failures from evidence-cli are reported as faults instead of crashing the command.
+
+### Working in a shared project
+- **Linked folders work across the CLI** — `context ingest`, `context list`, `context pull`, `design tests`, `maintain reconcile`, `maintain evolve`, `cover`, `testrun run` and `testmd run` all run against the shared project. Only paths the assurance store can't serve are refused.
+- **`context ingest` takes more** — URLs, references, Jira/Confluence/Linear items and several files in one session, all-or-nothing, with the project's converted sources landing on save.
+- **Reviews you can drive** — decide cards on screen, or answer on the agent stream with `--approve` / `--skip` / `--defer`. `--mode override` and `--json` work in a linked folder; a question with no recommended option fails as `NO_DEFAULT_ANSWER` in both override and ci.
+- **Sessions survive interruption** — **Ctrl+C** mid-child pauses the session with its resume, a resumed session comes back on the check-in it paused on, and credits count what was already spent.
+- **Saves say what Test Manager took** — which scenarios couldn't be covered and why, which test files were written, which values the tests still need, and which cases will update on their next run.
+- **Nothing left empty-handed** — an empty linked folder's next step is the pull; a fresh folder is told how to join; a folder with nothing designed leads with the design.
+
+### The assurance job
+- **`kane-cli explore assurance-job`** runs the whole design chain unattended, logging progress on stderr so the HyperExecute log says what it did.
+- **Clear outcomes** — `MARK_REFUSED` / `PROJECT_NOT_MARKED` when it can't share a project, `LATTICE_UNAVAILABLE` after a retried read, `INGEST_FAILED` with its cause, and `INPUT_INVALID` where it applies.
+- **Resumes are honest** — a run that saved nothing says what became of the session, and a resume hint only appears when the session can actually be resumed.
+- **`KANE_AJ_CURSOR_FROM`** bounds the job's cut from below; a cut with nothing new counts as handled.
+
+### Agent mode and traceability
+- **`--agent` everywhere** — one NDJSON rule across every command, plus `--mode agent` as an alias on `run` and `testmd run`, and `--json` on `extract`, `design tests` and `maintain reconcile`.
+- **Every next item is runnable as printed** — agent refusals name the commands you'd run next, with the flags you actually typed preserved.
+- **Support ids that lead somewhere** — every support id a person sees reaches the remote log under that id, errors are spooled and sent at exit, and each Lattice call carries its request id, the command's support id and the CLI version.
+- **Richer traces** — one trace per session run including its save, each landed design phase traced with its time, and a remote run's log naming its Lattice session and project.
+
+### Tests, designs and files
+- **Replaced tests are named, not silently dropped** — a replaced test's file is left in place and labelled with what replaced it and what that new test verifies.
+- **Redesigns keep lineage** — a rewritten scenario names the one it replaces via `reuse_of`, the test pair and criteria carry across, and an orphaned criterion is retired only by a forced redesign of its own use case.
+- **Start pages and variables** — a design marks the variable a test's first step opens as its start page, under one rule for every test; a save lists the values its tests still need, writes their stubs, and names any test with no start page.
+- **Emulator and simulator runs fail fast** — a run with no app to install stops before the case, the replay checks and any device (and before dispatch when remote), and says where the app should come from.
+- **Coverage is visible on every run path** — `context view` shows the coverage figure beside designed, `cover gaps` counts criteria not yet run, and a pack sealed on the grid says plainly that it has no coverage rather than promising it later.
+
 ## [0.9.0] - 2026-10-15
 
 ### Real-device runs
