@@ -1,0 +1,6 @@
+{"type":"run_start","objective":"On the Cart page, assert the cart shows a shipping amount of $5","v":1}
+{"type":"step_event","index":5,"event":"action","detail":"Reading the shipping amount from the cart order summary","action_type":"analyze","success":true,"v":1}
+{"type":"step_event","index":7,"event":"assertion","detail":"the cart shows a merchandise subtotal, a discount amount, a shipping amount of $5, a total, and a Checkout action.","passed":false,"v":1}
+{"type":"step_end","index":7,"status":"failed","kind":"assert","v":1}
+{"type":"run_end","run_id":"run-1","status":"failed","summary":"","reason":"assertion_failed: @ step 7","run_dir":"${RUNDIR}","context":{"variables":{"shipping_amount":{"syntax":"{{shipping_amount}}","value":"__not_visible__","secret":false},"baseline_total":{"syntax":"{{baseline_total}}","value":"$50.00","secret":false}}},"v":1}
+{"type":"test_md_step_end","step_index":2,"status":"failed","v":1}

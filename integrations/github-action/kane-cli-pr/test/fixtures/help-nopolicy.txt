@@ -1,0 +1,3 @@
+Usage: kane-cli testrun run [options] [paths...]
+  --no-adaptive-heal     disable adaptive heal for every member
+  --override-start-url <url>  Open this URL first

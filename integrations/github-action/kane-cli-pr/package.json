@@ -1,0 +1,14 @@
+{
+  "name": "kane-cli-pr",
+  "version": "0.1.0",
+  "private": true,
+  "description": "kane-cli's PR conversation layer: answers @kane-cli comments on a pull request.",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "yaml": "^2.5.1"
+  }
+}

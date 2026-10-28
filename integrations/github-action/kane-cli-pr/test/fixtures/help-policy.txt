@@ -1,0 +1,5 @@
+Usage: kane-cli testrun run [options] [paths...]
+  --no-adaptive-heal     disable adaptive heal for every member
+  --policy <file>        Judge the run's sealed evidence pack against this policy YAML (repeatable)
+  --policy-id <id>       Judge against a Test Manager policy
+  --override-start-url <url>  Open this URL first

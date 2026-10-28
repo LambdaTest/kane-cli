@@ -1,0 +1,158 @@
+name: "Kane CLI on Pull Requests"
+description: "Answers @kane-cli comments on a pull request: finds the tests the change affects, runs them against the PR's own build, and reports with evidence, a policy verdict and checks."
+author: "TestMu AI"
+branding:
+  icon: "message-circle"
+  color: "green"
+
+inputs:
+  phase:
+    description: >-
+      "run": answer the comment (and sweep missed ones); impact and tests run here. A turn that ran
+      tests leaves its result for "report", because the comment carries the evidence link and the
+      pack is uploaded between the two steps. "report": post that result and complete the checks.
+    required: false
+    default: "run"
+  username:
+    description: "TestMu username (pass from secrets.LT_USERNAME)"
+    required: true
+  access-key:
+    description: "TestMu access key (pass from secrets.LT_ACCESS_KEY)"
+    required: true
+  github-token:
+    description: "Token for reading the PR and writing kane's comments, reactions and checks. The job needs contents: read, issues: write, pull-requests: write and checks: write."
+    required: false
+    default: ${{ github.token }}
+  kane-cli-version:
+    description: "Version of @testmuai/kane-cli to install (npm dist-tag or exact version). Ignored when kane-cli is set."
+    required: false
+    default: "latest"
+  kane-cli:
+    description: "A kane-cli command to use instead of installing one, split like a shell would (quotes, backslashes) but never run through one, e.g. `/opt/kane/bin/kane-cli` or `node /path/to/kane-cli/dist/index.js`. Empty installs @testmuai/kane-cli@<kane-cli-version>."
+    required: false
+    default: ""
+  kane-env:
+    description: "The TestMu environment kane-cli signs in to (kane-cli login --env): prod, or stage for TestMu's own staging. It also picks the default converse-url."
+    required: false
+    default: "prod"
+  converse-url:
+    description: "Full URL of the endpoint that reads what a comment asks. Empty uses the kane controller for kane-env (prod: https://kaneai-api.lambdatest.com/v16-controller/v1/integration/github/converse). When it can't be reached, kane falls back to simple word rules and says so in its reply."
+    required: false
+    default: ""
+  impact-base-url:
+    description: "Advanced: point only the impact step at another controller (sets TESTMUAI_BASE_URL for kane-cli context impact). Leave empty."
+    required: false
+    default: ""
+  mention:
+    description: "The trigger word. The calling workflow's job-level `if` must test for the same word."
+    required: false
+    default: "@kane-cli"
+  bot-login:
+    description: "The login github-token comments and reacts as (kane recognises its own comments by it). Change it when github-token is a GitHub App's or a user's token."
+    required: false
+    default: "github-actions[bot]"
+  pipeline:
+    description: "\"true\" runs impact and tests for real; \"false\" is a dry run in which kane only says what it would do."
+    required: false
+    default: "true"
+  pr-path:
+    description: "Where the workflow checked out the PR head (refs/pull/<n>/head, fetch-depth 0), relative to the workspace."
+    required: false
+    default: "pr"
+  artifact-id:
+    description: "report phase: the evidence artifact's id (actions/upload-artifact's artifact-id output); empty when nothing was uploaded."
+    required: false
+    default: ""
+  node-version:
+    description: "Node.js version set up for the action and kane-cli (20 or newer)."
+    required: false
+    default: "24"
+  install-chrome:
+    description: "run phase: install Google Chrome (stable) with browser-actions/setup-chrome and point kane-cli at it (true/false). Set false when the runner already has Chrome, or export KANE_CLI_CHROME_PATH yourself."
+    required: false
+    default: "true"
+
+outputs:
+  evidence-path:
+    description: "run phase: the sealed evidence pack of the turn that ran tests, for actions/upload-artifact; empty when nothing ran."
+    value: ${{ steps.kane.outputs.evidence-path }}
+  logs-path:
+    description: "run phase: kane-cli's raw testrun NDJSON for that turn; empty when nothing ran."
+    value: ${{ steps.kane.outputs.logs-path }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+
+    - name: Install the action's dependencies
+      shell: bash
+      env:
+        KANE_PHASE: ${{ inputs.phase }}
+      run: |
+        if [ "$KANE_PHASE" = "report" ] && [ -d "$GITHUB_ACTION_PATH/node_modules/yaml" ]; then exit 0; fi
+        npm ci --omit=dev --no-audit --no-fund --prefix "$GITHUB_ACTION_PATH"
+
+    - name: Set up Chrome
+      if: inputs.phase == 'run' && inputs.install-chrome == 'true' && inputs.pipeline == 'true'
+      id: chrome
+      uses: browser-actions/setup-chrome@v2
+      with:
+        chrome-version: stable
+
+    - name: Point kane-cli at the installed Chrome
+      if: inputs.phase == 'run' && inputs.install-chrome == 'true' && inputs.pipeline == 'true'
+      shell: bash
+      env:
+        CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
+        CHROME_VERSION: ${{ steps.chrome.outputs.chrome-version }}
+      run: |
+        if [ -n "$CHROME_PATH" ]; then
+          echo "KANE_CLI_CHROME_PATH=$CHROME_PATH" >> "$GITHUB_ENV"
+          echo "Using Chrome $CHROME_VERSION at $CHROME_PATH"
+        else
+          echo "::warning::setup-chrome reported no chrome-path; kane-cli will look for Chrome at its standard locations."
+        fi
+
+    - name: Install Kane CLI
+      if: inputs.phase == 'run' && inputs.kane-cli == '' && inputs.pipeline == 'true'
+      shell: bash
+      env:
+        KANE_VERSION: ${{ inputs.kane-cli-version }}
+      run: |
+        npm install -g "@testmuai/kane-cli@${KANE_VERSION}"
+        kane-cli --version
+
+    - name: kane-cli (${{ inputs.phase }})
+      id: kane
+      shell: bash
+      env:
+        KANE_PHASE: ${{ inputs.phase }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        LT_USERNAME: ${{ inputs.username }}
+        LT_ACCESS_KEY: ${{ inputs.access-key }}
+        # Empty converse-url: the kane controller for kane-env.
+        KANE_CONVERSE_URL: ${{ inputs.converse-url != '' && inputs.converse-url || (inputs.kane-env == 'stage' && 'https://auteur-stage-automind.lambdatestinternal.com/v16-controller/v1/integration/github/converse' || 'https://kaneai-api.lambdatest.com/v16-controller/v1/integration/github/converse') }}
+        KANE_MENTION: ${{ inputs.mention }}
+        KANE_BOT_LOGIN: ${{ inputs.bot-login }}
+        KANE_PIPELINE: ${{ inputs.pipeline }}
+        KANE_CLI_CMD: ${{ inputs.kane-cli != '' && inputs.kane-cli || 'kane-cli' }}
+        KANE_ENV: ${{ inputs.kane-env }}
+        KANE_IMPACT_BASE_URL: ${{ inputs.impact-base-url }}
+        KANE_PR_PATH: ${{ inputs.pr-path }}
+        KANE_ARTIFACT_ID: ${{ inputs.artifact-id }}
+        KANE_CLI_USER_AGENT: github-action
+        KANE_STATE_DIR: ${{ runner.temp }}/kane-cli-pr
+      run: node "$GITHUB_ACTION_PATH/src/main.mjs"
+
+    - name: Stop the PR's app; remove kane-cli's per-job login
+      if: always() && inputs.phase == 'run'
+      shell: bash
+      env:
+        KANE_PHASE: stop-app
+        KANE_STATE_DIR: ${{ runner.temp }}/kane-cli-pr
+        GITHUB_TOKEN: ""
+      run: node "$GITHUB_ACTION_PATH/src/main.mjs"
