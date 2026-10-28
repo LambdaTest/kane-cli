@@ -66,6 +66,8 @@ Every flag accepted by `kane-cli testmd run`:
 | `--no-adaptive-heal` | flag | healing enabled | Disable adaptive healing after replay failure |
 | `--author` | flag | off | Re-author authorable steps; replay-only marked steps still replay. |
 | `--bug-detection <mode>` | `off` \| `stop` \| `continue` | config value (`off`) | Detect product bugs while authoring: `stop` halts the run on a confirmed bug; `continue` records it and keeps going. Overrides `config set-bug-detection`. Authoring steps only — replay failures always investigate. See [Configuration](../configuration.md#bug-detection). |
+| `--policy <file>` | path, repeatable | none | *(next release after 0.10.0-rc.3)* Judge the test's sealed evidence pack against this policy YAML. Linted before the run. See [Policies and verdicts](../policies.md). |
+| `--policy-id <id>` | string, repeatable | none | *(next release after 0.10.0-rc.3)* Judge it against a policy stored in Test Manager, latest version (`kane-cli policy list`). |
 
 Most flags have a frontmatter counterpart with the same name (with underscores). Where both are set, the CLI flag wins — except for `variables`, which the file owns; see [overview.md](./overview.md#variables).
 
@@ -199,6 +201,9 @@ When an `@import` step fails, the badge points at the failing leaf inside the he
 | `3` | Cancelled (Ctrl+C confirmed) or timed out (including `--on-lock-conflict wait` timing out). |
 
 Use these to gate downstream CI steps.
+
+<!-- release: needs evidence policies -->
+With `--policy` or `--policy-id` *(next release after 0.10.0-rc.3)*, a bad policy is exit `2` before any step runs, and a run that passed exits `1` on a failing verdict and `3` on an errored one. See [Policies and verdicts](../policies.md#judging-at-run-time).
 
 ## Lock conflicts
 

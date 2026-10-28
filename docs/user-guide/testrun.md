@@ -114,6 +114,8 @@ kane-cli testrun run --match '^tests/devices/' --parallel 2                     
 | `--device-name <name>` | Device for the suite's mobile members: as `kane-cli devices list` prints it locally, or a grid catalog device with `--remote` | member's `device_name:` |
 | `--os-version <version>` | OS version for the mobile members (`14`, `17.5`); alone = any device on that version | member's `os_version:` |
 | `--username <user>` / `--access-key <key>` | Basic auth (skips OAuth) | — |
+| `--policy <file>` | *(next release after 0.10.0-rc.3)* Judge the suite's sealed pack against this policy YAML (repeatable). Linted before the run. See [Policies and verdicts](./policies.md) | — |
+| `--policy-id <id>` | *(next release after 0.10.0-rc.3)* Judge it against a policy stored in Test Manager, latest version (repeatable; `kane-cli policy list`) | — |
 
 Each desktop worker gets its **own isolated Chrome** with a fresh temporary profile, so parallel members never share cookies, logins, or tabs — and never fight over your real browser profile.
 
@@ -150,6 +152,9 @@ In a terminal, kane-cli offers to open the pack in the [evidence viewer](./evide
 | `1` | At least one member failed or broke. |
 | `2` | Usage error, invalid plan (preflight failures), or auth error. Nothing ran. |
 | `3` | Cancelled (Ctrl-C). |
+
+<!-- release: needs evidence policies -->
+With `--policy` or `--policy-id` *(next release after 0.10.0-rc.3)*, a bad policy is exit `2` before anything runs, and after the run a failing verdict turns `0` into `1` and an errored verdict turns it into `3`. A run that already failed keeps its code. With `--remote`, your machine judges the suite's pack once it is back. See [Policies and verdicts](./policies.md#judging-at-run-time).
 
 ## Designed tests in a shared project
 
@@ -232,6 +237,7 @@ In agent / non-TTY mode, `testrun run` emits its own typed NDJSON events on stdo
 
 - [Remote runs on the cloud grid](./remote-execution.md) — `--remote`, mobile suites from any machine.
 - [Evidence packs](./evidence.md) — what's in the pack and how to view it.
+- [Policies and verdicts](./policies.md) — gate the suite's pack on quality rules.
 - [Writing test.md files](./testmd/overview.md) — the file format, including `tags:`.
 - [Running test.md files](./testmd/running.md) — single-test runs, replay, and flags.
 - [CI/CD recipes](./cicd.md) — pipeline patterns.

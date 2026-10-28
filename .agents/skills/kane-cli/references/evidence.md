@@ -1,4 +1,4 @@
-<!-- kane-cli skill reference: evidence packs (view, share, validate, merge) -->
+<!-- kane-cli skill reference: evidence packs (view, share, validate, merge, judge) -->
 
 # Evidence Packs — Agent Surface
 
@@ -69,7 +69,18 @@ Exit `0` valid · `1` invalid · `2` not found. Use it when a pack won't open in
 kane-cli evidence merge <targets...> --run-id <id>
 ```
 
-Combines packs (execution ids or paths, order-significant) into one, sealed by default at `.testmuai/evidence/<run-id>.evidence`. `--run-id` is required. Exit `0` merged · `1` policy abort (e.g. packs from different projects or organisations, or a pack that isn't sealed and valid; a pack whose run id repeats is skipped, not an abort) · `2` usage. Full policy detail is in the user guide — for anything beyond a simple merge, point the user there rather than improvising flags.
+Combines packs (execution ids or paths, order-significant) into one, sealed by default at `.testmuai/evidence/<run-id>.evidence`. `--run-id` is required. Exit `0` merged · `1` merge-rules abort (e.g. packs from different projects or organisations, or a pack that isn't sealed and valid; a pack whose run id repeats is skipped, not an abort) · `2` usage. Full merge-rules detail is in the user guide — for anything beyond a simple merge, point the user there rather than improvising flags.
+
+After 0.10.0-rc.3, `--policy <file>` / `--policy-id <id>` (repeatable) judge the sealed merged pack: exit `1` then also means a failing verdict (pack and verdict files written), `3` an errored verdict; `--json` adds `verdict {…}` to the report; `--no-finalize` with a policy is exit 2. See `references/policy.md`.
+
+## Verdict — judge a pack against a policy (after 0.10.0-rc.3)
+
+```bash
+kane-cli evidence lint-policy <policy.yaml> --json
+kane-cli evidence verdict <execution-id|path|latest> --policy <policy.yaml> [--policy-id <id>] --json
+```
+
+Writes `<pack>.verdicts/<policy-id>.verdict.json` beside the pack (never inside it). Exit `0` pass · `1` fail · `3` errored · `2` usage or I/O. Policy format, metrics, the `verdict` event, run-time `--policy` and Test Manager policies: `references/policy.md`.
 
 ## Debugging with a pack
 

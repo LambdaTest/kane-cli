@@ -4,7 +4,7 @@ Every kane-cli run produces an **evidence pack**: a single sealed `.evidence` fi
 
 A pack is a self-contained zip. You can open it in the hosted viewer, share it with a teammate, archive it in CI, validate it, or merge several packs into one.
 
-This page covers where packs live, how to view them, and the `kane-cli evidence` command family. For debugging a failed run with its pack, see [Debugging a failed run from its pack](#debugging-a-failed-run-from-its-pack).
+This page covers where packs live, how to view them, and the `kane-cli evidence` command family. To judge a pack against quality gates, see [Policies and verdicts](./policies.md). For debugging a failed run with its pack, see [Debugging a failed run from its pack](#debugging-a-failed-run-from-its-pack).
 
 ## What's inside a pack
 
@@ -171,10 +171,12 @@ Targets are execution ids or pack paths, and **order matters** (earlier targets 
 | `--title <title>` | Title for the merged run | first eligible pack's |
 | `--no-finalize` | Keep the merged pack live instead of sealing it | seals by default |
 | `--json` | Machine-readable merge report | off |
+| `--policy <file>` | *(next release after 0.10.0-rc.3)* Judge the sealed merged pack against this policy (repeatable). See [Policies and verdicts](./policies.md) | — |
+| `--policy-id <id>` | *(next release after 0.10.0-rc.3)* Judge it against a policy stored in Test Manager, latest version (repeatable) | — |
 
-`--rules` and `--on-collision` are mutually exclusive. The default policy requires inputs to be sealed and valid, skips duplicate run ids, and refuses to merge packs from different projects or organisations.
+`--rules` and `--on-collision` are mutually exclusive. The default rules require inputs to be sealed and valid, skips duplicate run ids, and refuses to merge packs from different projects or organisations.
 
-Exit codes: `0` merged · `1` policy abort · `2` usage error.
+Exit codes: `0` merged · `1` merge-rules abort, or a failing verdict with `--policy` · `2` usage error · `3` an errored verdict with `--policy`.
 
 ## Debugging a failed run from its pack
 
@@ -187,6 +189,18 @@ The pack is the fastest way to understand a failure, because everything is in on
 
 If a pack won't open in the viewer, run `kane-cli evidence validate <pack>` — an unsealed or truncated pack (for example from a run that was killed hard) reports as invalid, and the run's session directory still holds the raw logs.
 
+<!-- release: needs evidence policies -->
+## Judging a pack against a policy *(next release after 0.10.0-rc.3)*
+
+A policy is a YAML file of gates over a pack's metrics. `kane-cli evidence verdict` judges a sealed pack against one or more policies and writes each verdict next to the pack, in `<pack>.verdicts/<policy-id>.verdict.json`. The pack itself is never changed.
+
+```bash
+kane-cli evidence lint-policy release-policy.yaml
+kane-cli evidence verdict latest --policy release-policy.yaml
+```
+
+Exit codes: `0` pass · `1` fail · `3` errored · `2` usage or I/O error. `testmd run`, `testrun run` and `evidence merge` take the same `--policy` and `--policy-id` flags to judge their own pack. The format, the metrics, and storing policies in Test Manager: [Policies and verdicts](./policies.md).
+
 ## Publishing to the dashboard
 
 Runs that upload to Test Manager attach their sealed pack automatically. Replayed `testmd` runs and `testrun` executions publish their packs to your project as well, so the dashboard shows execution evidence even for cache-replayed runs that never re-author.
@@ -194,6 +208,7 @@ Runs that upload to Test Manager attach their sealed pack automatically. Replaye
 ## Next steps
 
 - [Batch runs with testrun](./testrun.md) — many tests, one execution, one pack.
+- [Policies and verdicts](./policies.md) — judge a pack against quality gates.
 - [Running test.md files](./testmd/running.md) — the testmd command family.
 - [Troubleshooting](./troubleshooting.md) — debugging flows and escape hatches.
 

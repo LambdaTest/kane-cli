@@ -1,6 +1,6 @@
 ---
 name: kane-cli
-description: "End-to-end (E2E) test generation and execution with KaneCLI. Generate tests from a PRD, specification, or user-provided description via the assurance commands (use-cases, acceptance criteria, scenarios, runnable _test.md tests; never write test cases by hand). Execute them on desktop web (Chrome, the default), Android and iOS: emulator/simulator locally on macOS Apple Silicon or via testrun run --remote, and real cloud devices from any machine (--target android|ios). Prove coverage with evidence packs and kane-cli cover. Work in a team's shared Test Manager project from a linked folder: link it with --project, save sessions, run the designed tests on their Test Manager cases, and read the project's coverage. Use for any task needing a real browser or mobile app: navigation, clicks, form filling, UI checks, screenshots, deploy verification. Parse NDJSON output, inspect logs, and save replayable _test.md files. Share a local assurance store (.context/) through a GitHub repository, S3-compatible bucket, or folder via kane-cli context sync, and resolve decisions requested during a sync rebase."
+description: "End-to-end (E2E) test generation and execution with KaneCLI. Generate tests from a PRD, specification, or user-provided description via the assurance commands (use-cases, acceptance criteria, scenarios, runnable _test.md tests; never write test cases by hand). Execute them on desktop web (Chrome, the default), Android and iOS: emulator/simulator locally on macOS Apple Silicon or via testrun run --remote, and real cloud devices from any machine (--target android|ios). Prove coverage with evidence packs and kane-cli cover, and judge a pack against a policy of quality gates (kane-cli evidence verdict, --policy) to pass or fail a CI run. Work in a team's shared Test Manager project from a linked folder: link it with --project, save sessions, run the designed tests on their Test Manager cases, and read the project's coverage. Use for any task needing a real browser or mobile app: navigation, clicks, form filling, UI checks, screenshots, deploy verification. Parse NDJSON output, inspect logs, and save replayable _test.md files. Share a local assurance store (.context/) through a GitHub repository, S3-compatible bucket, or folder via kane-cli context sync, and resolve decisions requested during a sync rebase."
 ---
 
 # Kane CLI — End-to-End Test Generation and Execution Skill
@@ -188,6 +188,7 @@ When the user's request involves a browser — or writing test cases:
 - Share a **local** context store through a repository, a bucket or a folder, join one, keep two stores level, or resolve a sync conflict → Read `references/context-sync.md` first (kane-cli 0.8.14+). A team in Test Manager uses a shared project instead (`references/shared-projects.md`); a linked folder refuses `kane-cli context sync`, `kane-cli context push` and `kane-cli context clone` (`REMOTE_UNSUPPORTED`), and a location pull (a location name, `--rebase`, `--yes` or `--answer`: `PULL_LOCATION_LINKED`); a plain `kane-cli context pull --mode agent` there brings the project's tests (`references/shared-projects.md` §7); the store is shared through a location, never by copying or git-merging `.context/`
 - Multiple independent browser tasks → Read `references/parallel.md` first
 - View, share, or validate run evidence (`.evidence` packs) → Read `references/evidence.md`
+- Judge a run or pack against quality gates (a policy YAML, `--policy`, `--policy-id`, `kane-cli evidence verdict`, `kane-cli policy …`), or gate CI on more than pass/fail → Read `references/policy.md` first (after 0.10.0-rc.3)
 - Debug a failed run → Read `references/debug.md`
 - Configure kane-cli or check directory layout → Read `references/setup-and-config.md`
 - Browse / create / pick a Test Manager project or folder for `kane-cli run`, or interpret the auto-default event → Read `references/test-manager.md`. Linking an assurance folder to a project is different: `references/shared-projects.md` §2–3
@@ -382,6 +383,7 @@ A draft in chat cannot be run, and a hand-written `_test.md` carries no requirem
 | Share the context store with a team, join one, keep stores level, or resolve a sync conflict (kane-cli 0.8.14+) | `references/context-sync.md` |
 | Run failed, need to diagnose | `references/debug.md` |
 | View, share, validate, or merge evidence packs | `references/evidence.md` |
+| Judge a pack against a policy, run with `--policy`, or store/list policies in Test Manager | `references/policy.md` |
 | Multiple independent browser tasks | `references/parallel.md` |
 | Need full NDJSON event schema (`run`) | `references/parsing.md` |
 | Browse / create projects or folders, or parse the auto-default event | `references/test-manager.md` |

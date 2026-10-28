@@ -268,6 +268,9 @@ When stdin is not a TTY, kane-cli automatically switches to plain NDJSON mode (t
 
 Use these codes to gate downstream CI steps.
 
+<!-- release: needs evidence policies -->
+To judge a run's evidence pack against quality gates *(next release after 0.10.0-rc.3)*, see [Policies and verdicts](./policies.md).
+
 ## What you see at the end of a run
 
 When a run finishes, kane-cli prints a result summary to the terminal:

@@ -21,6 +21,9 @@ These patterns apply to every CI system; the recipes below differ only in how th
 
   The suite becomes one execution with one exit code (`0` all passed, `1` any failure, `2` invalid plan, `3` cancelled) and one sealed [evidence pack](./evidence.md) — archive `.testmuai/evidence/*.evidence` as a CI artifact and anyone can drop it into the viewer. See [Batch runs with testrun](./testrun.md).
 
+<!-- release: needs evidence policies -->
+- Gate on quality rules, not only on pass/fail *(next release after 0.10.0-rc.3)*. Add `--policy <file>` to `testrun run` or `testmd run` and the job fails when the run's pack breaks a gate (a broken test, a pass rate under a floor, a test with no checks). See [Policies and verdicts](./policies.md#in-ci).
+
 - Run the suite on the cloud grid when the runner can't run it. `kane-cli testrun run … --remote` turns the suite into one HyperExecute job: the grid supplies Chrome on a macOS runner — or, for mobile `_test.md` members, a virtual Android emulator or iOS simulator — so the runner needs no Chrome, Xcode, or Android Studio, and `--parallel N` spreads the members across N grid runners. The recordings and the evidence pack come back to the checkout as if the suite had run locally.
 
   ```bash

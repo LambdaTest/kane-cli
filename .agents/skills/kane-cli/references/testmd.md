@@ -146,6 +146,7 @@ Editing a helper re-authors that step in **every test that imports it**, plus ev
 | `--no-adaptive-heal` | healing enabled | Disable adaptive healing after replay failure |
 | `--author` | off | Force authorable steps to re-author; replay-only steps still replay |
 | `--bug-detection <off\|stop\|continue>` | config (`off`) | Flag suspected product bugs while **authoring** (`stop` halts on a confirmed bug; `continue` records it). Replay failures always investigate regardless. |
+| `--policy <file>` / `--policy-id <id>` | none | (after 0.10.0-rc.3) Judge the test's sealed pack against a policy YAML / a Test Manager policy (repeatable). Linted before the run (error = exit 2). A passing run exits `1` on a failing verdict, `3` on an errored one; a `verdict` event precedes `test_md_done`. `references/policy.md` |
 
 Common flags include `--agent`, `--headless`, `--max-steps`, `--timeout`, and `--variables`. Command-specific flags differ; check `kane-cli testmd run --help`.
 
