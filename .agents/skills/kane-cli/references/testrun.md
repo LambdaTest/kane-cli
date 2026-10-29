@@ -36,6 +36,8 @@ kane-cli testrun run [paths...] [flags] < /dev/null   # NDJSON when stdin is not
 | `--device-name <name>` | Device for the mobile members: as `kane-cli devices list --target <kind>` prints it locally, or a grid catalog device (`devices list … --remote`) with `--remote`; for real-device members a name or pattern from `devices list --target android\|ios --remote`. Validated before dispatch | members' `device_name:` (real devices: else the hub picks) |
 | `--os-version <version>` | OS version for the mobile members (`14`, `17.5`); alone = any device on that version | members' `os_version:` |
 | `--username` / `--access-key` | Basic auth | active profile |
+| `--policy <file>` | (after 0.10.0-rc.3) Judge the suite's sealed pack against this policy YAML (repeatable; never comma-join). Linted after the plan, dry run too: an error is exit 2 before anything runs. With `--remote` the laptop judges the consolidated pack. `references/policy.md` | — |
+| `--policy-id <id>` | (after 0.10.0-rc.3) The same with a Test Manager policy, latest version (repeatable; id from `kane-cli policy list --agent`) | — |
 
 ## Preflight (why members get rejected)
 
@@ -152,6 +154,7 @@ All typed; stdout; one JSON object per line. **Local completion: `testrun_done`.
 | `testrun_investigations_wait` | `count` | Failed replays left investigations running; the coordinator waits before sealing. Narrate as "investigating N failures". |
 | `testrun_evidence_ingest` | `status: "ok"\|"failed"`, `evidence_id`, `stage?` | Pack published to the dashboard. Absent when publish is skipped. |
 | `testrun_summary` | `totals: {tests, passed, failed, broken, skipped, authored}`, `duration_s`, `upload`, `cancelled`, `execution: {id, status}` | Build the rollup table from this. |
+| `verdict` | `evidence_id`, `result: pass\|fail\|errored`, `exit_code`, `policies: [{id, result, failed_gate_ids, errored_gate_ids, file, …}]`, `error?` | Only with `--policy` / `--policy-id`, after the pack is judged and before `testrun_summary`. On `--remote`, before `remote_done`. Schema: `references/policy.md` §4 |
 | `testrun_done` | `execution_id`, `overall_status: "passed"\|"failed"\|"cancelled"` (`"refused"` for an invalid plan in a linked folder), `coverage?: {status, pct?}` | Local completion; remote runs continue through `remote_done`. `coverage` repeats the run's coverage figure (`pct` only when `status` is `written`). |
 
 ### Each test's own log, and `--stream-members` (0.8.17+)
@@ -189,6 +192,7 @@ for each line:
   if type === "warning" && code === "unresolved_variables" → name the variables with no value (references/parsing.md); the run continues; ignore other warning codes
   if type === "testrun_member_end" or "testrun_authored_member_end" → note per-member outcome
   if type === "testrun_summary"       → capture totals for the rollup
+  if type === "verdict"               → capture the policy result (references/policy.md §4); testrun_done stays the tests' status
   else                                → informational; narrate sparingly
 ```
 
@@ -211,6 +215,8 @@ Don't list passing tests individually. If the pack published, mention the run is
 ## Exit codes
 
 `0` all members passed · `1` at least one failed/broken · `2` usage / invalid plan / auth (nothing ran) · `3` cancelled (Ctrl-C — no new members start, running ones are stopped, and the pack still seals with what finished).
+
+With `--policy` / `--policy-id`: a bad policy is `2` before anything runs; when every member passed, a failing verdict exits `1` and an errored verdict `3`; a run that already failed or was cancelled keeps its code. Tell an errored verdict from a cancel by the `verdict` event.
 
 ## Evidence & debugging
 

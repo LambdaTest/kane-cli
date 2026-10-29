@@ -107,6 +107,11 @@ Saving a design session makes one test case per scenario in the folder's project
 
 A designed test's first run adds its KaneAI test to that case, and every later run is recorded on it. Coverage counts those runs. If you edit a case's steps in Test Manager, the next save doesn't overwrite them: it lists the case as one it couldn't update.
 
+<!-- release: needs evidence policies -->
+## Policies *(next release after 0.10.0-rc.3)*
+
+Test Manager also stores evidence **policies**: YAML files of quality gates a run's pack is judged against. `kane-cli policy create <file>` stores one in a project, `kane-cli policy list` lists them, and `--policy-id <id>` on `testmd run`, `testrun run`, `evidence verdict` and `evidence merge` judges with the latest version. A replay or a suite run that is judged sends its verdicts to Test Manager with its evidence. See [Policies and verdicts](./policies.md#policies-in-test-manager).
+
 ## Code export
 
 Code export converts a completed test case into runnable Playwright code that you can check into your repository or extend by hand.
