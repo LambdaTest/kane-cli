@@ -34,7 +34,10 @@
     "ios",
     "real-device",
     "test-automation",
-    "ai-testing"
+    "ai-testing",
+    "mcp",
+    "cursor",
+    "playwright"
   ],
   "homepage": "https://github.com/LambdaTest/kane-cli",
   "repository": {
