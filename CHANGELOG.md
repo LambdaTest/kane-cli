@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.3] - 2026-11-07
+
+### Added
+- Real devices can now reach private backends through your LT tunnel. Pass `--tunnel` or `--tunnel-name <name>` to `run`, `testmd run` or `testrun run`. For `testrun run --remote`, start LT tunnel with `--env ht-prod`.
+- On web, a type step can ask for a delay, so fields that ignore a normal fill are typed key by key. The delay carries through replay, upload and code export.
+
+### Fixed
+- Android vision taps now map to full-display pixels.
+- Mobile API calls keep their timeout in milliseconds.
+- A session that can't be saved now says why, instead of "No test_id available".
+- When a test can't be created, Test Manager's own message is shown.
+- A bundle sync failure at save is no longer reported as a commit failure.
+- A refused tunnel now lists what to check.
+
+## [0.10.2] - 2026-11-05
+
+### Certificates that follow your runs
+- **Python steps trust what kane-cli trusts** — the certificate bundle is handed to Python programs as `SSL_CERT_FILE`, so runs behind a TLS-inspecting proxy or corporate network no longer fail with certificate errors.
+- **A broken trust file can't poison a run** — if the configured trust file is missing or invalid, it is never passed along to Python programs instead of being handed over and failing mid-run.
+
+### Failures that explain themselves
+- **Locator actions say why they failed** — instead of a bare "action failed", the error names the reason, so you can tell a missing element from a blocked click without digging through logs.
+- **Vision-based select no longer claims false success** — if a dropdown selection didn't actually take, the step reports it as a failure.
+
+### More reliable dropdowns
+- **Reworded labels don't throw off selection** — when a dropdown option's label is only rephrased (same option, different wording), kane-cli keeps the existing select instead of discarding it and retrying a different way.
+
+### Evidence packs
+- **Evidence is sealed as captured** — secret redaction no longer runs over the evidence pack before sealing, so the sealed pack matches exactly what was recorded during the run. Treat evidence packs as sensitive artifacts and store them accordingly.
+
+### Security and runtime updates
+- **Bundled Node updated to 24.22.2** — picks up the fix for CVE-2026-111497.
+- **Refreshed browser automation bindings** — the bundled Playwright bindings (browser-agent and v16-runner) move to 0.1.54b1 with the latest fixes.
+
 ## [0.10.0] - 2026-10-28
 
 ### Exploration, end to end
