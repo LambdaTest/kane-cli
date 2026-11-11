@@ -1,0 +1,8 @@
+{
+  "name": "testmuai/kane-cli",
+  "description": "Kane CLI by TestMu AI (Formerly LambdaTest). Use kane-cli for end-to-end browser and mobile testing in natural language: generate tests from a PRD or spec, run them on Chrome, Android and iOS, and gate CI with evidence packs.",
+  "private": false,
+  "skills": [".agents/skills/kane-cli"],
+  "version": "1.0.1",
+  "repository": "https://github.com/LambdaTest/kane-cli"
+}

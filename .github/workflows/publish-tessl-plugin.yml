@@ -1,0 +1,38 @@
+name: Publish Tessl plugin
+
+# Publishes the kane-cli skill to the Tessl registry (workspace testmuai).
+# Runs when .tessl-plugin/plugin.json changes on main (bump "version" there
+# to release), or on a manual run. Needs the TESSL_TOKEN secret.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".tessl-plugin/plugin.json"
+  workflow_dispatch:
+
+concurrency:
+  group: publish-tessl-plugin
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.repository == 'LambdaTest/kane-cli' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: tesslio/setup-tessl@v2
+        with:
+          token: ${{ secrets.TESSL_TOKEN }}
+
+      - name: Lint plugin
+        run: tessl plugin lint .
+
+      - name: Publish to Tessl registry
+        run: tessl plugin publish .
