@@ -18,6 +18,7 @@ The `Skill installer tests` workflow runs this on **ubuntu, macos and windows**,
 | `lib/agent-config.mjs` | Preferences merge, unknown keys kept, bad values rejected with the allowed list, seeding never overwrites |
 | `skills/scripts/preflight.sh` | Section order, a missing kane-cli, the mobile and grid flags, parallel calls, temp folder cleanup (Linux, macOS) |
 | `skills/scripts/preflight.ps1` | The same contract, run for real under Windows PowerShell against a stand-in `kane-cli.cmd` (Windows only) |
+| `skills/scripts/evidence-map.mjs` | The step sheet from a hand-built pack: joins by `action_id`, the failure record mark, a step with no image, actions with no step folder, skipped steps, the triage flag, log lines. Reading a `.evidence` zip, and refusing a folder that is not empty or an entry that would land outside it |
 
 Refresh the fixtures when the kane-cli stream changes: capture `kane-cli run`, `testmd run` (twice) and `testrun run` with `--agent` or piped stdout, then replace home paths, internal hosts, share tokens and ids before committing. The repo is public.
 

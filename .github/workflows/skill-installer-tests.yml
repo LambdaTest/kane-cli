@@ -56,4 +56,5 @@ jobs:
           grep -q "lib/strip-install.mjs" pack.txt
           grep -q "skills/scripts/preflight.sh" pack.txt
           grep -q "skills/scripts/preflight.ps1" pack.txt
+          grep -q "skills/scripts/evidence-map.mjs" pack.txt
           if grep -q " test/" pack.txt; then echo "tests must not ship"; exit 1; fi

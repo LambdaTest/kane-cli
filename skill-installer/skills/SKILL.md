@@ -148,7 +148,7 @@ For exit code 1 (or `status: "failed"` in `run_end`), present the failure card. 
 | ➡️ **Next** | <a retry you can run now> · <walk through the failing step> |
 ```
 
-The failing step's screenshot lives inside the run's evidence pack (the stderr hint names the pack path): extract it with `unzip <pack> "tests/*/steps/*/screenshot.png" -d <tmpdir>`, Read it, and show it **under** the card. For the pack layout and deeper diagnosis, see `references/debug.md`.
+The failing step's screenshot lives inside the run's evidence pack (the stderr hint names the pack path): extract it with `unzip <pack> "tests/*/steps/*/screenshot.*" -d <tmpdir>`, Read it, and show it **under** the card. For the pack layout and deeper diagnosis, see `references/debug.md`.
 
 Exit code 2 with no progress events means nothing ran: that is a `🟡 Didn't start` card, not a failure (`references/cards.md` §4). If progress events came before it, steps ran and the run stopped without a result: say so, and use the stopped-early card (`references/cards.md` §5).
 
@@ -190,6 +190,7 @@ When the user's request involves a browser — or writing test cases:
 - View, share, or validate run evidence (`.evidence` packs) → Read `references/evidence.md`
 - Judge a run or pack against quality gates (a policy YAML, `--policy`, `--policy-id`, `kane-cli evidence verdict`, `kane-cli policy …`), or gate CI on more than pass/fail → Read `references/policy.md` first (after 0.10.0-rc.3)
 - Debug a failed run → Read `references/debug.md`
+- The quick debug did not explain a failure, a run passed but looks wrong, or the person asks whose fault a failure is or whether the triage in a pack is right → Read `references/triage.md`
 - Configure kane-cli or check directory layout → Read `references/setup-and-config.md`
 - Browse / create / pick a Test Manager project or folder for `kane-cli run`, or interpret the auto-default event → Read `references/test-manager.md`. Linking an assurance folder to a project is different: `references/shared-projects.md` §2–3
 - The person wants results saved somewhere else ("change project") → Read `references/test-manager.md` §6. The change is global, and the question must say so
@@ -382,6 +383,7 @@ A draft in chat cannot be run, and a hand-written `_test.md` carries no requirem
 | Need the assurance NDJSON event schema (`--mode agent`) | `references/assurance-parsing.md` |
 | Share the context store with a team, join one, keep stores level, or resolve a sync conflict (kane-cli 0.8.14+) | `references/context-sync.md` |
 | Run failed, need to diagnose | `references/debug.md` |
+| Full triage of a pack: the step sheet, screenshots set against intent, a report with one cause | `references/triage.md` |
 | View, share, validate, or merge evidence packs | `references/evidence.md` |
 | Judge a pack against a policy, run with `--policy`, or store/list policies in Test Manager | `references/policy.md` |
 | Multiple independent browser tasks | `references/parallel.md` |

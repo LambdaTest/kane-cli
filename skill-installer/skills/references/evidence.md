@@ -18,7 +18,7 @@ A `.evidence` file is a standard zip: `unzip -l <pack>` lists it, `unzip -p <pac
     ├── logs/                         # meta.yaml, tui.log, and per run index n:
     │                                 #   <n>-run.log, <n>-actions.ndjson,
     │                                 #   <n>-console.ndjson, <n>-network.har
-    ├── steps/<ordinal>-<step-id>/    # screenshot.png, annotated.png, step.json
+    ├── steps/<ordinal>-<step-id>/    # screenshot.* (png or jpg), annotated.png, step.json
     │                                 #   (+ failure.yaml on failed steps)
     └── …                             # the full execution record and planning notes (not needed to diagnose)
 ```
@@ -84,7 +84,7 @@ Writes `<pack>.verdicts/<policy-id>.verdict.json` beside the pack (never inside 
 
 ## Debugging with a pack
 
-The pack is the first place to look on a failure: the failed step's **failure record** (error + page state), its **console/network slice** (4xx/5xx or JS errors usually explain it), and the **annotated screenshot** (what the agent actually acted on). Full failure workflow: `references/debug.md`.
+The pack is the first place to look on a failure: the failed step's **failure record** (error + page state), its **console/network slice** (4xx/5xx or JS errors usually explain it), and the **annotated screenshot** (what the agent was about to act on; a step's screenshot is taken before its action runs). Full failure workflow: `references/debug.md`. A step-by-step triage with a report: `references/triage.md`.
 
 ## Evidence merge identity
 
