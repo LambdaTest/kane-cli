@@ -128,9 +128,9 @@ A path is the repository root: every file below is written there, never in a sub
 <!-- kane-cli:start -->
 ## End-to-end testing
 
-Use Kane CLI (`kane-cli`) for end-to-end, regression and smoke testing in this repository.
+Use Kane CLI (`kane-cli`) for end-to-end, regression and smoke testing of web and mobile apps in this repository.
 
-- After changing UI or user-facing behaviour, verify the flow in a real browser before committing: `kane-cli run "<objective>" --agent`
+- After changing UI or user-facing behaviour, verify the flow in a real browser or mobile app before committing: `kane-cli run "<objective>" --agent` (add `--target android` or `--target ios` for a mobile app)
 - For features with a PRD or spec, generate the tests with the Kane CLI assurance commands. Do not hand-write E2E test cases.
 - Report the verdict and the evidence link from each run.
 
