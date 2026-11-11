@@ -199,7 +199,7 @@ When the user's request involves a browser — or writing test cases:
 - You need the full NDJSON event schema (rare — §5's summary covers 90% of cases) → Read `references/parsing.md`
 - Compare / evaluate / justify kane-cli against another tool or approach (cost, tokens, effort, ROI) → Read `references/fair-evaluation.md` first — comparisons are only honest like-for-like across the test lifecycle
 - **Mobile**: drive a native app on a real Android/iOS device, or a virtual Android emulator / iOS simulator, instead of the browser → Read `references/mobile.md` first. Desktop (the browser) stays the **default** target; mobile is opt-in via `--target` and always drives an app you provide (`--app <build|APPid>`), never a URL.
-  - **Real devices** (`--target android|ios`) run from **any machine** — `run`, `testmd run`, `testrun run`, and `--remote` — with only `kane-cli login` (`--remote` also needs the remote-execution plugin and a HyperExecute plan). They need **KaneAI Max** (one real device) or **KaneAI credits + Real Device Plus Automation Cloud**; read `references/mobile.md` §Real devices for the plan rules before running one.
+  - **Real devices** (`--target android|ios`) run from **any machine** — `run`, `testmd run`, `testrun run`, and `--remote` — with only `kane-cli login` (`--remote` also needs the remote-execution plugin and a HyperExecute plan). They need **KaneAI Max** (one real device) or **KaneAI credits + Real Device Plus Automation Cloud**; read `references/mobile.md` §Real devices for the plan rules before running one. An app whose backend is on `localhost` or a private network needs the person's LT tunnel (`--tunnel-name <name>`, 0.10.3+, §A private or local backend).
   - **Emulator/simulator** (`--target emulator|simulator`): local runs need macOS Apple Silicon. From any other machine, run saved `_test.md` files on the cloud grid with `kane-cli testrun run <paths> --remote --device-name "<grid device>" --os-version <v> < /dev/null` (HyperExecute macOS runners).
   - Never tell a non-Mac user mobile is impossible: offer a real device, or `--remote`.
 
@@ -373,7 +373,7 @@ A draft in chat cannot be run, and a hand-written `_test.md` carries no requirem
 | User wants to save/persist/re-run a test | `references/testmd.md` |
 | Run a suite of saved `_test.md` tests as one batch | `references/testrun.md` |
 | Run a suite on the cloud grid (`--remote`), incl. mobile suites from any machine | `references/testrun.md` §Remote + `references/mobile.md` §Remote |
-| Run on a real Android/iOS device (`--target android\|ios`), its plan requirements, or a hub session error | `references/mobile.md` §Real devices |
+| Run on a real Android/iOS device (`--target android\|ios`), its plan requirements, an LT tunnel to a private backend, or a hub session error | `references/mobile.md` §Real devices |
 | A team, a Test Manager project, a linked folder (`.testmuai/assurance.json`), a teammate's or exploration's tests | `references/shared-projects.md` |
 | This folder's shared project and its id (for a teammate, or a dashboard) | `references/shared-projects.md` §2, "This folder's project id" |
 | A shared-project refusal code, event or exit code | `references/agent-contract.md` |

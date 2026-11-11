@@ -113,6 +113,7 @@ kane-cli testrun run --match '^tests/devices/' --parallel 2                     
 | `--remote [backend]` | Dispatch the suite to the cloud grid instead of local Chrome / local devices (default backend: `hyper`). Needs `kane-cli plugin install remote-execution`. See [Remote runs](./remote-execution.md) | off |
 | `--device-name <name>` | Device for the suite's mobile members: as `kane-cli devices list` prints it locally, or a grid catalog device with `--remote` | member's `device_name:` |
 | `--os-version <version>` | OS version for the mobile members (`14`, `17.5`); alone = any device on that version | member's `os_version:` |
+| `--tunnel` / `--tunnel-name <name>` | *(0.10.3)* Real-device members route through your running LT tunnel, to reach a private or local backend. `--tunnel-name` turns it on. With `--remote`, start LT with `--env ht-prod`. See [A private or local backend](./mobile/real-device.md#a-private-or-local-backend-lt-tunnel) | off |
 | `--username <user>` / `--access-key <key>` | Basic auth (skips OAuth) | — |
 | `--policy <file>` | *(next release after 0.10.0-rc.3)* Judge the suite's sealed pack against this policy YAML (repeatable). Linted before the run. See [Policies and verdicts](./policies.md) | — |
 | `--policy-id <id>` | *(next release after 0.10.0-rc.3)* Judge it against a policy stored in Test Manager, latest version (repeatable; `kane-cli policy list`) | — |
