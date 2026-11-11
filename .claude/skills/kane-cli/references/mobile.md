@@ -1,4 +1,4 @@
-<!-- Read this when the user wants to run or author a test against a mobile app (a real Android/iOS device, an Android emulator, or an iOS simulator) instead of the browser. Owns real devices (plan requirements, device/app selection, live view, limits, hub errors), mobile availability (real device = any machine; local emulator/simulator = macOS Apple Silicon; remote grid = any machine), the target axis, target/device/app selection on `run`, the app-under-test requirement, mobile setup (login + doctor --install), doctor flags, the testmd flat `target:` + `app:` (+ `device_name:`/`os_version:`) frontmatter keys, mobile members in testrun (local and `--remote`), and what objective grammar carries over to mobile. Desktop (browser) stays the default; this is the scoped mobile branch. -->
+<!-- Read this when the user wants to run or author a test against a mobile app (a real Android/iOS device, an Android emulator, or an iOS simulator) instead of the browser. Owns real devices (plan requirements, device/app selection, live view, the LT tunnel to a private backend, limits, hub errors), mobile availability (real device = any machine; local emulator/simulator = macOS Apple Silicon; remote grid = any machine), the target axis, target/device/app selection on `run`, the app-under-test requirement, mobile setup (login + doctor --install), doctor flags, the testmd flat `target:` + `app:` (+ `device_name:`/`os_version:`) frontmatter keys, mobile members in testrun (local and `--remote`), and what objective grammar carries over to mobile. Desktop (browser) stays the default; this is the scoped mobile branch. -->
 
 # Mobile testing (real devices from any machine; emulator/simulator locally on macOS Apple Silicon or on the cloud grid)
 
@@ -185,6 +185,40 @@ kane-cli testmd run tests/login_test.md --agent --target android   # override th
 - **`_test.md`:** `target: android|ios`, `app:` (required), optional `device_name:` (name or pattern) and `os_version:`. `no_reset:` is refused.
 - **testrun:** real-device members run locally from any host, each with its own session, so `--parallel` is allowed (plan permitting). `--remote` makes a HyperExecute job on **Linux** runners; per member flag > file > hub, printed as a `Devices:` block and one `remote_member_device` event each. Android and iOS real devices can share a job; mixing with web or emulator/simulator members is `mobile_remote_mixed`. No `--app` on testrun (each file's `app:`; missing = `mobile_app_required`), and `--device-slug` is refused.
 
+### A private or local backend (LT tunnel, 0.10.3+)
+
+When the app under test talks to a backend on `localhost`, a staging host behind a VPN, or anything else only the person's machine reaches, the cloud device can't reach it on its own. It reaches it through a LambdaTest tunnel (LT) on the person's machine, with `--tunnel` / `--tunnel-name <name>` on `run`, `testmd run` or `testrun run` (local and `--remote`). kane-cli never starts or stops the tunnel; the person does, in their own terminal, so their key never comes through you.
+
+1. **LT installed?** Have the person run `LT --version`. If it's missing, they download it and put it on their PATH:
+   - Apple silicon Mac: `https://downloads.lambdatest.com/tunnel/v3/mac/arm64/LT_Mac.zip`
+   - Intel Mac: `https://downloads.lambdatest.com/tunnel/v3/mac/64bit/LT_Mac.zip`
+   - Linux: `https://downloads.lambdatest.com/tunnel/v3/linux/64bit/LT_Linux.zip` (`linux/arm64/LT_Linux.zip` on ARM)
+   - Windows: `https://downloads.lambdatest.com/tunnel/v3/windows/64bit/LT_Windows.zip`, then run `LT.exe`
+
+   If macOS blocks it: `xattr -d com.apple.quarantine <path-to-LT>`.
+2. **The person starts LT** as the same user kane-cli is signed in as, and leaves it running. **The `--env` depends on where the run happens**, and getting it wrong is the usual failure:
+
+   | The run | LT command |
+   |---|---|
+   | `run` / `testmd run` / `testrun run` from this machine | `LT --user "$LT_USERNAME" --key "$LT_ACCESS_KEY" --tunnelName <name>` (**no `--env`**) |
+   | `testrun run --remote` | `LT --user "$LT_USERNAME" --key "$LT_ACCESS_KEY" --env ht-prod --tunnelName <name>` |
+
+   (Explore is different: `explore run` always needs `--env ht-prod`, see `references/explore.md`.) Wait for them to say LT is connected.
+3. **Run with the name:**
+
+   ```bash
+   kane-cli run "<objective>" --agent --target android --app ./builds/app-debug.apk --tunnel-name <name>
+   kane-cli testmd run tests/devices/orders_test.md --agent --tunnel-name <name>
+   kane-cli testrun run --match '^tests/devices/' --remote --tunnel-name <name> < /dev/null
+   ```
+
+- `--tunnel-name` must match LT's `--tunnelName`, and implies `--tunnel`. `--tunnel` alone takes the person's one running tunnel; prefer the name whenever you know it. A blank name is exit 2 (`error: --tunnel-name: …`).
+- **Confirm from stderr:** `Connecting to a real Android device through LT tunnel <name>…` (or `through your LT tunnel` with no name).
+- **testrun:** the flags pass through to every real-device member, locally and on the grid. With `--remote` and a name, HyperExecute checks the tunnel before the job starts. A refused tunnel on `--remote` arrives as `remote_error` with `code: "tunnel_refused"` and the steps in `detail`.
+- **Real devices only:** on `desktop`, `emulator` and `simulator` the flags are ignored (Chrome and local virtual devices already reach this machine). Don't add them there.
+- The tunnel **and the person's machine** must stay up until the run ends; if it drops, the app loses its backend mid-run.
+- Pass the flags on every run: they aren't saved in config or in the `_test.md`.
+
 ### Limits
 
 - **No adaptive heal**: a replay step that fails fails the test (`note: adaptive heal is off on real devices…`). Don't suggest heal retries on a real device; re-author with `--author` instead.
@@ -202,6 +236,8 @@ kane-cli testmd run tests/login_test.md --agent --target android   # override th
 | `no app for this real-device test — add app: …` | Add `app:` to the file or pass `--app`. |
 | `… has to be uploaded before it can run on a real device, but your account's org id was not found.` | `kane-cli login` again, or use an `APP…` id. |
 | `error: real devices are not listed from this machine — add --remote` | Add `--remote` to `devices list`. |
+| `failed to start: the mobile hub refused the tunnel (hub: either tunnel is not running or disconnected)` + a `next: check that` list | Don't retry blindly. Walk the person through the list: LT running under the same account; one tunnel, or pass `--tunnel-name`; **no `--env`** for a run from this machine, **`--env ht-prod`** for `--remote`. Retry once they confirm LT is connected. |
+| `remote_error` `tunnel_refused`, or a HyperExecute tunnel error then `next: start LT with --env ht-prod … --tunnelName <name>, under the same account` | The grid couldn't find the tunnel. The person restarts LT with `--env ht-prod` and the same `--tunnelName`, as the same user. |
 
 ## What works on mobile
 

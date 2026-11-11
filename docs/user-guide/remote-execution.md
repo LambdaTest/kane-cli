@@ -142,7 +142,9 @@ If the device list can't be read, the job is dispatched anyway with a `real_devi
 
 Every real-device member needs an `app:` (`mobile_app_required` otherwise): `.apk` or `.aab` for Android, `.ipa` for iOS, or an `APP…` id. `testrun` has no `--app` flag, and `--device-slug` is refused for real devices. Adaptive heal is off on real devices, so a replay step that fails fails the test.
 
-More on real devices — the TUI, live view, settings, and limits — is in [Real devices](./mobile/real-device.md).
+If the app talks to a backend on `localhost` or your private network, pass `--tunnel-name <name>` (or `--tunnel`) and start LT on your machine with `--env ht-prod`, which the grid needs. With a name, HyperExecute checks the tunnel before the job starts. If the cloud refuses the tunnel, agents get a `remote_error` with code `tunnel_refused` and the steps to check. See [A private or local backend](./mobile/real-device.md#a-private-or-local-backend-lt-tunnel).
+
+More on real devices (the TUI, live view, settings, tunnel, and limits) is in [Real devices](./mobile/real-device.md).
 
 ## The app under test on the grid
 

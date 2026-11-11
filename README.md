@@ -357,6 +357,8 @@ TUI slash commands (`/run`, `/mobile`, `/desktop`, `/doctor`, `/login`, `/logout
 | `--os-version <version>`    | none                                  | The device's OS version (`15`, `17.5`); alone = any device on that version. |
 | `--app <path\|APPid>`       | none                                  | App under test for a mobile run: a build (`.apk` for emulator, `.zip` for simulator, `.apk`/`.aab` for android, `.ipa` for ios) or an uploaded `APP…` id. |
 | `--no-stream`               | off                                   | Real devices: don't open the device's live view for this run. |
+| `--tunnel`                  | off                                   | Real devices: route the device's traffic through your running LT tunnel, to reach a private or local backend. |
+| `--tunnel-name <name>`      | your one running tunnel               | Real devices: the LT tunnel to use, by its `--tunnelName`. Turns `--tunnel` on. |
 | `--bug-detection <mode>`    | config value, otherwise `off`         | Detect product bugs while authoring: `off`/`stop`/`continue` (`stop` halts on a confirmed bug; `continue` records it and keeps going). |
 | `--cdp-endpoint <url>`      | none                                  | Connect to an existing Chrome via the Chrome DevTools Protocol.         |
 | `--ws-endpoint <url>`       | none                                  | Connect to a Playwright WebSocket endpoint (e.g. TestmuAI `wss://`) — a remote browser for a run that still executes here. To move a whole suite to the grid, use `testrun run --remote`. |

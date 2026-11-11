@@ -120,7 +120,7 @@ os_version: "15"           # optional
 
 - `app:` is required (or pass `--app`).
 - `no_reset:` is refused: a real-device session always starts with a fresh install.
-- `kane-cli testmd run <path> --target android|ios` overrides the file's target. `--device-name`, `--os-version`, `--app`, and `--no-stream` work as on `run`.
+- `kane-cli testmd run <path> --target android|ios` overrides the file's target. `--device-name`, `--os-version`, `--app`, `--no-stream`, `--tunnel` and `--tunnel-name` work as on `run`.
 
 ## Suites (`testrun`)
 
@@ -138,6 +138,66 @@ Devices:
 ```
 
 Android and iOS real-device members can share one job. A job can't mix real-device members with web, emulator, or simulator members. `testrun` takes the app from each file's `app:` (there is no `--app` on `testrun`), and `--device-slug` is refused for real devices. See [Remote runs](../remote-execution.md).
+
+## A private or local backend (LT tunnel)
+
+> Requires kane-cli 0.10.3 or later.
+
+A device in the cloud can't reach `localhost` or your private network on its own. If your app talks to a backend that
+only your machine (or your VPN) can reach, route the device's traffic through a LambdaTest tunnel (LT) running on
+**your machine**:
+
+```
+real device ── LT tunnel ── your machine ── your backend
+```
+
+kane-cli never starts or stops the tunnel. You run it in your own terminal, so your access key stays with you.
+
+1. If `LT --version` doesn't work, download LT and put it on your PATH:
+
+   | Machine | Download |
+   |---|---|
+   | Apple silicon Mac | https://downloads.lambdatest.com/tunnel/v3/mac/arm64/LT_Mac.zip |
+   | Intel Mac | https://downloads.lambdatest.com/tunnel/v3/mac/64bit/LT_Mac.zip |
+   | Linux | https://downloads.lambdatest.com/tunnel/v3/linux/64bit/LT_Linux.zip (`linux/arm64/LT_Linux.zip` on ARM) |
+   | Windows | https://downloads.lambdatest.com/tunnel/v3/windows/64bit/LT_Windows.zip, then run `LT.exe` |
+
+   If macOS blocks it from opening: `xattr -d com.apple.quarantine /usr/local/bin/LT` (or wherever you put it).
+2. Start the tunnel as the same user kane-cli is signed in as, and leave it running. Where the run happens decides
+   the `--env`:
+
+   | The run | Start LT with |
+   |---|---|
+   | `run`, `testmd run` or `testrun run` from your machine | `LT --user "$LT_USERNAME" --key "$LT_ACCESS_KEY" --tunnelName dev` (no `--env`) |
+   | `testrun run --remote` (the cloud grid) | `LT --user "$LT_USERNAME" --key "$LT_ACCESS_KEY" --env ht-prod --tunnelName dev` |
+
+   (`$LT_USERNAME` and `$LT_ACCESS_KEY` are your username and access key: set them in your shell first.
+   [Where to find your access key](../authentication.md#where-to-find-your-access-key).) Wait until LT says the tunnel
+   is connected.
+3. In another terminal, run with the tunnel:
+
+   ```bash
+   kane-cli run "Sign in and open the orders tab" --target android --app ./builds/app-debug.apk --tunnel-name dev
+   kane-cli testmd run tests/devices/orders_test.md --tunnel-name dev
+   kane-cli testrun run --match '^tests/devices/' --tunnel-name dev < /dev/null
+   kane-cli testrun run --match '^tests/devices/' --remote --tunnel-name dev
+   ```
+
+   kane-cli says which tunnel it uses before the device opens:
+
+   ```
+   Connecting to a real Android device through LT tunnel dev…
+   ```
+
+- **`--tunnel-name` must match `--tunnelName`** from step 2, and it turns the tunnel on. With only one tunnel running,
+  `--tunnel` alone is enough: the device uses your one running tunnel.
+- **Every member uses it.** On `testrun run`, the tunnel applies to every real-device member, locally and on the grid.
+- **On the grid, name it.** With `--remote` and `--tunnel-name`, the cloud checks that the tunnel is up before the job
+  starts, so a missing tunnel fails fast instead of mid-run.
+- **Keep the tunnel and your machine up** until the run ends. If the tunnel drops, the app stops reaching its backend.
+- **Real devices only.** On the `desktop`, `emulator` and `simulator` targets the flags do nothing: a browser or a
+  virtual device on your Mac already reaches your machine. For an exploration through a tunnel, see
+  [Exploration](../exploration.md#an-app-on-localhost-or-a-private-network).
 
 ## Limitations
 
@@ -159,6 +219,9 @@ Android and iOS real-device members can share one job. A job can't mix real-devi
 | `no app for this real-device test — add app: <path-to-build \| AppId> to the file, or pass --app.` | Add `app:` to the file, or pass `--app`. |
 | `… has to be uploaded before it can run on a real device, but your account's org id was not found.` | `kane-cli login` again, or use an `APP…` id from `kane-cli apps list`. |
 | `error: real devices are not listed from this machine — add --remote` | Add `--remote` to `devices list`. |
+| `failed to start: the mobile hub refused the tunnel (hub: either tunnel is not running or disconnected)` | The lines after it list what to check: an LT tunnel is running under the same account; only one is running, or you passed `--tunnel-name`; and it was started with no `--env` for a run from your machine, or `--env ht-prod` for `--remote`. See [A private or local backend](#a-private-or-local-backend-lt-tunnel). |
+| A tunnel error from the cloud on `--remote`, followed by `next: start LT with --env ht-prod … --tunnelName <name>, under the same account` | The grid couldn't find the named tunnel. Start LT with `--env ht-prod` and the same `--tunnelName`, as the same user. |
+| `error: --tunnel-name: the name the LT tunnel was started with (--tunnelName)` | The name was blank. Pass the name from LT's `--tunnelName`. |
 
 ## Next steps
 
