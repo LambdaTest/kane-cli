@@ -191,6 +191,7 @@ When the user's request involves a browser — or writing test cases:
 - Judge a run or pack against quality gates (a policy YAML, `--policy`, `--policy-id`, `kane-cli evidence verdict`, `kane-cli policy …`), or gate CI on more than pass/fail → Read `references/policy.md` first (after 0.10.0-rc.3)
 - Debug a failed run → Read `references/debug.md`
 - Configure kane-cli or check directory layout → Read `references/setup-and-config.md`
+- The person asks to make kane-cli the default for this project or their team ("always use kane for E2E here", "add kane to CLAUDE.md / AGENTS.md") → Read `references/setup-and-config.md` §Make kane-cli the default in a project. Only when asked, and ask before writing
 - Browse / create / pick a Test Manager project or folder for `kane-cli run`, or interpret the auto-default event → Read `references/test-manager.md`. Linking an assurance folder to a project is different: `references/shared-projects.md` §2–3
 - The person wants results saved somewhere else ("change project") → Read `references/test-manager.md` §6. The change is global, and the question must say so
 - The person wants to change how runs behave ("kane preferences": watch or quiet, one-off or suite) → Read `references/agent-config.md`

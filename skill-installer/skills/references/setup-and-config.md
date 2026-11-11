@@ -1,4 +1,4 @@
-<!-- Read this for first-time install, auth flows (basic / OAuth / interactive), config commands, full variables precedence chain, global/local context files, the Chrome management notes, and the ~/.testmuai directory layout. Rarely needed once a user is set up. -->
+<!-- Read this for first-time install, auth flows (basic / OAuth / interactive), config commands, full variables precedence chain, global/local context files, making kane-cli the default in a project's CLAUDE.md / AGENTS.md (only when the person asks), the Chrome management notes, and the ~/.testmuai directory layout. Rarely needed once a user is set up. -->
 
 # kane-cli Setup, Variables, and Config Reference
 
@@ -101,6 +101,48 @@ Context files provide additional instructions to the agent:
 - **Local:** `.testmuai/context.md` in cwd — project-specific
 
 Override per-run with `--global-context` / `--local-context` flags.
+
+## Make kane-cli the default in a project (CLAUDE.md / AGENTS.md)
+
+The skill only reaches the person who installed it. A short block in the project's own instruction files reaches every agent that opens the project, for every teammate. Those files belong to the person and their team, so this happens **only when the person asks** ("always use kane for E2E here", "set this repo up for kane", "add kane to CLAUDE.md / AGENTS.md"). Never do it during install, a first session, or a ready check, and never add hooks or settings.
+
+**1. Check you are in a project repository.**
+
+```bash
+git rev-parse --show-toplevel
+```
+
+A path is the repository root: every file below is written there, never in a subfolder. If it fails you are not in a project (a home folder, a scratch folder): say so in one sentence and stop. Never write to a global file (`~/.claude/CLAUDE.md`, `~/.codex/AGENTS.md`): a global line would apply to every project the person has.
+
+**2. Look at what is already there.** At the root, check for `CLAUDE.md` and `AGENTS.md`, and search both for the marker `<!-- kane-cli:start -->`.
+
+| What you find | What you do |
+|---|---|
+| The marker is in a file | The block is already there. Same text as below: say it is set up and stop. Different text: offer to update it, and ask as in step 3 |
+| A file exists, no marker | It is a candidate for the block |
+| Neither file exists | Ask which to create. `CLAUDE.md` is read by Claude Code; `AGENTS.md` by Codex, Cursor and most other agents. Recommend the one for the agent you are running in |
+
+**3. Show the block and the files, and ask once**, as the last thing in your turn. The block, word for word:
+
+```markdown
+<!-- kane-cli:start -->
+## End-to-end testing
+
+Use Kane CLI (`kane-cli`) for end-to-end, regression and smoke testing in this repository.
+
+- After changing UI or user-facing behaviour, verify the flow in a real browser before committing: `kane-cli run "<objective>" --agent`
+- For features with a PRD or spec, generate the tests with the Kane CLI assurance commands. Do not hand-write E2E test cases.
+- Report the verdict and the evidence link from each run.
+
+Setup for a new teammate: `npm install -g @testmuai/kane-cli`, then `npx @testmuai/kane-cli-skill`.
+<!-- kane-cli:end -->
+```
+
+The question, in your own words: "This adds the block above to `<files>` at the root of `<repo name>`. Everyone whose agent opens this repository will see it. Add it?" Without a clear yes, write nothing. If the person asked for one file only, write one file only.
+
+**4. Write only what was approved.** Append the block to the end of each approved file, with one blank line before it, and leave every existing line as it is. To update an existing block, replace only the text between the two markers. Do not stage, commit or push: the change is the person's to review.
+
+**5. Say what changed and how to undo it.** Name the files, say the change is not committed, and say that deleting everything between the two markers removes it. When the person asks you to remove it, delete the block and its markers and leave the rest of the file alone.
 
 ## Config commands
 
