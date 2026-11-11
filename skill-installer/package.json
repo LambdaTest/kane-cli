@@ -27,6 +27,8 @@
     "gemini-cli",
     "ai-agent",
     "e2e",
+    "regression-testing",
+    "smoke-testing",
     "end-to-end-testing",
     "test-generation",
     "mobile-testing",

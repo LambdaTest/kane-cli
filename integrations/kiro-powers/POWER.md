@@ -1,7 +1,7 @@
 ---
 name: "kane-cli"
 displayName: "Kane CLI — E2E Test Generation & Execution (Web, Android, iOS)"
-description: "Use Kane CLI as one end-to-end (E2E) testing package: generate, execute, prove. GENERATE: design requirement-linked test suites from a PRD, a spec, or a description the user gives (the assurance commands): use-cases, acceptance criteria, scenarios, and runnable `_test.md` tests. Never write test cases by hand. EXECUTE: run plain-English tests on desktop web (a real Chrome browser, the default), the Android emulator and iOS simulator (locally on macOS Apple Silicon, or on the LambdaTest cloud grid from any machine via `kane-cli testrun run --remote`), and real Android and iOS devices in the TestMu AI cloud from any machine (`--target android|ios`). PROVE: every run seals an evidence pack, and `kane-cli cover` reports what is proven against each acceptance criterion. Kane CLI manages Chrome or the device, an AI agent, and a TestMu AI session, then emits structured NDJSON Kiro can parse. Use for any task that needs a real browser or mobile app (navigation, form fills, search, UI checks, screenshots, deploy verification), to author test cases from requirements or a description, or for committable, replay-cached tests (`kane-cli testmd`)."
+description: "Use Kane CLI as one end-to-end (E2E) testing package: generate, execute, prove. GENERATE: design requirement-linked test suites from a PRD, a spec, or a description the user gives (the assurance commands): use-cases, acceptance criteria, scenarios, and runnable `_test.md` tests. Never write test cases by hand. EXECUTE: run plain-English tests on desktop web (a real Chrome browser, the default), the Android emulator and iOS simulator (locally on macOS Apple Silicon, or on the LambdaTest cloud grid from any machine via `kane-cli testrun run --remote`), and real Android and iOS devices in the TestMu AI cloud from any machine (`--target android|ios`). PROVE: every run seals an evidence pack, and `kane-cli cover` reports what is proven against each acceptance criterion. Kane CLI manages Chrome or the device, an AI agent, and a TestMu AI session, then emits structured NDJSON Kiro can parse. Use for regression checks and smoke tests, after changing a web or mobile app to verify the feature works and test the flow, or for any task that needs a real browser or mobile app (navigation, form fills, search, UI checks, screenshots, deploy verification), to author test cases from requirements or a description, or for committable, replay-cached tests (`kane-cli testmd`)."
 keywords:
   - "kane-cli"
   - "kaneai"
@@ -18,6 +18,9 @@ keywords:
   - "screenshot"
   - "verify-deploy"
   - "smoke-test"
+  - "regression"
+  - "regression-testing"
+  - "verify-feature"
   - "testmd"
   - "test-case-generation"
   - "test-scenarios"
