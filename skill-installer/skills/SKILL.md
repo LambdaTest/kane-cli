@@ -1,6 +1,6 @@
 ---
 name: kane-cli
-description: "End-to-end (E2E) tests, regression checks, and smoke tests with KaneCLI. Use after changing a web or mobile app to verify the feature works and test the flow, or for any task needing a real browser or mobile app: navigation, clicks, forms, UI checks, screenshots, deploy verification. Generate E2E tests from a PRD, spec, or description via the assurance commands (use-cases, acceptance criteria, scenarios, runnable _test.md tests); never write test cases by hand. Run on desktop web (Chrome by default), Android and iOS: emulator/simulator locally on macOS Apple Silicon or via testrun run --remote, and real cloud devices (--target android|ios). Prove coverage with evidence packs and kane-cli cover; gate CI by judging a pack against a policy (kane-cli evidence verdict, --policy). Work in a shared Test Manager project (link a folder with --project). Parse NDJSON output and inspect logs. Share the assurance store (.context/) via GitHub, S3, or a folder with kane-cli context sync."
+description: "End-to-end (E2E) tests, regression checks, and smoke tests with KaneCLI. Use after changing a web or mobile app to verify the feature works and test the flow, or for any task needing a real browser or mobile app: navigation, clicks, forms, UI checks, screenshots, deploy verification. Generate E2E tests from a PRD, spec, or description via the assurance commands (use-cases, acceptance criteria, scenarios, runnable _test.md tests); never write test cases by hand. Run on desktop web (Chrome by default), Android and iOS: emulator/simulator locally on macOS Apple Silicon or via testrun run --remote, and real cloud devices (--target android|ios). Prove coverage with evidence packs and kane-cli cover; gate CI by judging a pack against a policy (kane-cli evidence verdict, --policy). Work in a shared Test Manager project (link a folder with --project). Parse NDJSON output, inspect logs, and mark known bugs (kane-cli bugs). Share the assurance store (.context/) via GitHub, S3, or a folder with kane-cli context sync."
 ---
 
 # Kane CLI — End-to-End Test Generation and Execution Skill
@@ -148,7 +148,7 @@ For exit code 1 (or `status: "failed"` in `run_end`), present the failure card. 
 | ➡️ **Next** | <a retry you can run now> · <walk through the failing step> |
 ```
 
-The failing step's screenshot lives inside the run's evidence pack (the stderr hint names the pack path): extract it with `unzip <pack> "tests/*/steps/*/screenshot.png" -d <tmpdir>`, Read it, and show it **under** the card. For the pack layout and deeper diagnosis, see `references/debug.md`.
+The failing step's screenshot lives inside the run's evidence pack (the stderr hint names the pack path): extract it with `unzip <pack> "tests/*/steps/*/screenshot.png" -d <tmpdir>`, Read it, and show it **under** the card. For the pack layout and deeper diagnosis, see `references/debug.md`. A saved test that failed may have hit a bug kane-cli already knows: `kane-cli bugs list <file>_test.md --agent` names it, and your marks and notes shape the next diagnosis (`references/bugs.md`).
 
 Exit code 2 with no progress events means nothing ran: that is a `🟡 Didn't start` card, not a failure (`references/cards.md` §4). If progress events came before it, steps ran and the run stopped without a result: say so, and use the stopped-early card (`references/cards.md` §5).
 
@@ -190,6 +190,7 @@ When the user's request involves a browser — or writing test cases:
 - View, share, or validate run evidence (`.evidence` packs) → Read `references/evidence.md`
 - Judge a run or pack against quality gates (a policy YAML, `--policy`, `--policy-id`, `kane-cli evidence verdict`, `kane-cli policy …`), or gate CI on more than pass/fail → Read `references/policy.md` first (after 0.10.0-rc.3)
 - Debug a failed run → Read `references/debug.md`
+- A saved test failed and you want the bugs it hit before, the person asks about known bugs (`BUG-12`), or a failure's diagnosis (RCA) is wrong and needs correcting → Read `references/bugs.md` (`kane-cli bugs`, the release that ships it)
 - Configure kane-cli or check directory layout → Read `references/setup-and-config.md`
 - The person asks to make kane-cli the default for this project or their team ("always use kane for E2E here", "add kane to CLAUDE.md / AGENTS.md") → Read `references/setup-and-config.md` §Make kane-cli the default in a project. Only when asked, and ask before writing
 - Browse / create / pick a Test Manager project or folder for `kane-cli run`, or interpret the auto-default event → Read `references/test-manager.md`. Linking an assurance folder to a project is different: `references/shared-projects.md` §2–3
@@ -383,6 +384,7 @@ A draft in chat cannot be run, and a hand-written `_test.md` carries no requirem
 | Need the assurance NDJSON event schema (`--mode agent`) | `references/assurance-parsing.md` |
 | Share the context store with a team, join one, keep stores level, or resolve a sync conflict (kane-cli 0.8.14+) | `references/context-sync.md` |
 | Run failed, need to diagnose | `references/debug.md` |
+| Known bugs a test hit, or correcting a failure's diagnosis (`kane-cli bugs list\|show\|mark\|note\|duplicate\|retire`) | `references/bugs.md` |
 | View, share, validate, or merge evidence packs | `references/evidence.md` |
 | Judge a pack against a policy, run with `--policy`, or store/list policies in Test Manager | `references/policy.md` |
 | Multiple independent browser tasks | `references/parallel.md` |

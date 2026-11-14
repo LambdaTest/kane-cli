@@ -189,6 +189,9 @@ The pack is the fastest way to understand a failure, because everything is in on
 
 If a pack won't open in the viewer, run `kane-cli evidence validate <pack>` — an unsealed or truncated pack (for example from a run that was killed hard) reports as invalid, and the run's session directory still holds the raw logs.
 
+<!-- release: needs kane-cli bugs -->
+A failed saved test's diagnosis is also matched against the bugs kane-cli already knows in your project *(the release that ships `kane-cli bugs`)*. To see them, or to correct a diagnosis that got the root cause wrong, see [Bug memory and feedback](./bugs.md).
+
 <!-- release: needs evidence policies -->
 ## Judging a pack against a policy *(next release after 0.10.0-rc.3)*
 
@@ -209,6 +212,8 @@ Runs that upload to Test Manager attach their sealed pack automatically. Replaye
 
 - [Batch runs with testrun](./testrun.md) — many tests, one execution, one pack.
 - [Policies and verdicts](./policies.md) — judge a pack against quality gates.
+<!-- release: needs kane-cli bugs -->
+- [Bug memory and feedback](./bugs.md) — the bugs failed tests hit, and feedback that shapes the next diagnosis.
 - [Running test.md files](./testmd/running.md) — the testmd command family.
 - [Troubleshooting](./troubleshooting.md) — debugging flows and escape hatches.
 

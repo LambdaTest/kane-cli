@@ -20,6 +20,8 @@ This page lists common problems you may hit while using kane-cli, what causes th
 - [Shared projects: a command stopped](#shared-projects) — linking a folder, sessions, designs, runs on a test case, and the pull
 - [Real devices: the hub refused the tunnel](./mobile/real-device.md#troubleshooting) — the LT tunnel, its name, and `--env`
 - [Exploration: a run refused or designed no tests](./exploration.md#troubleshooting) — the URL, a login, secrets, the tunnel, design jobs
+<!-- release: needs kane-cli bugs -->
+- [Bug memory: `kane-cli bugs` refused](./bugs.md#troubleshooting) — no test case, no project, an unknown ref, or bug memory not enabled
 - [Context sync: Git not found or too old](#context-sync-git-not-found-or-too-old)
 - [Context sync: a location cannot be reached or refuses you](#context-sync-a-location-cannot-be-reached-or-refuses-you)
 - [Context sync: "a rebase is open" — every change refused](#context-sync-a-rebase-is-open--every-change-refused)

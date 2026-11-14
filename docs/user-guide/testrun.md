@@ -239,6 +239,8 @@ In agent / non-TTY mode, `testrun run` emits its own typed NDJSON events on stdo
 - [Remote runs on the cloud grid](./remote-execution.md) — `--remote`, mobile suites from any machine.
 - [Evidence packs](./evidence.md) — what's in the pack and how to view it.
 - [Policies and verdicts](./policies.md) — gate the suite's pack on quality rules.
+<!-- release: needs kane-cli bugs -->
+- [Bug memory and feedback](./bugs.md) — the bugs failed members hit, and feedback that shapes the next diagnosis.
 - [Writing test.md files](./testmd/overview.md) — the file format, including `tags:`.
 - [Running test.md files](./testmd/running.md) — single-test runs, replay, and flags.
 - [CI/CD recipes](./cicd.md) — pipeline patterns.
