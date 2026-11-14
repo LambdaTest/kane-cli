@@ -63,6 +63,8 @@ Every page below is standalone — start wherever your job starts.
 - [Evidence packs](./evidence.md) — the sealed proof every run produces: screenshots, logs, results, the viewer.
 <!-- release: needs evidence policies -->
 - [Policies and verdicts](./policies.md) *(next release after 0.10.0-rc.3)*: judge a pack against quality gates (no broken tests, a pass-rate floor, every test asserting something) and fail CI on a failed verdict.
+<!-- release: needs kane-cli bugs -->
+- [Bug memory and feedback](./bugs.md) *(the release that ships `kane-cli bugs`)*: the application bugs failed tests run into, remembered as `BUG-<n>`; mark them, add notes, and shape the next failure diagnosis.
 - [Coverage](./assurance/coverage.md) — what execution proved vs what the design still owes.
 - [Maintaining the suite](./assurance/maintain.md) — reconcile the suite when a requirement document changes.
 
