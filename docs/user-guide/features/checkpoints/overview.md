@@ -52,16 +52,54 @@ Store the API response body                    → DevTools (Network)
 
 ## Operators
 
-Assertions support these comparison operators:
+Assertions and if/else conditions support these comparison operators:
 
 | Operator | Meaning | Example |
 |----------|---------|---------|
-| `equals` | Exact match | price equals "29.99" |
+| `equals` | Exact match (numbers: see [Comparing numbers](#comparing-numbers)) | price equals "29.99" |
 | `contains` | Substring match | URL contains "/checkout" |
 | `not_contains` | Does not contain | title not contains "Error" |
 | `gt` / `gte` | Greater than / or equal | items greater than 5 |
 | `lt` / `lte` | Less than / or equal | LCP less than 2500 |
 | `not_equals` | Not equal | status not equals "failed" |
+
+## Comparing numbers
+
+When a step calculates a number, such as the sum of the prices in a cart, the result can carry a tiny leftover in its last digits. Adding `1.0 + 0.07 + 11.0 + 0.0 + 47.7 + 3.34 + 19.95 + 1.4` gives `84.46000000000001`, not `84.46`.
+
+This is standard computer arithmetic, not an error in your test or your app. Computers store numbers in binary, and most decimals, like 0.1 or 84.46, have no exact binary form, in the same way 1/3 has no exact decimal form (0.3333…). Each value is kept as the closest number the computer can hold, so small differences can show up after a calculation. The best-known example is `0.1 + 0.2`, which browsers and most programming languages calculate as `0.30000000000000004`.
+
+**How KaneAI handles it:**
+
+- **Logs and results show the value exactly as calculated.** You see `84.46000000000001` in the step output, the stored variable, and the exported code's logs. Your data is never rounded or changed.
+- **Comparisons allow for the leftover.** When both sides of a check are numbers, they count as equal if they differ by less than one billionth of their size (for values near zero, by less than 0.000000001). So `84.46000000000001` equals `84.46`, and the check passes.
+
+All the numeric operators use the same rule, so they always agree with each other:
+
+| Check | `84.46000000000001` vs `84.46` |
+|-------|-------------------------------|
+| `equals` | true |
+| `not_equals` | false |
+| `gt` (greater than) | false: they are the same amount |
+| `gte` (greater than or equal) | true |
+| `lt` (less than) | false |
+| `lte` (less than or equal) | true |
+
+Real differences still fail:
+
+| Actual | Expected | `equals` | Why |
+|--------|----------|----------|-----|
+| `84.46000000000001` | `84.46` | passes | calculation leftover only |
+| `0.30000000000000004` | `0.3` | passes | calculation leftover only |
+| `84.45` | `84.46` | fails | a real one-cent difference |
+| `0.001` | `0` | fails | a real difference |
+
+Notes:
+
+- The values are not rounded to a fixed number of decimals, because not every number has two. Rounding would make `0.125` equal `0.13` and hide real differences in rates, weights or percentages.
+- Text values, such as names, messages and labels, are always compared exactly. The rule applies only when both sides are numbers.
+- Because the margin scales with the size of the number, very large values (ten million and above) can't be told apart by a one-cent difference. To check a large amount to the cent, calculate the difference between the two values and check that it is greater than 0.
+- The same rule applies when you run a test with kane-cli and when you run its exported Python or JavaScript code, so a check gives the same answer in both.
 
 ## Learn More
 
