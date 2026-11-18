@@ -1,6 +1,6 @@
 # Kane CLI — assurance steering (requirements → designed suite → coverage → upkeep)
 
-Load this file when the user has **requirement documents** (a PRD, a spec, acceptance notes) and wants tests designed from them, coverage accounting ("what exactly is covered?"), or the suite kept current when requirements change. A description given in chat with no document is written to `requirements/<feature>.md` in the user's words and follows the same path. Never write test cases by hand.
+Load this file when the user has **requirement documents** (a PRD, a spec, acceptance notes) and wants tests designed from them, coverage accounting ("what exactly is covered?"), or the suite kept current when requirements change. A description given in chat with no document is written to `requirements/<feature>.md` in the user's words and follows the same path. Never hand-write Kane test cases.
 
 Requires kane-cli 0.6.1+ — on an older CLI, `kane-cli context …` fails as an *unknown command* (exit 2). That means the CLI is too old, not a typo: confirm with `kane-cli --version`, have the user update, and stop rather than improvising the workflow with other commands. Flags marked with a release (0.7.1+ … 0.8.6+) need at least that release — an *unknown option* error on one of them means the same thing.
 

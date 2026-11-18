@@ -6,6 +6,14 @@ You can drive kane-cli by talking to your coding agent (Claude Code, Codex CLI, 
 
 KaneCLI is TestMu AI's command-line tool for end-to-end testing (E2E), browser automation, and native mobile-app testing. Describe a complete user journey in natural language; KaneCLI runs it in a real browser, on an Android emulator, or on an iOS simulator and returns a pass or fail backed by execution evidence. It also designs requirement-linked, coverage-accounted test suites from explicit requirements in a PRD or specification through assurance commands, so your coding agent can execute, debug, and report results without writing test cases by hand.
 
+## Kane CLI next to Playwright Agents
+
+Playwright Agents are the planner, generator and healer agent definitions that ship with Playwright. They write and repair Playwright spec files, which your team reviews and keeps in the repo.
+
+Kane CLI fits a different step of a coding-agent workflow. After the agent changes a flow, it runs `kane-cli run "<objective>" --agent`, reads the `run_end` event and the exit code, and fixes what failed before it hands the work back. The check is a plain-English objective, so there is no spec file to write first.
+
+The two work together. If your repo already keeps committed E2E tests in Playwright or another framework, those tests stay in that framework, and Playwright Agents can maintain them. Use Kane CLI for checks on fast-changing flows and agent-written code, and to verify the same acceptance criteria independently of the test code.
+
 ## Install the skill
 
 ```bash
