@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>kane-cli</id>
+    <version>0.10.5</version>
+    <title>Kane CLI</title>
+    <authors>TestMu AI</authors>
+    <owners>TestMu AI</owners>
+    <projectUrl>https://www.testmuai.com/kane-cli/</projectUrl>
+    <packageSourceUrl>https://github.com/LambdaTest/kane-cli/tree/main/integrations/chocolatey</packageSourceUrl>
+    <projectSourceUrl>https://github.com/LambdaTest/kane-cli</projectSourceUrl>
+    <docsUrl>https://github.com/LambdaTest/kane-cli#readme</docsUrl>
+    <bugTrackerUrl>https://github.com/LambdaTest/kane-cli/issues</bugTrackerUrl>
+    <iconUrl>https://www.testmuai.com/favicon.png</iconUrl>
+    <licenseUrl>https://github.com/LambdaTest/kane-cli/blob/main/LICENSE</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <copyright>TestMu AI</copyright>
+    <tags>kane-cli kane-ai testmu-ai lambdatest browser-automation testing test-automation ai cli</tags>
+    <summary>Browser automation and AI test authoring from the terminal, by TestMu AI (formerly LambdaTest).</summary>
+    <description><![CDATA[Kane CLI by TestMu AI (formerly LambdaTest) runs browser tests written in natural language. Describe what to check, and Kane CLI drives a real Chrome browser, reports a verdict with evidence, and can save the run as a reusable test.
+
+## Features
+- Run natural-language objectives in your local Chrome
+- Generate and refine test cases from a description
+- Save runs as tests and run them again in CI
+- Works with AI coding agents through skills and MCP
+
+## Requirements
+- A TestMu AI account (`kane-cli login`); runs use credits
+- Google Chrome (stable) for local browser runs
+
+## Notes
+This package installs the npm package `@testmuai/kane-cli` globally with Node.js.
+]]></description>
+    <releaseNotes>https://github.com/LambdaTest/kane-cli/blob/main/CHANGELOG.md</releaseNotes>
+    <dependencies>
+      <dependency id="nodejs-lts" version="20.0.0" />
+    </dependencies>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>
