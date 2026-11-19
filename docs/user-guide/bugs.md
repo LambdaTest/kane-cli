@@ -15,7 +15,7 @@ When a saved test fails, kane-cli works out why: its **failure diagnosis** (the 
 2. The failure is diagnosed, and the diagnosis is uploaded with the run's [evidence](./evidence.md).
 3. If the diagnosis found an application bug, kane-cli either files it as a new bug with its own `BUG-<n>` ref, or adds this run to the bug it already knows.
 
-Each bug has a **card**: a title, the root cause, the page it happens on, and the error it shows. It also has a **status**, the **votes** people and agents gave it, and the list of runs it was seen in.
+Each bug has a **card**: a title, the root cause, its [RCA category](#rca-categories), the page it happens on, and the error it shows. It also has a **status**, the **votes** people and agents gave it, and the list of runs it was seen in.
 
 ## How the next diagnosis uses it
 
@@ -26,7 +26,8 @@ That is why feedback matters:
 - Marking a bug `real` or `not-real` tells the next diagnosis how much weight it deserves.
 - Marking its root cause `rca-wrong`, with a note that says what is actually wrong, makes the next diagnosis re-diagnose from its own evidence instead of repeating the recorded root cause.
 - A note ("500 only when the cart already has items; an empty cart works") is passed on as it is. The latest note is the one the diagnosis reads.
-- Marking a bug `done` and then seeing it again flags it as `regressed`.
+- Marking a bug `done` tells the next diagnosis it was fixed: a run whose evidence shows that same defect again is linked to it, says the fix has regressed, and flags the bug `regressed`.
+- Marking a bug `not-a-bug` tells the next diagnosis people ruled it isn't a product bug: for that symptom it reports a product bug only when the run's own evidence clearly shows the product broken, and otherwise leans to a test or environment problem.
 
 ## Which test and which project
 
@@ -48,6 +49,7 @@ kane-cli bugs list checkout_test.md                 # the bugs this test has hit
 kane-cli bugs list --testcase <id>                  # the bugs a Test Manager test case has hit
 kane-cli bugs list                                  # the project's bugs
 kane-cli bugs list --status open,confirmed          # only these statuses
+kane-cli bugs list --category "Payment failures"   # only bugs given this RCA category
 ```
 
 On a terminal you get a table:
@@ -69,6 +71,7 @@ Details: kane-cli bugs show <REF>
 | `--testcase <id>` | A Test Manager test case id, instead of a test.md | none |
 | `--status <list>` | Only these statuses, comma-separated: `open`, `confirmed`, `done`, `regressed`, `not_a_bug`, `contested`, `merged` | every status except `merged` |
 | `--all-families` | Every kind of failure the diagnosis recorded, not only application bugs | application bugs |
+| `--category <name\|id>` | Only bugs given this [RCA category](#rca-categories), built-in or your organisation's. Takes in every kind of failure, since an organisation's category can be given to any of them | none |
 | `--limit <n>` | At most n bugs (1-200) | 50 |
 
 ### Show one bug
@@ -121,6 +124,28 @@ kane-cli bugs retire <feedback-id>
 ```
 
 The id is printed by `mark` and `note`, and listed by `bugs show`. You can take back only your own feedback.
+
+### RCA categories
+
+The diagnosis gives every failure one **RCA category**. It picks one of your organisation's own categories (the list in Org Preferences → Automatic AI RCA) whenever its description fits the failure, and otherwise the closest built-in category. Whether the failure is a product bug, a test problem or an environment problem is still decided separately. `kane-cli bugs categories` shows both lists and manages your organisation's:
+
+```bash
+kane-cli bugs categories list                    # yours first, then the built-in ones, and whether the diagnosis uses each
+kane-cli bugs categories list --source org       # only yours (or --source builtin; --status active|inactive)
+kane-cli bugs categories show "Payment failures" # by name (any case) or id
+kane-cli bugs categories add --name "Payment failures" --description "Payment gateway returns a 5xx or times out during checkout" [--inactive]
+kane-cli bugs categories edit "Payment failures" --status inactive   # or --name, --description
+kane-cli bugs categories remove "Payment failures" [--yes]           # asks first on a terminal
+```
+
+- The diagnosis matches failures against a category's **description**, so write it as the failures it covers. It uses one of your categories only while it is active and has a description.
+- A change applies to the next run, for everyone in your organisation.
+- Built-in categories can be listed and shown, never changed.
+- Adding, editing and removing need org admin, or the Product Preferences permission when your organisation uses roles.
+- A failed step's reason, `kane-cli bugs show` and the run's evidence name your category. A failure, and a bug, keep a category's name after it is renamed or removed.
+- A category never decides which bug a failure joins: the same defect stays one bug whatever category each run gave it.
+- **A bug keeps the category of the run that first found it.** A bug recorded before you added a category doesn't take it on, even when later runs pick it, so `bugs list --category` doesn't list that bug.
+- The Org Preferences screen saves the whole list it loaded: saving it from a page opened before a change made here undoes that change.
 
 ### Flags every subcommand takes
 
@@ -181,6 +206,11 @@ Exit codes: `0` done, `1` any refusal. A typical agent flow after a saved test f
 | `--status takes open, confirmed, done, regressed, not_a_bug, contested, merged (comma-separated)` | Fix the status list |
 | `--limit must be an integer in [1, 200]` | Pass a number from 1 to 200 |
 | `… cannot be a duplicate of itself` / the merge would loop | Pick another bug for `--of` |
+| `… is a built-in category and can't be changed` | Built-in categories are read-only. Add your own with `kane-cli bugs categories add` |
+| A category change is refused for permission | Ask an org admin to make the change, or to give your role the Product Preferences permission |
+| A category with that name already exists | Pick another name, or edit the existing category |
+| `"…" is a built-in category in several families: use …` | Name it by one of the ids the message lists |
+| `this controller has no RCA category routes yet` | This environment doesn't have categories yet. Listing and marking bugs work as before |
 | `the controller refused the sign-in: run …` | Sign in again with `kane-cli login` ([Authentication](./authentication.md)) |
 | No answer (a network error) | Check your connection, or the environment you passed with `--env` |
 

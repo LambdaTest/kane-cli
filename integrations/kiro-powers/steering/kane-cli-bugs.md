@@ -24,12 +24,16 @@ When a later run fails on the same page, its diagnosis is told about the known b
 | `kane-cli bugs note BUG-12 "<text>" --agent` | Free text; the next diagnosis reads the latest note |
 | `kane-cli bugs duplicate BUG-12 --of BUG-9 --agent` | BUG-12 is the same bug as BUG-9: merges 12 into 9. No confirmation |
 | `kane-cli bugs retire <feedback-id> --agent` | Take back a vote or note you gave (the id is in the `mark`/`note` output and in `show`) |
+| `kane-cli bugs list --category "<name or id>" --agent` | Only bugs given this RCA category (built-in or the organisation's) |
+| `kane-cli bugs categories list\|show\|add\|edit\|remove --agent` | The RCA categories: the organisation's first, then the built-in ones (read-only); add, edit and remove change the organisation's |
 
 - `BUG-12`, `bug-12` and `12` all mean BUG-12.
 - `--status` takes a comma-separated list of `open`, `confirmed`, `done`, `regressed`, `not_a_bug`, `contested`, `merged`. `--limit` is 1-200, default 50. `--all-families` lists every kind of failure the diagnosis recorded, not only application bugs.
 - Every subcommand takes `--project <id>`, `--profile <name>`, `--env <prod|stage>`, `--username <user>`, `--access-key <key>` and `--agent`.
 - **Project:** `--project`, else the test.md's own, else the folder's linked project, else the profile's (`kane-cli config project <id>`).
 - **Test:** `bugs list <file>_test.md` needs the test to have a Test Manager test case, which it gets the first time it runs with an upload. Otherwise pass `--testcase <id>`.
+
+- **RCA categories:** the diagnosis prefers one of the organisation's own categories whose description fits, else a built-in one. Change the organisation's list only when the user asks (it needs org admin or the Product Preferences permission, and applies to everyone's next runs). A category never decides which bug a failure joins, and a bug keeps the category of the run that first found it, so one recorded before a category existed never takes it on.
 
 # Who the feedback counts as
 
@@ -54,6 +58,7 @@ With `--agent` every command prints one JSON line: `{"ok":true,…}` on success,
 | `NETWORK` / `NOT_READY` / `CONFLICT` | Retry shortly (for `NETWORK`, check `--env`) |
 | `CYCLE` | The merge would loop |
 | `INVALID` | Fix the call as the message says |
+| `BUILTIN_READ_ONLY` / `FORBIDDEN` / `DUPLICATE_NAME` / `AMBIGUOUS` | Categories: built-in ones are read-only; the user lacks the permission; the name is taken; the name matches several (use an id from the message) |
 
 # After a saved test fails
 
@@ -65,5 +70,7 @@ With `--agent` every command prints one JSON line: `{"ok":true,…}` on success,
    - The recorded root cause is wrong → `mark BUG-n rca-wrong`, then `note BUG-n "<what is actually wrong>"`. The next diagnosis then works from its own evidence. It is right → `rca-right`.
    - Narrowed it down → `note`. Two refs are the same bug → `duplicate BUG-12 --of BUG-9`.
 5. Tell the user in one line what you marked and why. A wrong mark: `retire <feedback-id>`.
+
+The next diagnosis reads rulings: a recalled `done` bug seen again is reported as a regression; for a `not_a_bug` one it reports a product bug only when the run's evidence clearly shows the product broken.
 
 Rulings (`done`, `not-a-bug`, `reopen`) and merges change the bug for everyone in the project: make them when the user says so, or when the evidence is unambiguous.

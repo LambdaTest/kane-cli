@@ -1,4 +1,4 @@
-<!-- kane-cli skill reference: bug memory and feedback (kane-cli bugs list|show|mark|note|duplicate|retire). Read it after a saved test failed and you are diagnosing it, when the person asks about known bugs, or when a diagnosis needs correcting. Internal parsing reference: never show field names or raw JSON to the person. -->
+<!-- kane-cli skill reference: bug memory and feedback (kane-cli bugs list|show|mark|note|duplicate|retire|categories). Read it after a saved test failed and you are diagnosing it, when the person asks about known bugs, or when a diagnosis needs correcting. Internal parsing reference: never show field names or raw JSON to the person. -->
 
 # Bugs — Agent Surface
 
@@ -22,12 +22,20 @@ When a later run fails on the same page, its diagnosis is told about the known b
 | `kane-cli bugs note BUG-12 "<text>" --agent` | Free text; the next diagnosis reads the latest note |
 | `kane-cli bugs duplicate BUG-12 --of BUG-9 --agent` | BUG-12 is the same bug as BUG-9: merges 12 into 9. No confirmation |
 | `kane-cli bugs retire <feedback-id> --agent` | Take back a vote or note you gave (the id is in the `mark`/`note` output and in `show`) |
+| `kane-cli bugs list --category "<name or id>" --agent` | Only bugs given this RCA category (built-in or the organisation's); spans every family |
+| `kane-cli bugs categories list [--source builtin\|org] [--status active\|inactive] --agent` | Every RCA category: the organisation's first, then the built-in ones; `agent_uses` says which the diagnosis picks from |
+| `kane-cli bugs categories show "<name or id>" --agent` | One category |
+| `kane-cli bugs categories add --name "<n>" --description "<d>" [--inactive] --agent` | Add one of the organisation's |
+| `kane-cli bugs categories edit "<name or id>" [--name] [--description] [--status active\|inactive] --agent` | Change one of the organisation's |
+| `kane-cli bugs categories remove "<name or id>" --agent` | Remove one of the organisation's (no question under `--agent`; on a terminal it asks unless `--yes`) |
 
 - **Refs.** `BUG-12`, `bug-12` and `12` all mean BUG-12.
 - **`--status`** takes a comma-separated list of `open`, `confirmed`, `done`, `regressed`, `not_a_bug`, `contested`, `merged` (`not-a-bug` also works). **`--limit`** is 1-200, default 50. **`--all-families`** lists every kind of failure the diagnosis recorded, not only application bugs.
 - **Every subcommand** takes `--project <id>`, `--profile <name>`, `--env <prod|stage>`, `--username <user>`, `--access-key <key>` and `--agent`.
 
 **Which project.** `--project`, else the test.md's own project, else the folder's linked project, else the profile's (`kane-cli config project <id>`). With none: `NO_PROJECT`.
+
+**RCA categories.** Every failure gets one category. The diagnosis prefers one of the organisation's own (Org Preferences → Automatic AI RCA) whose description fits, else the closest built-in one; the family (product, test or environment fault) is still decided separately. Name a category by its name (any case) or id. Built-in ones are read-only. An organisation category's id is `custom:<id>`: a failure records it as `<family>/custom:<id>` with its name beside it, and a failed step's reason names it. Changing the organisation's list applies to everyone's next runs, and adding, editing or removing needs org admin or the Product Preferences permission: do it only when the person asks. A category never decides which bug a failure joins, and **a bug keeps the category of the run that first found it**: one recorded before a category existed never takes it on, so `--category` doesn't list it. That is expected, not a fault.
 
 **Which test.** `bugs list <file>_test.md` needs the test to have a Test Manager test case, which it gets the first time it runs with an upload. A test that never uploaded refuses with `NO_TESTCASE`: run it once, or pass `--testcase <id>`.
 
@@ -85,6 +93,11 @@ refusal        {"ok":false,"error":"NOT_FOUND","message":"BUG-99 is not a bug in
 | `CYCLE` | The merge would loop (BUG-9 is already merged into BUG-12) |
 | `INVALID` | A bad argument (an unknown mark, an empty note, `--limit` out of range, a bug as a duplicate of itself, a test.md that does not exist): fix the call as the message says |
 | `CONFLICT` | Someone changed the bug at the same moment: retry |
+| `BUILTIN_READ_ONLY` | A built-in category can't be edited or removed: add the organisation's own instead |
+| `FORBIDDEN` | The person can't change categories: an org admin, or a role with the Product Preferences permission, must |
+| `DUPLICATE_NAME` | Another category has that name: pick another, or edit that one |
+| `AMBIGUOUS` | The name matches more than one category: use one of the ids the message lists |
+| `NOT_SUPPORTED` | This controller has no category routes yet: tell the person in one line and go on |
 
 ## 5. In an RCA flow
 
@@ -99,5 +112,7 @@ After a saved test fails (`testmd run`, or a member of `testrun run`):
    - You narrowed it down ("500 only when the cart already has items; an empty cart works") → `note`.
    - Two refs are the same bug → `duplicate BUG-12 --of BUG-9` (keep the older one).
 5. Tell the person in one line what you marked and why. A mark you got wrong: `retire <feedback-id>`.
+
+The next diagnosis reads the rulings too. For a recalled bug marked `done`, a run whose own evidence shows that defect again is linked to it and reported as a regression. For one marked `not_a_bug`, it reports a product bug for that symptom only when the run's evidence clearly shows the product broken, and otherwise leans to a test or environment problem.
 
 Rulings (`done`, `not-a-bug`, `reopen`) and merges change the bug for everyone in the project: make them when the person says so ("it's fixed", "that's expected behaviour"), or when the evidence is unambiguous, and say so in your summary.

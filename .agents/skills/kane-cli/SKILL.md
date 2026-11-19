@@ -190,7 +190,7 @@ When the user's request involves a browser — or writing test cases:
 - View, share, or validate run evidence (`.evidence` packs) → Read `references/evidence.md`
 - Judge a run or pack against quality gates (a policy YAML, `--policy`, `--policy-id`, `kane-cli evidence verdict`, `kane-cli policy …`), or gate CI on more than pass/fail → Read `references/policy.md` first (after 0.10.0-rc.3)
 - Debug a failed run → Read `references/debug.md`
-- A saved test failed and you want the bugs it hit before, the person asks about known bugs (`BUG-12`), or a failure's diagnosis (RCA) is wrong and needs correcting → Read `references/bugs.md` (`kane-cli bugs`, the release that ships it)
+- A saved test failed and you want the bugs it hit before, the person asks about known bugs (`BUG-12`), a failure's diagnosis (RCA) is wrong and needs correcting, or the person wants to see or manage the organisation's RCA categories → Read `references/bugs.md` (`kane-cli bugs`, the release that ships it)
 - Configure kane-cli or check directory layout → Read `references/setup-and-config.md`
 - The person asks to make kane-cli the default for this project or their team ("always use kane for E2E here", "add kane to CLAUDE.md / AGENTS.md") → Read `references/setup-and-config.md` §Make kane-cli the default in a project. Only when asked, and ask before writing
 - Browse / create / pick a Test Manager project or folder for `kane-cli run`, or interpret the auto-default event → Read `references/test-manager.md`. Linking an assurance folder to a project is different: `references/shared-projects.md` §2–3
@@ -384,7 +384,7 @@ A draft in chat cannot be run, and a hand-written `_test.md` carries no requirem
 | Need the assurance NDJSON event schema (`--mode agent`) | `references/assurance-parsing.md` |
 | Share the context store with a team, join one, keep stores level, or resolve a sync conflict (kane-cli 0.8.14+) | `references/context-sync.md` |
 | Run failed, need to diagnose | `references/debug.md` |
-| Known bugs a test hit, or correcting a failure's diagnosis (`kane-cli bugs list\|show\|mark\|note\|duplicate\|retire`) | `references/bugs.md` |
+| Known bugs a test hit, or correcting a failure's diagnosis (`kane-cli bugs list\|show\|mark\|note\|duplicate\|retire\|categories`) | `references/bugs.md` |
 | View, share, validate, or merge evidence packs | `references/evidence.md` |
 | Judge a pack against a policy, run with `--policy`, or store/list policies in Test Manager | `references/policy.md` |
 | Multiple independent browser tasks | `references/parallel.md` |
