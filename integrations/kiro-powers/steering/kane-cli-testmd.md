@@ -321,7 +321,7 @@ A replay can fail when the site shifts under you:
 
 - **Adaptive healing** — enabled by default: three shrinking replay windows, then re-author authorable steps. Use `--no-adaptive-heal` to disable it.
 
-Every failed replay is also **investigated automatically** — a failure record (error, page state, console/network pointers) is written into the run's evidence pack, so you can explain *why* the replay broke.
+Every failed replay is also **investigated automatically** — a failure record (error, page state, console/network pointers) is written into the run's evidence pack, so you can explain *why* the replay broke. The diagnosis also remembers the application bugs it finds as `BUG-<n>` refs; to see the bugs a test has hit and correct a wrong diagnosis, load the `kane-cli-bugs` steering file.
 
 ## Replays are self-sufficient
 

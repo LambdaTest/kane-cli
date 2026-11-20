@@ -118,6 +118,9 @@ A replay can fail if the site changed under you — a button moved, the page is 
 
 Every failed replay is also **investigated automatically**: a failure record — the error, the page state at failure, and pointers into the step's console/network logs — is written into the run's [evidence pack](../evidence.md#debugging-a-failed-run-from-its-pack), so you can see *why* the replay broke, not just that it did.
 
+<!-- release: needs kane-cli bugs -->
+kane-cli also remembers the application bugs those diagnoses find, as `BUG-<n>` refs in your project, and tells the next diagnosis about them *(the release that ships `kane-cli bugs`)*. `kane-cli bugs list <file>_test.md` shows what a test has hit, and your marks and notes shape the next diagnosis. See [Bug memory and feedback](../bugs.md).
+
 ### Replays don't need a project or folder
 
 A pure replay of an already-authored test — every step replays from cache — no longer requires a Test Manager project/folder to be configured. There is no interactive picker, no auto-created project, and no setup dead end: the test already knows where it belongs, and the replay runs with that identity. Authoring runs (first runs, edited steps, `--author`) resolve a project and folder as before.

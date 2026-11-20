@@ -615,6 +615,8 @@ tests/<test-id>/
 
 Offer the visual route: `kane-cli evidence serve <pack>` starts a local-only server and prints a hosted-viewer link. After agent-mode runs, Kane CLI prints a stderr hint line (`` evidence: view locally with `kane-cli evidence serve <path>` ``) — it is plain text on stderr, never a stdout event. If a pack won't open, `kane-cli evidence validate <pack>` reports whether it's truncated/unsealed. Full evidence + testrun surface: load **`kane-cli-testrun`** steering.
 
+**Known bugs.** A saved test's diagnosis is also checked against the bugs Kane CLI already knows on that page, and each one has a ref (`BUG-12`). `kane-cli bugs list <file>_test.md --agent` shows what the test has hit before; when the diagnosis got it wrong, correct it with `kane-cli bugs mark … rca-wrong` and a `note` so the next one starts from its own evidence. Load **`kane-cli-bugs`** steering.
+
 ## Common failure patterns
 
 | Symptom | Likely cause | Fix |
