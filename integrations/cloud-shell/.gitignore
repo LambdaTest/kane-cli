@@ -1,0 +1,3 @@
+# Local Kane CLI state and run output
+.testmuai/
+tests/output-*/
