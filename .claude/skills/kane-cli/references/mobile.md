@@ -203,7 +203,7 @@ When the app under test talks to a backend on `localhost`, a staging host behind
    | `run` / `testmd run` / `testrun run` from this machine | `LT --user "$LT_USERNAME" --key "$LT_ACCESS_KEY" --tunnelName <name>` (**no `--env`**) |
    | `testrun run --remote` | `LT --user "$LT_USERNAME" --key "$LT_ACCESS_KEY" --env ht-prod --tunnelName <name>` |
 
-   (Explore is different: `explore run` always needs `--env ht-prod`, see `references/explore.md`.) Wait for them to say LT is connected.
+   Why `--remote` needs `ht-prod`: the device session is opened from a HyperExecute machine, which only finds tunnels started with `--env ht-prod`. A tunnel with no `--env` is refused on `--remote` even with no `--tunnel-name` (the hub says the tunnel is not running). (Explore is different: `explore run` always needs `--env ht-prod`, see `references/explore.md`.) Wait for them to say LT is connected.
 3. **Run with the name:**
 
    ```bash

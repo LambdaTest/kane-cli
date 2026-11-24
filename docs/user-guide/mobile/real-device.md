@@ -192,6 +192,9 @@ kane-cli never starts or stops the tunnel. You run it in your own terminal, so y
 - **`--tunnel-name` must match `--tunnelName`** from step 2, and it turns the tunnel on. With only one tunnel running,
   `--tunnel` alone is enough: the device uses your one running tunnel.
 - **Every member uses it.** On `testrun run`, the tunnel applies to every real-device member, locally and on the grid.
+- **On the grid, use `--env ht-prod`.** With `--remote`, the device's session is opened from a HyperExecute machine,
+  and it only finds tunnels started with `--env ht-prod`. A tunnel started without it is refused, with or without
+  `--tunnel-name`.
 - **On the grid, name it.** With `--remote` and `--tunnel-name`, the cloud checks that the tunnel is up before the job
   starts, so a missing tunnel fails fast instead of mid-run.
 - **Keep the tunnel and your machine up** until the run ends. If the tunnel drops, the app stops reaching its backend.
