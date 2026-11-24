@@ -534,7 +534,7 @@ Error: CDP endpoint not reachable on port 9222
 kane-cli whoami
 ```
 
-If it reports "not configured", run `kane-cli login` (interactive in a TTY, or pass `--username` / `--access-key` for non-interactive setups). Get your access key from your TestMu AI dashboard under **Settings → Keys**.
+If it reports "not configured", run `kane-cli login` (interactive in a TTY, or pass `--username` / `--access-key` for non-interactive setups). Get your access key from your TestMu AI dashboard under **Profile → Account Settings → Password & Security**.
 
 ### 3. The agent ran, but didn't extract the value I wanted
 
