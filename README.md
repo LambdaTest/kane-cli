@@ -7,6 +7,22 @@
 ![Platforms](https://img.shields.io/badge/platforms-macOS%20%7C%20Linux%20%7C%20Windows-brightgreen)
 [![Discord](https://img.shields.io/badge/Discord-Join%20the%20community-5865F2?logo=discord&logoColor=white)](https://discord.gg/SqVMtNeWEf)
 
+## Works with
+
+| Agent or runner | How it gets Kane CLI | Where it lives |
+|---|---|---|
+| Claude Code | `npx @testmuai/kane-cli-skill` | `~/.claude/skills/kane-cli/` |
+| Codex CLI | `npx @testmuai/kane-cli-skill` | `~/.agents/skills/kane-cli/` |
+| Gemini CLI | `npx @testmuai/kane-cli-skill` | `~/.gemini/skills/kane-cli/` |
+| Cursor | The Kane CLI block in your project's `AGENTS.md` | Repository root |
+| GitHub Copilot | The Kane CLI block in your project's `AGENTS.md` | Repository root |
+| Kiro | [Kiro power](integrations/kiro-powers/POWER.md) | `integrations/kiro-powers/` |
+| GitHub Actions | [`kane-cli-browser-run` and `kane-cli-pr`](integrations/github-action/README.md) | `integrations/github-action/` |
+
+To add the `AGENTS.md` block, ask an agent that has the skill to "add kane to AGENTS.md". It shows you the block and writes it only after you say yes. Any other agent that can run a shell command can call `kane-cli run "<objective>" --agent` and read the NDJSON and the exit code.
+
+For agents and crawlers: [agent guide](https://testmuai.com/kane-cli/agents.md) · [llms.txt](https://www.testmuai.com/kane-cli/llms.txt)
+
 ---
 
 ## One E2E package: generate, execute, prove
@@ -75,6 +91,7 @@ kane-cli maintain reconcile    # update the suite after a requirement changes
 
 ## Contents
 
+- [Works with](#works-with)
 - [What you type. What you get back.](#what-you-type-what-you-get-back)
 - [Where it fits](#where-it-fits)
 - [Install](#install)
@@ -255,7 +272,7 @@ Full agent guide with flow splitting, parallel execution patterns, and result-pr
 npx @testmuai/kane-cli-skill
 ```
 
-This installs the skill for Claude Code, Codex CLI, and Gemini CLI in one command. On your first request the agent checks that kane-cli is ready, runs it, and shows a result card. What to expect, your saved preferences and the live status strip are covered in [Using kane-cli from an AI coding agent](docs/user-guide/agents.md).
+This installs the skill for Claude Code, Codex CLI, and Gemini CLI in one command. Cursor and GitHub Copilot pick it up from `AGENTS.md` (see [Works with](#works-with)). On your first request the agent checks that kane-cli is ready, runs it, and shows a result card. What to expect, your saved preferences and the live status strip are covered in [Using kane-cli from an AI coding agent](docs/user-guide/agents.md).
 
 ---
 
@@ -595,6 +612,7 @@ curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh
   - Assurance: [overview](docs/user-guide/assurance/overview.md) · [context graph](docs/user-guide/assurance/context.md) · [test design](docs/user-guide/assurance/design.md) · [coverage](docs/user-guide/assurance/coverage.md) · [maintain](docs/user-guide/assurance/maintain.md) · [automation](docs/user-guide/assurance/automation.md)
   - [Test Manager integration](docs/user-guide/test-manager-integration.md) · [CI/CD recipes](docs/user-guide/cicd.md) · [Troubleshooting](docs/user-guide/troubleshooting.md)
 - **Agent setup guide** (deep reference for AI coding agents): [testmuai.com/kane-cli/agents.md](https://testmuai.com/kane-cli/agents.md)
+- **llms.txt** (index for agents and crawlers): [testmuai.com/kane-cli/llms.txt](https://www.testmuai.com/kane-cli/llms.txt)
 - **Community:** [Join us on Discord](https://discord.gg/kanQPEx9) — questions, discussion, and release announcements
 - **Issues / bug reports:** [GitHub Issues](https://github.com/LambdaTest/kane-cli/issues/new/choose)
 - **Reviews:** Kane CLI is listed on [agent.reviews](https://agent.reviews), where coding agents review the tools they use after real tasks. To let your agent do the same, see [agent.reviews/install](https://agent.reviews/install)
