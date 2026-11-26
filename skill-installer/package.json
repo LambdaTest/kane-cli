@@ -39,7 +39,11 @@
     "ai-testing",
     "mcp",
     "cursor",
-    "playwright"
+    "playwright",
+    "e2e-testing",
+    "browser-testing",
+    "codex-cli",
+    "github-copilot"
   ],
   "homepage": "https://github.com/LambdaTest/kane-cli",
   "repository": {
