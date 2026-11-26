@@ -92,6 +92,7 @@ Many flags are shared with `run`, but not all; check `kane-cli testmd run --help
 |---|---|---|
 | `--url <url>` | frontmatter `url:` / config `default_url` | Start URL for the first step. Overrides the `url:` frontmatter key and config `default_url`; bare domains get `https://`. |
 | `--allow-missing-url` | off | Non-TTY only: start from the browser's current page instead of failing when the first step has no start URL. |
+| `--override-start-url <url>` | none | Retarget the test's start: replay opens `<url>` instead of the start URL the test recorded, and authoring/heal starts there. |
 | `--name <name>` | none | Persist the run under this name. Slug: `[a-zA-Z0-9_-]+`. |
 | `--on-lock-conflict <readonly\|fail\|wait>` | none | Behavior when another user holds the test's edit lock. `readonly` = replay-only / no upload; `fail` = exit `2`; `wait` = block until released. |
 | `--no-adaptive-heal` | healing enabled | Disable adaptive healing after replay failure |

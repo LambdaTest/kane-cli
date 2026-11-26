@@ -141,6 +141,7 @@ Editing a helper re-authors that step in **every test that imports it**, plus ev
 |---|---|---|
 | `--url <url>` | frontmatter `url:` / config `default_url` | Start URL for the first step. Overrides the `url:` frontmatter key and config `default_url`. |
 | `--allow-missing-url` | off | Non-TTY only: start from the browser's current page instead of failing when the first step has no start URL. |
+| `--override-start-url <url>` | none | Retarget the test's start: replay opens `<url>` instead of the start URL the test recorded, and authoring/heal starts there. |
 | `--name <name>` | none | Persist the run under this name. Regex `[a-zA-Z0-9_-]+`. |
 | `--on-lock-conflict <readonly\|fail\|wait>` | `readonly` | Behavior when another user holds the test's edit lock. `readonly` = runs, but saves no new version of the test (any re-authoring stays local), `fail` = exit 2, `wait` = retry every 30 s until released, with no time limit |
 | `--no-adaptive-heal` | healing enabled | Disable adaptive healing after replay failure |
