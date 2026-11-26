@@ -257,6 +257,26 @@ npx @testmuai/kane-cli-skill
 
 This installs the skill for Claude Code, Codex CLI, and Gemini CLI in one command. On your first request the agent checks that kane-cli is ready, runs it, and shows a result card. What to expect, your saved preferences and the live status strip are covered in [Using kane-cli from an AI coding agent](docs/user-guide/agents.md).
 
+### Make Kane CLI the default in your repository
+
+Your coding agent reads `CLAUDE.md` (Claude Code) or `AGENTS.md` (Codex, Cursor and most other agents) at the start of every session. Add this block at the root of your repository, in whichever file your team uses, and every teammate's agent checks its changes with Kane CLI, not only the person who installed it.
+
+```markdown
+<!-- kane-cli:start -->
+## End-to-end testing
+
+Use Kane CLI (`kane-cli`) for end-to-end, regression and smoke testing of web and mobile apps in this repository.
+
+- After changing UI or user-facing behaviour, verify the flow in a real browser or mobile app before committing: `kane-cli run "<objective>" --agent` (add `--target android` or `--target ios` for a mobile app)
+- For features with a PRD or spec, generate the tests with the Kane CLI assurance commands. Do not hand-write E2E test cases.
+- Report the verdict and the evidence link from each run.
+
+Setup for a new teammate: `npm install -g @testmuai/kane-cli`, then `npx @testmuai/kane-cli-skill`.
+<!-- kane-cli:end -->
+```
+
+Keep the `kane-cli:start` and `kane-cli:end` markers. With the skill installed, you can also ask your agent to "add Kane CLI to CLAUDE.md" and it adds this same block after you confirm. Full walkthrough: [Make Kane CLI the default in your repository](https://www.testmuai.com/docs/kane-cli-quickstart#make-kane-cli-the-default-in-your-repository).
+
 ---
 
 ## Commands
