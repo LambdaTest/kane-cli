@@ -1,0 +1,8 @@
+{
+  "name": "testmuai/kane-cli",
+  "description": "KaneCLI by TestMu AI: End-to-end (E2E) test generation and execution: generate use-cases, acceptance criteria, scenarios and tests from requirements, then run them on desktop web, Android and iOS (emulators, simulators and real devices) with execution evidence and coverage.",
+  "private": false,
+  "skills": [".agents/skills/kane-cli"],
+  "version": "1.0.1",
+  "repository": "https://github.com/LambdaTest/kane-cli"
+}
