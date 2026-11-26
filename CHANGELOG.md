@@ -7,6 +7,149 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.11] - 2026-11-26
+
+### Use cases file themselves under entities
+- **Saved use cases file themselves** — after a save in a linked folder, kane-cli files the session's new use cases under the project's entities, and creates a new top-level entity when none fits.
+- **Explorations file theirs too** — the use cases an exploration saves are filed the same way.
+
+### Variables and secrets follow the file
+- **`{{global.x}}` and `{{secrets.user.x}}` work the same everywhere** — `kane-cli testmd run` and `kane-cli testrun run --remote` both use the variables file's value when it holds one, create a global Test Manager doesn't have yet, and treat a test's own `{{secrets.user.x}}` as a secret.
+- **An empty entry no longer erases a Test Manager global** — for a variable your test writes as `{{global.x}}`, an empty entry in the variables file leaves Test Manager's value as it is.
+- **Designed tests write prefixed names** — in a linked folder, a design names globals as `{{global.x}}` and secrets as `{{secrets.user.x}}`, and lists both among what its tests need.
+
+### Saves that collide explain themselves
+- **Name already taken?** — a save refused because another save used the same name says so and starts again instead of failing silently.
+- **Renumbered saves list the new ids** — the receipt, the summary and agent mode all name the ids a save was given anew, and a refusal caused only by numbers taken first says so, grouped by kind then number.
+
+### Secrets stay redacted
+- **Redacted in more places** — masking applies first, recorded tests name secrets without their values, sealed evidence packs carry none, and evidence HARs redact the app's auth headers.
+- **Failure triage shows real values** — a failed check reports the value it actually compared, not the `{{store_key}}` template.
+
+### Evidence
+- **More complete evidence packs** — page traffic between steps is kept, and the browser closes before the pack is sealed and uploaded.
+
+### Fixes
+- **Names with emoji and joined characters survive** — a zero-width joiner between two characters is preserved.
+- **A second Ctrl+C while exiting exits at once.**
+
+## [0.10.9] - 2026-11-24
+
+### Clearer device targeting
+- **The tunnel is for real devices only** — both the help text and the TUI now say so outright, instead of leaving you to discover it mid-run.
+- **Private devices appear in the TUI** — your organization's dedicated devices show alongside the shared pool.
+- **A curated catalog with a TIP badge** — recommended targets are called out visually so you can pick a sensible device without scanning the full list.
+
+### A tidier run view
+- **One-line Run bar and richer Session details** — the run status collapses to a single line, with the full context moved into Session details.
+
+### Fixes you may have hit
+- **DevTools queries work on Windows** — runs that inspect page internals no longer fail on Windows machines.
+- **A test that ran zero steps still produces a valid pack** — empty runs no longer leave you with an unusable artifact.
+
+## [0.10.8] - 2026-11-21
+
+### Failures you can actually read
+- **Every failed run ends with one red step** — instead of scattered or missing failure output, each failed exit produces a single red `AGENT_INFO` step that marks exactly where the agent gave up.
+- **Error codes are written in English** — generated steps carry a readable label as their error code rather than an internal enum name.
+- **Step history stays honest** — the failing step is flagged in place, and the surrounding steps, their IDs, and their titles are left exactly as they were recorded.
+
+### Improvements in replay stability
+- **Recorded budgets never shrink your defaults** — a re-read budget captured during recording can extend, but no longer shortens, the binding's default budget.
+
+## [0.10.7] - 2026-11-20
+
+### Bug tracking that feeds back into analysis
+- **Mark the bugs a test hits** — the new `kane-cli bugs` commands record known bugs against a test, and the next RCA run reads them instead of starting from scratch.
+- **Your org's own RCA categories** — `kane-cli bugs categories` lists the available root-cause categories and lets you add and manage the ones specific to your organization.
+- **Known bugs and categories show up in results** — the known bug ID and the org category name are carried through to `failure.yaml`, so triage output matches what you recorded.
+- **Take back feedback the same way you gave it** — `kane-cli bugs retire` now makes it clear that feedback can be withdrawn regardless of how it was submitted.
+
+### Named explorations
+- **Name an exploration when you start it** — `kane-cli explore run --name <name>` labels the exploration it creates, and the name follows through to the export so runs are easy to find later.
+- **Retries keep their identity** — retrying an exploration without passing a name no longer loses track of it.
+
+### Remote runs on Windows
+- **`testrun --remote` works from Windows** — kane-cli starts HyperExecute and sends the grid POSIX-style paths, so remote runs no longer break on Windows path separators.
+
+### Requests go out the way you configured them
+- **Custom headers are sent on test runs** — headers configured for a test are now included in `kane-cli test` runs.
+- **Header problems never kill a run** — a bad or unusable custom header is handled gracefully instead of failing the whole run.
+
+### More trustworthy TLS and clearer replay evidence
+- **Corporate and self-signed certificates work everywhere** — background worker threads now use the same OS certificate store trust as the main thread, so runs behind a proxy or custom CA behave consistently.
+- **Assertion details survive into triage** — passed assertions carry their checks into the evidence, and failed assertions carry both the expected and observed values into the verdict.
+
+## [0.10.6] - 2026-11-17
+
+### Scrolling that tells you the truth
+- **A scroll that moves nothing now fails** — authoring scrolls, coordinate (vision) scrolls, and scrolls that never ran are reported as failures, the same way a locator click that misses one is, instead of passing quietly.
+- **Until-scrolls fail when the condition is never met** — no more runs that scroll forever and then move on as if they succeeded.
+- **Scroll detection reaches further** — scrollable regions inside cross-origin (out-of-process) iframes, dialogs in front of the page, and `<body>` scrolling under a locked `<html>` are all detected and tagged, including horizontal scrollers.
+- **Text-mode page output shows what scrolls** — the page document lists scrollable containers, so you can see what the agent has to work with.
+- **Scroll results are judged on scroll offsets** — the screenshot comparison is gone, so a visually similar page no longer hides a scroll that never happened.
+
+### Remote runs handle variables and secrets properly
+- **Pool variables per member** — a `--remote` job names each member's pool variables and carries their secrets from the vault, so remote runs behave like local ones.
+- **Secrets keep their bare names** — remote member secrets are pushed under the same plain names your laptop runs use, stored under a vault key kane-cli owns.
+- **Global vs. secret is decided by your authoring run** — on the grid, the authoring record determines which bare names bind as globals and which as secrets, and bindings are carried through replays.
+- **Empty seeded globals resolve correctly** — a global seeded with no value on the grid now resolves through the binding instead of dropping out.
+- **Variable scoping is clearer** — variables are step-scoped, environment names follow one rule, and globals stay laptop-only.
+
+### Coverage without the extra flags
+- **Coverage comes from your Test Manager project** — the final evidence merge and the pack shipped by a task ask the project for coverage directly; no `--coverage-project` flag needed in a Test Manager job.
+- **`--remote` jobs name the project by id** — Test Manager job output identifies its project by id, and both the flag and the job skip a project with no use cases.
+- **Logs stay clean** — job login details and failure details stay out of the printed log, and coverage comments and test names no longer carry triage ids.
+
+### Mobile replay of API responses
+- **Stored API response values replay on mobile** — a mobile `api_response` extraction keeps its Python extraction code, replay carries the extracted outputs through to the binding, and hand-off follows the tape's platform.
+- **Missing extraction code is named** — replay tells you which extraction is missing its code instead of failing opaquely.
+
+### Fixes and defaults
+- **Self-healing runs on every web replay** — page-code healing runs on each web replay, and heals now warn and bind rather than silently rewriting.
+- **Dropdown options stay targeted** — when selector resolution retargets to a parent `<select>`, the original option locator is preserved.
+
+## [0.10.5] - 2026-11-16
+
+### Run stats you can trust
+- **Heal counts come from the real heal chain** — the number of self-healing attempts in a run is read directly off the heal call chain, so the totals shown match the steps kane-cli actually took.
+- **Replayed runs report the same stability numbers** — telemetry for stability and self-healing is carried through replay, so a replayed run no longer shows different stats than the original.
+
+### Exported code that matches your test
+- **If/else branches compare the right value** — exported automation code now compares the operand from your step instead of an empty string, so conditional branches behave the same in exported code as they do in the run.
+
+## [0.10.4] - 2026-11-12
+
+### Every run is now traceable
+- **Commands report their own lifecycle** — every command emits a start and end event, including `run`, `testmd run` and `explore`, so a run's shape is visible even if it dies early.
+- **Sessions say what they are and how they ended** — session start records the surface and target; session end records the outcome, including sessions that exit without finishing.
+- **Failures carry an error code, a domain and the actual error** — no more guessing from a bare stack trace, and a `testmd` run that throws now logs why before closing its session.
+- **Ctrl+C is recorded as a signal exit, not a crash** — interrupting a run no longer pollutes your history with phantom crashes.
+- **Telemetry is always on** — there is no opt-out, and usage before login is attributed by machine id.
+
+### Exit codes you can trust
+- **A failed test is not a CLI error** — test failures and CLI failures are now reported on separate lanes, so scripts and CI can tell them apart.
+- **A command that needs a login says so** — instead of a generic failure, kane-cli reports the missing login explicitly.
+- **A run that produces no result still fails** — an empty result no longer slips through as a success.
+
+### Replay that repairs itself
+- **Reads heal instead of giving up** — screenshot and page-code reads run through a repair loop before failing, and a heal that finds nothing is reported as a failed read rather than a silent pass.
+- **Screenshot reads record the question they asked** — and are checked the same way replay asks it, so verification matches intent.
+- **Pages are re-read after hover and drag** — actions that change the page no longer leave replay working from stale content.
+- **`query_js` handles code that evaluates to a function** — snippets that return a function now execute instead of erroring.
+- **New `@manual` marker** — tag steps that need a human and replay treats them as replay-only, not as something to automate.
+
+### Remote and multi-test runs make sense in the logs
+- **`testrun --remote` reports dispatch, outcome and failures** — and every HyperExecute VM session names the job that sent it.
+- **A test run coordinator is its own session** — each member run names the run it belongs to and is tagged with its run type, so a parallel suite reads as one tree instead of scattered sessions.
+- **`explore` has its own lifecycle events** — start, end and error are logged like any other command.
+
+### Quieter, more useful output
+- **Per-item success spam is gone** — repeated success lines collapse into one summary, and normal states no longer emit warnings.
+- **Every pipeline stage reports how long it took** — stages end with a duration, making slow steps easy to spot.
+- **Debug detail appears only when it matters** — debug lines are held back and released when a run fails, and a passing `test.md` run drops its held step output.
+- **Nothing is dropped at the edges** — log lines before attach, after finish and at exit are all kept.
+
 ## [0.10.3] - 2026-11-07
 
 ### Added
