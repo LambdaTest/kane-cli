@@ -7,7 +7,7 @@
 #
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh | sh
-#   curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh | sh -s -- --version 0.2.0
+#   curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh | sh -s -- --version <version>
 #
 # Requires: Node.js 18+ and npm on PATH.
 # For an install path that doesn't need Node, use Homebrew:
