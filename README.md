@@ -133,7 +133,7 @@ brew install LambdaTest/kane/kane-cli
 curl -fsSL https://raw.githubusercontent.com/LambdaTest/kane-cli/main/install.sh | sh
 ```
 
-Pin a version: append `-s -- --version 0.2.6`.
+Optionally pin a version: append `-s -- --version <version>`.
 
 ### Chrome (required)
 
